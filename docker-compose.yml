@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    environment:
+      - FLASK_SECRET_KEY
+      - DB_HOST=database
+      - DB_USER=root
+      - DB_PASS
+      - DB_NAME=pghumor
+    networks:
+      - net
+  database:
+    build: db
+    volumes:
+      - data:/var/lib/mysql
+    networks:
+      - net
+networks:
+  net:
+volumes:
+  data:
