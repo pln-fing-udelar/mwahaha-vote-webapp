@@ -18,13 +18,9 @@ homepage = "TODO"
 repository = "TODO"
 
 [dependency-groups]
-#krippendorff = "*"
-#mycli = "*"
-#mysqlclient = "*"
-#pandas = "*"
-#tweepy = "*"
-#tqdm = "*"
 dev = [
+    "jq",
+    "mycli",
 ]
 
 [build-system]

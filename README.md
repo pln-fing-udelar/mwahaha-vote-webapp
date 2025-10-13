@@ -78,23 +78,13 @@ a local `mysql`:
 ```bash
 # First check the IP address of the container.
 # Note the actual Docker container name depends on the local folder name.
-docker container inspect pghumor-mwahahavote_database_1 | grep IPAddress
+DB_IP_ADDRESS=$(docker container inspect mwahaha-vote-webapp-database-1 | jq -r '.[0].NetworkSettings.Networks."mwahaha-vote-webapp_net".IPAddress')
 # Then use the IP address (e.g., 172.19.0.3) to connect:
-mysql -h 172.19.0.3 -u root -p
+mycli -h "$DB_IP_ADDRESS" -u root -p
 # You can also set the password in the command like: -p$PASSWORD
 ```
 
-**Pro-tip:** you can use `mycli`, which is included in the dev dependencies for this project, and it's a more powerful
-MySQL default CLI client (e.g., it has code highlighting, command auto-complete, and doesn't need the semicolon at 
-the end of every command):
-
-```bash
-mycli -h 172.19.0.3 -u root
-# You can also set the password in the command like: -p $PASSWORD
-```
-
-For both `mysql` and `mycli`, you can append a database name at the end of the command (e.g., `pghumor`) to select it
-when starting the session.
+You can append a database name at the end of the command (e.g., `pghumor`) to select it when starting the session.
 
 ### Useful SQL commands
 
