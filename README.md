@@ -24,6 +24,7 @@ UV_DEFAULT_INDEX=https://pypi.org/simple uv sync --managed-python --locked
 
 TODO: explain the problem with sqlite3.
 TODO: explain that if `mycli` gives Unicode issues, use `mysql` from the Docker container.
+TODO: explain if VPN then create network once w/o VPN, then it should be all good.
 
 ```sql
 ALTER TABLE votes ADD is_offensive BOOL DEFAULT 0;
