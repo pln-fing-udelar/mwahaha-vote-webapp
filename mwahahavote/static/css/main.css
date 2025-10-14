@@ -23,7 +23,7 @@ h2 {
   color: #777777;
 }
 
-#tweet {
+.tweet {
   border-radius: 5px;
   border: 1px solid #e1e8ed;
   display: flex;
@@ -33,14 +33,7 @@ h2 {
   padding: 20px;
 }
 
-#tweet-logo {
-  float: right;
-  height: 20px;
-  margin-left: auto;
-  width: 20px;
-}
-
-#tweet-text {
+.tweet-text {
   color: #1c2022;
   cursor: text;
   font-family: Helvetica, Roboto, "Segoe UI", Calibri, sans-serif;
@@ -56,13 +49,6 @@ h2 {
 #form-container {
   display: inline-grid;
   text-align: left;
-}
-
-#question {
-  display: inline-block;
-  margin-bottom: 30px;
-  margin-top: 20px;
-  text-align: center;
 }
 
 #answers {
@@ -83,27 +69,27 @@ h2 {
   min-width: 100px;
 }
 
-#humor:focus,
-#humor:hover,
-#humor:active,
-#humor.active.focus,
-#humor.active:focus,
-#humor.active:hover,
-#humor:active.focus,
-#humor:active:focus,
-#humor:active:hover,
-.open > .dropdown-toggle#humor.focus,
-.open > .dropdown-toggle#humor:focus,
-.open > .dropdown-toggle#humor:hover {
-  background-color: #fafafa;
-  border-color: #ddd;
-  box-shadow: none;
-  color: #333;
-  cursor: default;
-  outline: none;
-}
+/*#humor:focus,*/
+/*#humor:hover,*/
+/*#humor:active,*/
+/*#humor.active.focus,*/
+/*#humor.active:focus,*/
+/*#humor.active:hover,*/
+/*#humor:active.focus,*/
+/*#humor:active:focus,*/
+/*#humor:active:hover,*/
+/*.open > .dropdown-toggle#humor.focus,*/
+/*.open > .dropdown-toggle#humor:focus,*/
+/*.open > .dropdown-toggle#humor:hover {*/
+/*  background-color: #fafafa;*/
+/*  border-color: #ddd;*/
+/*  box-shadow: none;*/
+/*  color: #333;*/
+/*  cursor: default;*/
+/*  outline: none;*/
+/*}*/
 
-#not-humor.no-hover:hover {
+button.no-hover:hover {
   background-color: #fff;
   border-color: #ccc;
   color: #333;

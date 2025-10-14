@@ -25,6 +25,10 @@ UV_DEFAULT_INDEX=https://pypi.org/simple uv sync --managed-python --locked
 TODO: explain the problem with sqlite3.
 TODO: explain that if `mycli` gives Unicode issues, use `mysql` from the Docker container.
 
+```sql
+ALTER TABLE votes ADD is_offensive BOOL DEFAULT 0;
+```
+
 ### Pipenv
 
 1. Install the Python and MySQL library headers. In Ubuntu, it'd be:

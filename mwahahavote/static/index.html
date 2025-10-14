@@ -1,30 +1,30 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="description"
-        content="Ayudá a clasificar tweets como humorísticos o no humorísticos, y si lo son, decí qué tan graciosos son. El objetivo es armar un conjunto de datos para investigar sobre Humor Computacional.">
-  <meta name="author" content="Santiago Castro, Matías Cubero y el Grupo PLN, UdelaR">
+        content="TODO">
+  <meta name="author" content="TODO">
   <link rel="apple-touch-icon" href="img/favicon.png">
 
   <meta property="og:type" content="website"/>
-  <meta property="og:site_name" content="Clasificá tweets y divertite"/>
+  <meta property="og:site_name" content="Which One is Funnier?"/>
   <meta property="og:image" content="https://clasificahumor.com/img/og.png"/>
   <meta property="og:image:height" content="630"/>
   <meta property="og:image:width" content="1200"/>
-  <meta property="og:title" content="Clasificá tweets y divertite"/>
+  <meta property="og:title" content="Which One is Funnier?"/>
   <meta property="og:description"
-        content="Ayudá a clasificar tweets como humorísticos o no humorísticos, y si lo son, decí qué tan graciosos son. El objetivo es armar un conjunto de datos para investigar sobre Humor Computacional."/>
+        content="TODO"/>
   <meta property="og:url" content="https://clasificahumor.com/"/>
   <meta property="fb:app_id" content="1223095247821615"/>
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:site" content="@PLN_UdelaR"/>
   <meta name="twitter:creator" content="@PLN_UdelaR"/>
 
-  <title>Clasificá tweets y divertite</title>
+  <title>Which One is Funnier?</title>
 
   <link href="css/normalize.css" rel="stylesheet"/>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
@@ -37,93 +37,85 @@
   <script async src="https://www.googletagmanager.com/gtag/js?id=UA-34392230-5"></script>
   <!--suppress JSUnresolvedVariable -->
   <script>
-    window.dataLayer = window.dataLayer || [];
+      window.dataLayer = window.dataLayer || [];
 
-    function gtag() {
-      dataLayer.push(arguments);
-    }
+      function gtag() {
+          dataLayer.push(arguments);
+      }
 
-    gtag('js', new Date());
-    gtag('config', 'UA-34392230-5');
+      gtag('js', new Date());
+      gtag('config', 'UA-34392230-5');
   </script>
 </head>
 
 <body>
 <!--suppress JSUnresolvedVariable, JSUnresolvedFunction -->
-<script>
-  window.fbAsyncInit = () => {
-    FB.init({
-      appId: '1223095247821615',
-      cookie: true,
-      xfbml: true,
-      version: 'v10.0'
-    });
+<!--<script>
+    window.fbAsyncInit = () => {
+        FB.init({
+            appId: '1223095247821615',
+            cookie: true,
+            xfbml: true,
+            version: 'v10.0'
+        });
 
-    FB.AppEvents.logPageView();
-  };
+        FB.AppEvents.logPageView();
+    };
 </script>
-<script async defer crossorigin="anonymous" src="https://connect.facebook.net/es_LA/sdk.js"></script>
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/es_LA/sdk.js"></script>-->
 
 <!--suppress JSUnresolvedVariable -->
-<script>
-  window.twttr = ((d, s, id) => {
-    let js;
-    const fjs = d.getElementsByTagName(s)[0]
-    const t = window.twttr || {};
-    if (d.getElementById(id)) {
-      return t;
-    }
-    js = d.createElement(s);
-    js.id = id;
-    js.src = "https://platform.twitter.com/widgets.js";
-    fjs.parentNode.insertBefore(js, fjs);
-    t._e = [];
-    t.ready = t._e.push;
-    return t;
-  })(document, "script", "twitter-wjs");
-</script>
+<!--<script>
+    window.twttr = ((d, s, id) => {
+        let js;
+        const fjs = d.getElementsByTagName(s)[0]
+        const t = window.twttr || {};
+        if (d.getElementById(id)) {
+            return t;
+        }
+        js = d.createElement(s);
+        js.id = id;
+        js.src = "https://platform.twitter.com/widgets.js";
+        fjs.parentNode.insertBefore(js, fjs);
+        t._e = [];
+        t.ready = t._e.push;
+        return t;
+    })(document, "script", "twitter-wjs");
+</script> -->
 
 <div class="main-content">
   <div class="container">
     <div id="home-content" class="content">
-      <h1>Clasificá tweets y divertite</h1>
+      <h1>Which One is Funnier?</h1>
 
-      <div id="tweet">
-        <p id="tweet-text"></p>
-        <img id="tweet-logo" src="img/twitter.ico" alt="Twitter"/>
+      <div id="prompt" class="row">
+        Prompt: <p id="prompt-text" class="tweet-text">Will England make the World Cup final?</p>
+      </div>
+
+      <div class="row">
+        <div class="tweet col-xs-6">
+          <p>System A's output:</p>
+          <p id="tweet-text" class="tweet-text"></p>
+        </div>
+        <div class="tweet col-xs-6">
+          <p>System B's output:</p>
+          <p id="tweet2-text" class="tweet-text"></p>
+        </div>
       </div>
 
       <div id="form-container">
-        <p id="question">¿El tweet pretende ser humorístico?</p>
-
         <ul id="answers">
-          <li class="answer">
-            <label id="is-offensive-label" for="is-offensive">
-              <input id="is-offensive" type="checkbox"/>
-              Ofensivo
-            </label>
-          </li>
-
           <li id="humor-answer" class="answer">
-            <div id="humor-container">
-              <button id="humor" type="button" class="btn btn-lg btn-default btn-answer">Sí</button>
-              <div id="toolbox"></div>
-              <div id="votes">
-                <button id="vote-1" class="vote"><span class="legend-vote">Nada gracioso</span></button>
-                <button id="vote-2" class="vote"><span class="legend-vote">Poco gracioso</span></button>
-                <button id="vote-3" class="vote"><span class="legend-vote">Regular</span></button>
-                <button id="vote-4" class="vote"><span class="legend-vote">Bueno</span></button>
-                <button id="vote-5" class="vote"><span class="legend-vote">¡Buenísimo!</span></button>
-              </div>
-            </div>
+            <button id="humor" type="button" class="btn btn-lg btn-default btn-answer">⬅️ Left is funnier</button>
           </li>
-
+          <li id="tie-answer" class="answer">
+            <button id="tie" type="button" class="btn btn-lg btn-default btn-answer">It's a tie 🤝</button>
+          </li>
+          <li id="both-bad-answer" class="answer">
+            <button id="both-bad" type="button" class="btn btn-lg btn-default btn-answer">Both are bad 🚫</button>
+          </li>
           <li id="not-humor-answer" class="answer">
-            <button id="not-humor" type="button" class="btn btn-lg btn-default btn-answer">No</button>
-          </li>
-
-          <li class="answer">
-            <button id="skip" type="button" class="btn btn-lg btn-link btn-answer">Saltear</button>
+            <button id="not-humor" type="button" class="btn btn-lg btn-default btn-answer">Right is funnier ➡️</button>
           </li>
         </ul>
       </div>
@@ -132,7 +124,7 @@
     <p id="vote-count"></p>
   </div>
 
-  <footer class="container">
+  <!--<footer class="container">
     <div class="row">
       <div id="social-buttons-container" class="col-xs-6">
         <div class="fb-share-button" data-href="https://clasificahumor.com" data-layout="button_count"
@@ -147,7 +139,7 @@
            data-size="small">
           Twittear
         </a>
-        <a href="whatsapp://send" data-text="Clasificá tweets y divertite" data-href="" class="wa_btn wa_btn_s">
+        <a href="whatsapp://send" data-text="Which One is Funnier?" data-href="" class="wa_btn wa_btn_s">
           Compartir
         </a>
       </div>
@@ -157,7 +149,7 @@
         </button>
       </div>
     </div>
-  </footer>
+  </footer>-->
 </div>
 
 <div id="consent" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false"
@@ -169,13 +161,15 @@
       </div>
       <div class="modal-body">
         <p>
-          Por favor, lea cuidadosamente la siguiente información. Recomendamos que guarde una captura de esta página.
+          Por favor, lea cuidadosamente la siguiente información. Recomendamos que guarde una captura de esta
+          página.
         </p>
 
         <h4>¿Quiénes son los investigadores?</h4>
 
         <p>
-          Los investigadores detrás de este trabajo son Luis Chiruzzo, Santiago Castro, Santiago Góngora, Aiala Rosá,
+          Los investigadores detrás de este trabajo son Luis Chiruzzo, Santiago Castro, Santiago Góngora,
+          Aiala Rosá,
           Julie-Anne Meaney y Rada Mihalcea.
         </p>
 
@@ -193,31 +187,38 @@
         <h4>¿Estoy obligado a participar?</h4>
 
         <p>
-          No. La participación en este estudio es enteramente voluntaria. Puede darse de baja del estudio en cualquier
-          momento, sin dar ninguna explicación. Sus derechos no se verán afectados. Si desea darse de baja del estudio,
-          por favor contáctenos a <a href="mailto:haha@fing.edu.uy">haha@fing.edu.uy</a>. No utilizaremos sus datos en
-          ninguna publicación o presentaciones si usted se dio de baja del estudio. Sin embargo, mantendremos una copia
+          No. La participación en este estudio es enteramente voluntaria. Puede darse de baja del estudio en
+          cualquier
+          momento, sin dar ninguna explicación. Sus derechos no se verán afectados. Si desea darse de baja del
+          estudio,
+          por favor contáctenos a <a href="mailto:haha@fing.edu.uy">haha@fing.edu.uy</a>. No utilizaremos sus
+          datos en
+          ninguna publicación o presentaciones si usted se dio de baja del estudio. Sin embargo, mantendremos
+          una copia
           del formulario de consentimiento original y de su pedido para darse de baja.
         </p>
 
         <h4>¿Hay algún riesgo asociado con formar parte de este estudio?</h4>
 
         <p>
-          No hay riesgos significativos asociados con la participación. Sin embargo, algunos de los textos pueden llegar
+          No hay riesgos significativos asociados con la participación. Sin embargo, algunos de los textos
+          pueden llegar
           a ser ofensivos. Si en cualquier momento desea darse de baja, por favor no dude en hacerlo.
         </p>
 
         <h4>¿Hay algún beneficio asociado con formar parte de este estudio?</h4>
 
         <p>
-          No hay beneficios significativos por formar parte del estudio, pero podría encontrar algunos textos graciosos.
+          No hay beneficios significativos por formar parte del estudio, pero podría encontrar algunos textos
+          graciosos.
         </p>
 
         <h4>¿Cómo puedo contactarlos?</h4>
 
         <p>
           Si tiene más preguntas acerca del estudio, o desea formular una queja sobre él, por favor
-          <a href="mailto:haha@fing.edu.uy">haha@fing.edu.uy</a>. Cuando nos contacte, por favor indique el título del
+          <a href="mailto:haha@fing.edu.uy">haha@fing.edu.uy</a>. Cuando nos contacte, por favor indique el
+          título del
           estudio y la naturaleza de su queja.
         </p>
 
@@ -227,7 +228,8 @@
           <div class="checkbox">
             <label>
               <input type="checkbox" required/>
-              Confirmo que he leído y entendido la información indicada arriba, que he tenido la oportunidad de realizar
+              Confirmo que he leído y entendido la información indicada arriba, que he tenido la
+              oportunidad de realizar
               preguntas, y de que las preguntas que he tenido han sido respondidas satisfactoriamente.
             </label>
           </div>
@@ -235,7 +237,8 @@
           <div class="checkbox">
             <label>
               <input type="checkbox" required/>
-              Entiendo que mi participación es voluntaria, y que puedo darme de baja en cualquier momento sin dar una
+              Entiendo que mi participación es voluntaria, y que puedo darme de baja en cualquier momento
+              sin dar una
               razón. Darme de baja no afectará mis derechos.
             </label>
           </div>
@@ -243,7 +246,8 @@
           <div class="checkbox">
             <label>
               <input type="checkbox" required/>
-              Doy mi consentimiento para que mis datos anonimizados se utilicen en publicaciones y presentaciones
+              Doy mi consentimiento para que mis datos anonimizados se utilicen en publicaciones y
+              presentaciones
               académicas.
             </label>
           </div>
@@ -295,7 +299,8 @@
         <form method="post" action="prolific-finish">
           <div class="form-group">
             <label for="comments" class="control-label">Comentarios</label>
-            <textarea id="comments" name="comments" class="form-control" rows="3" maxlength="300"></textarea>
+            <textarea id="comments" name="comments" class="form-control" rows="3"
+                      maxlength="300"></textarea>
           </div>
           <button id="prolific-finish" type="submit" class="btn btn-primary">Finalizar</button>
         </form>
@@ -317,7 +322,8 @@
         <h4>Instrucciones</h4>
 
         <p>
-          Dado el tweet que se muestra en pantalla, ¿lo consideras humorístico? En caso positivo, pon el cursor sobre
+          Dado el tweet que se muestra en pantalla, ¿lo consideras humorístico? En caso positivo, pon el
+          cursor sobre
           el botón "Sí", y elige qué tan gracioso le parece del 1 al 5 (representado por los 5 emojis).
           En caso que no, elige en "No".
           <span id="skip-instructions">Si no estás seguro, poné "Saltear".</span>
@@ -325,9 +331,12 @@
         </p>
 
         <p>
-          En un segundo nivel de importancia, también nos interesa saber si los tweets son ofensivos. En caso de que
-          consideres que un tweet lo es, tilda la casilla de verificación que dice "Ofensivo" antes de indicar si es
-          humorístico o no. Recuerda que puede ocurrir que un texto sea ofensivo y a la vez tenga la intención de ser
+          En un segundo nivel de importancia, también nos interesa saber si los tweets son ofensivos. En caso
+          de que
+          consideres que un tweet lo es, tilda la casilla de verificación que dice "Ofensivo" antes de indicar
+          si es
+          humorístico o no. Recuerda que puede ocurrir que un texto sea ofensivo y a la vez tenga la intención
+          de ser
           humorístico.
         </p>
 
@@ -336,7 +345,8 @@
         <h4>Sobre el proyecto</h4>
 
         <p>
-          El fin de esta página es armar una base de datos de opiniones sobre humor en español, como parte de una
+          El fin de esta página es armar una base de datos de opiniones sobre humor en español, como parte de
+          una
           investigación sobre
           <a href="https://es.wikipedia.org/wiki/Humor_computacional" target="_blank">Humor Computacional</a>.
         </p>
@@ -345,17 +355,20 @@
           <a href="https://www.fing.edu.uy/inco/grupos/pln/haha/" target="_blank">la competencia HAHA 2021 (3ª
             edición)</a>,
           organizada por el
-          <a href="https://www.fing.edu.uy/inco/grupos/pln" target="_blank">Grupo de Procesamiento de Lenguaje Natural
+          <a href="https://www.fing.edu.uy/inco/grupos/pln" target="_blank">Grupo de Procesamiento de Lenguaje
+            Natural
             (PLN)</a> de la
           <a href="https://www.fing.edu.uy" target="_blank">Facultad de Ingeniería</a> de la
           <a href="http://www.universidad.edu.uy/" target="_blank">Universidad de la República</a>, Uruguay.
-          La competencia consiste, entre otras cosas, en predecir si un tweet es humorístico o no, y también decir qué
+          La competencia consiste, entre otras cosas, en predecir si un tweet es humorístico o no, y también
+          decir qué
           tan gracioso le puede resultar a la gente 😲
           <span id="optional-participation-instructions">Si te interesa, podés participar.</span>
         </p>
         <p>
           El código de este proyecto
-          <a href="https://github.com/pln-fing-udelar/pghumor-clasificahumor" target="_blank">se encuentra disponible
+          <a href="https://github.com/pln-fing-udelar/pghumor-clasificahumor" target="_blank">se encuentra
+            disponible
             en GitHub</a>.
         </p>
         <p>
@@ -372,16 +385,19 @@
           <a href="https://github.com/pln-fing-udelar/pghumor" target="_blank">pgHumor</a>
           – Universidad de la República, Uruguay, apoyados por la
           <a href="http://www.anii.org.uy" target="_blank">ANII</a>. En 2018 se volvió a lanzar para tener más
-          anotaciones y de mejor calidad 😊, para la 1ª edición de la competencia HAHA. En 2019 se hizo lo mismo pero
+          anotaciones y de mejor calidad 😊, para la 1ª edición de la competencia HAHA. En 2019 se hizo lo
+          mismo pero
           para la 2ª edición de la competencia HAHA.
         </p>
 
         <h4>Cookies</h4>
 
         <p>
-          Este sitio usa cookies para hacer un seguimiento de qué tweets ya clasificó cada persona, y evitar mostrar
+          Este sitio usa cookies para hacer un seguimiento de qué tweets ya clasificó cada persona, y evitar
+          mostrar
           repetidos. También usa <a href="https://analytics.google.com/analytics/web/" target="_blank">Google
-          Analytics</a> para conocer información general y agregada sobre los anotadores (como país, idioma, género y
+          Analytics</a> para conocer información general y agregada sobre los anotadores (como país, idioma,
+          género y
           rango etario).
         </p>
       </div>

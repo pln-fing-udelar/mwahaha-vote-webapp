@@ -5,4 +5,4 @@ COPY pyproject.toml uv.lock README.md ./
 COPY mwahahavote mwahahavote
 RUN uv sync --locked
 EXPOSE 5000
-CMD ["uv", "run", "flask", "run", "-h", "0.0.0.0"]
+CMD ["uv", "run", "flask", "run", "-h", "::", "--debug"]
