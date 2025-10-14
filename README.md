@@ -16,6 +16,15 @@ You need Docker and Docker Compose for this. To run the Flask development server
 docker compose up --build
 ```
 
+### uv
+
+```bash
+UV_DEFAULT_INDEX=https://pypi.org/simple uv sync --managed-python --locked
+```
+
+TODO: explain the problem with sqlite3.
+TODO: explain that if `mycli` gives Unicode issues, use `mysql` from the Docker container.
+
 ### Pipenv
 
 1. Install the Python and MySQL library headers. In Ubuntu, it'd be:
@@ -54,7 +63,7 @@ docker compose up --build
 ## Tweet data
 
 You need data to mess with.
-There's [a dump with the downloaded tweets in the HUMOR repo](https://github.com/pln-fing-udelar/humor/blob/master/extraction/dump-tweets-without-votes.sql).
+There's [a dump with the downloaded tweets in the HUMOR repo](https://github.com/pln-fing-udelar/humor/blob/b8943a40548db7cb09f614aa3e795480d0a85c8c/extraction/dump-tweets-without-votes.sql).
 
 First, create a database with the options `DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci`. It could be created
 with [schema.sql](schema.sql):
@@ -132,24 +141,25 @@ Then you can do some testing, such as running a load test:
 To back up the data in production:
 
 ```bash
-docker exec mwahahavote_database_1 mysqldump -u root -p pghumor > dump.sql
+docker exec mwahaha-vote-webapp-database-1 mysqldump -u root -p pghumor > dump.sql
 ```
 
 To run a SQL script in production (e.g., to restore some data):
 
 ```bash
-docker exec -i mwahahavote_database_1 mysql -u root -p pghumor < dump.sql
+docker exec -i mwahaha-vote-webapp-database-1 mysql -u root -p pghumor < dump.sql
 ```
 
 To open a mysql interactive session in production:
 
 ```bash
-docker exec -i mwahahavote_database_1 mysql -u root -p pghumor
+docker exec -i mwahaha-vote-webapp-database-1 mysql -u root -p pghumor
 ```
 
 For these commands, using directly Docker Compose (`docker compose exec database`) is also supported instead of the
-Docker CLI directly (`docker exec mwahahavote_database_1`). However, the extra flags needed for each of them change
-as Docker Compose `exec` subcommand uses a pseudo TTY, and it's interactive by default while the Docker CLI `exec`
+Docker CLI directly (`docker exec mwahaha-vote-webapp-database-1`).
+However, the extra flags needed for each of them change as Docker Compose `exec` subcommand uses a pseudo TTY,
+and it's interactive by default while the Docker CLI `exec`
 subcommand doesn't.
 
 ## Production setup
