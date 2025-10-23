@@ -48,9 +48,12 @@ def main() -> None:
 
         with zipfile.ZipFile(path) as zip_file:
             extract_dir = os.path.splitext(path)[0]
+
             if os.path.exists(extract_dir):
                 shutil.rmtree(extract_dir)
+
             zip_file.extractall(extract_dir)
+
             for filename in sorted(zip_file.namelist()):
                 filename = filename.lower()
                 task, ext = os.path.splitext(filename)
