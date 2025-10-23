@@ -1,47 +1,53 @@
-CREATE DATABASE pghumor DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE mwahaha;
 
-USE pghumor;
+USE mwahaha;
 
-CREATE TABLE accounts
+CREATE TABLE prompts
 (
-    account_id BIGINT UNSIGNED NOT NULL,
-    name       VARCHAR(100),
-    followers  BIGINT,
-    PRIMARY KEY (account_id)
+    prompt_id VARCHAR(10)    NOT NULL,
+    word1     VARCHAR(50),
+    word2     VARCHAR(50),
+    headline  VARCHAR(2048),
+    url       VARCHAR(2048),
+    prompt    VARCHAR(256),
+    PRIMARY KEY (prompt_id)
 ) ENGINE InnoDB;
 
-CREATE TABLE tweets
+CREATE TABLE systems
 (
-    tweet_id   BIGINT UNSIGNED                   NOT NULL,
-    text       VARCHAR(1120)                     NOT NULL, # 1120 = max length of a tweet (280) * max length in bytes of a utf8 code point (4).
-    account_id BIGINT UNSIGNED                   NOT NULL,
-    origin     ENUM ('hose', 'humorous account') NOT NULL,
-    lang       ENUM ('es', 'en')                 NOT NULL,
-    weight     TINYINT UNSIGNED DEFAULT 1,
-    PRIMARY KEY (tweet_id),
-    FOREIGN KEY (account_id) REFERENCES accounts (account_id)
+    system_id VARCHAR(64) NOT NULL,
+    PRIMARY KEY (system_id)
+) ENGINE InnoDB;
+
+CREATE TABLE outputs
+(
+    prompt_id VARCHAR(10)   NOT NULL,
+    system_id VARCHAR(64)   NOT NULL,
+    text      VARCHAR(2048) NOT NULL,
+    PRIMARY KEY (prompt_id, system_id),
+    INDEX (prompt_id),
+    INDEX (system_id),
+    FOREIGN KEY (prompt_id) REFERENCES prompts (prompt_id),
+    FOREIGN KEY (system_id) REFERENCES systems (system_id)
 ) ENGINE InnoDB;
 
 CREATE TABLE votes
 (
-    tweet_id     BIGINT UNSIGNED NOT NULL,
-    session_id   CHAR(100)       NOT NULL,
-    vote         CHAR(1)         NOT NULL,
-    date         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_offensive BOOL      DEFAULT 0,
-    PRIMARY KEY (tweet_id, session_id),
-    INDEX (tweet_id),
+    prompt_id    VARCHAR(10) NOT NULL,
+    system_id_a  VARCHAR(64) NOT NULL,
+    system_id_b  VARCHAR(64) NOT NULL,
+    session_id   CHAR(100)   NOT NULL,
+    vote         CHAR(1)     NOT NULL,
+    date         TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    is_offensive BOOL        DEFAULT 0,
+    PRIMARY KEY (prompt_id, system_id_a, system_id_b, session_id),
+    INDEX (prompt_id, system_id_a, system_id_b),
+    INDEX (prompt_id, system_id_a),
+    INDEX (prompt_id, system_id_b),
+    INDEX (prompt_id),
+    INDEX (system_id_a),
+    INDEX (system_id_b),
     INDEX (session_id),
-    FOREIGN KEY (tweet_id) REFERENCES tweets (tweet_id)
-) ENGINE InnoDB;
-
-# No foreign key between `votes` and `prolific` for `session_id` because there could be no votes, and also the ID may
-# have not consented yet.
-CREATE TABLE prolific
-(
-    session_id CHAR(100) NOT NULL,
-    consent_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    finish_date TIMESTAMP NULL,
-    comments VARCHAR(300) DEFAULT NULL,
-    PRIMARY KEY (session_id)
+    FOREIGN KEY (prompt_id, system_id_a) REFERENCES outputs (prompt_id, system_id),
+    FOREIGN KEY (prompt_id, system_id_b) REFERENCES outputs (prompt_id, system_id)
 ) ENGINE InnoDB;

@@ -6,7 +6,7 @@ from typing import Any
 class ArgumentParserWithDefaults(argparse.ArgumentParser):
     """Custom argument parser that will display the default value for an argument in the help message. """
 
-    _action_defaults_to_ignore = {"help", "store_true", "store_false", "store_const"}
+    _action_defaults_to_ignore = frozenset(("help", "store_true", "store_false", "store_const"))
 
     @staticmethod
     def _is_empty_default(default: Any) -> bool:
