@@ -41,49 +41,48 @@ def main() -> None:
     user = os.path.splitext(os.path.basename(path))[0]
 
     engine = util.create_engine()
-    with engine.begin() as connection:
+    with engine.begin() as connection, zipfile.ZipFile(path) as zip_file:
         connection.execute(
             sqlalchemy.sql.text("INSERT IGNORE INTO systems (system_id) VALUES (:system_id)"), {"system_id": user}
         )
 
-        with zipfile.ZipFile(path) as zip_file:
-            extract_dir = os.path.splitext(path)[0]
+        extract_dir = os.path.splitext(path)[0]
 
-            if os.path.exists(extract_dir):
-                shutil.rmtree(extract_dir)
+        if os.path.exists(extract_dir):
+            shutil.rmtree(extract_dir)
 
-            zip_file.extractall(extract_dir)
+        zip_file.extractall(extract_dir)
 
-            for filename in sorted(zip_file.namelist()):
-                filename = filename.lower()
-                task, ext = os.path.splitext(filename)
+        for filename in sorted(zip_file.namelist()):
+            filename = filename.lower()
+            task, ext = os.path.splitext(filename)
 
-                if ext == ".tsv":
-                    submission_path = os.path.join(extract_dir, filename)
-                    if os.path.isfile(submission_path):
-                        if task not in get_args(Task):
-                            raise ValueError(f"Unknown task '{task}' from the filename '{filename}'.")
+            if ext == ".tsv":
+                submission_path = os.path.join(extract_dir, filename)
+                if os.path.isfile(submission_path):
+                    if task not in get_args(Task):
+                        raise ValueError(f"Unknown task '{task}' from the filename '{filename}'.")
 
-                        task = cast(Task, task)
+                    task = cast(Task, task)
 
-                        submission_df = read_submission(submission_path)
+                    submission_df = read_submission(submission_path)
 
-                        cursor = connection.execute(
-                            sqlalchemy.sql.text("SELECT prompt_id FROM prompts WHERE prompt_id LIKE :prompt_id_like"),
-                            {"prompt_id_like": task_to_id_sql_like_expression(task)},
+                    cursor = connection.execute(
+                        sqlalchemy.sql.text("SELECT prompt_id FROM prompts WHERE prompt_id LIKE :prompt_id_like"),
+                        {"prompt_id_like": task_to_id_sql_like_expression(task)},
+                    )
+                    reference_prompt_ids = frozenset(t[0] for t in cursor.fetchall())
+                    submitted_prompt_ids = frozenset(submission_df.index)
+
+                    if submitted_prompt_ids != reference_prompt_ids:
+                        raise ValueError(
+                            f"Submitted prompt IDs do not match reference for the task '{task}'."
+                            f" Missing IDs: {reference_prompt_ids - submitted_prompt_ids}."
+                            f" Extra IDs: {submitted_prompt_ids - reference_prompt_ids}."
                         )
-                        reference_prompt_ids = frozenset(t[0] for t in cursor.fetchall())
-                        submitted_prompt_ids = frozenset(submission_df.index)
 
-                        if submitted_prompt_ids != reference_prompt_ids:
-                            raise ValueError(
-                                f"Submitted prompt IDs do not match reference for the task '{task}'."
-                                f" Missing IDs: {reference_prompt_ids - submitted_prompt_ids}."
-                                f" Extra IDs: {submitted_prompt_ids - reference_prompt_ids}."
-                            )
-
-                        submission_df["system_id"] = user
-                        submission_df.to_sql("outputs", connection, if_exists="append")
+                    submission_df["system_id"] = user
+                    submission_df.to_sql("outputs", connection, if_exists="append")
 
 
 if __name__ == "__main__":
