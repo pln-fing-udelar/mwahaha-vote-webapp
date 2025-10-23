@@ -83,7 +83,7 @@ the [`docker-compose.override.yml`](docker-compose.override.yml) file.
 To load a database dump, run in another shell:
 
 ```bash
-mysql -u $USER -p pghumor < dump.sql
+mysql -u $USER -p mwahaha < dump.sql
 ```
 
 You can prefix `docker compose exec database` to the command to run it in the database Docker container. Or you can use
@@ -98,7 +98,7 @@ mycli -h "$DB_IP_ADDRESS" -u root -p
 # You can also set the password in the command like: -p$PASSWORD
 ```
 
-You can append a database name at the end of the command (e.g., `pghumor`) to select it when starting the session.
+You can append a database name at the end of the command (e.g., `mwahaha`) to select it when starting the session.
 
 ### Useful SQL commands
 
@@ -108,10 +108,10 @@ List the databases:
 SHOW DATABASES;
 ```
 
-List `pghumor` database tables:
+List `mwahaha` database tables:
 
 ```sql
-USE pghumor;
+USE mwahaha;
 SHOW tables;
 ```
 
@@ -146,19 +146,19 @@ Then you can do some testing, such as running a load test:
 To back up the data in production:
 
 ```bash
-docker exec mwahaha-vote-webapp-database-1 mysqldump -u root -p pghumor > dump.sql
+docker exec mwahaha-vote-webapp-database-1 mysqldump -u root -p mwahaha > dump.sql
 ```
 
 To run a SQL script in production (e.g., to restore some data):
 
 ```bash
-docker exec -i mwahaha-vote-webapp-database-1 mysql -u root -p pghumor < dump.sql
+docker exec -i mwahaha-vote-webapp-database-1 mysql -u root -p mwahaha < dump.sql
 ```
 
 To open a mysql interactive session in production:
 
 ```bash
-docker exec -i mwahaha-vote-webapp-database-1 mysql -u root -p pghumor
+docker exec -i mwahaha-vote-webapp-database-1 mysql -u root -p mwahaha
 ```
 
 For these commands, using directly Docker Compose (`docker compose exec database`) is also supported instead of the
