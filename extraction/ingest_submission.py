@@ -20,7 +20,7 @@ def read_submission(path: str) -> pd.DataFrame:
     return df
 
 
-def task_to_id_like_expression(task: Task) -> str:
+def task_to_id_sql_like_expression(task: Task) -> str:
     match task:
         case "task-a-en":
             return r"en\_____"
@@ -70,7 +70,7 @@ def main() -> None:
 
                         cursor = connection.execute(
                             sqlalchemy.sql.text("SELECT prompt_id FROM prompts WHERE prompt_id LIKE :prompt_id_like"),
-                            {"prompt_id_like": task_to_id_like_expression(task)},
+                            {"prompt_id_like": task_to_id_sql_like_expression(task)},
                         )
                         reference_prompt_ids = frozenset(t[0] for t in cursor.fetchall())
                         submitted_prompt_ids = frozenset(submission_df.index)
