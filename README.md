@@ -30,6 +30,11 @@ TODO: explain if VPN then create network once w/o VPN, then it should be all goo
 ALTER TABLE votes ADD is_offensive BOOL DEFAULT 0;
 ```
 
+```bash
+mkdir prompts  # Add the prompts here.
+mkdir submissions
+```
+
 ### Pipenv
 
 1. Install the Python and MySQL library headers. In Ubuntu, it'd be:

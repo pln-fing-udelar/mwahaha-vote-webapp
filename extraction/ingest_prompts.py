@@ -4,12 +4,11 @@ import os
 
 import pandas as pd
 
-from . import util
+from extraction import util
 
 
 def read_prompt_file(path: str) -> pd.DataFrame:
-    # noinspection PyTypeChecker
-    df = pd.read_csv(path, delimiter="\t", quoting=csv.QUOTE_NONE, index_col="id", na_values="-")
+    df = pd.read_csv(path, delimiter="\t", quoting=csv.QUOTE_NONE, index_col="id", na_values="-")  # type: ignore
     df.index.rename("prompt_id", inplace=True)
     return df
 
