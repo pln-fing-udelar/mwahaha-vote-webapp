@@ -4,9 +4,9 @@ Website to crowd-annotate ...
 
 ## Setup
 
-There are two ways to run this code after cloning the repo: with Docker or via Pipenv. The first one is the recommended
-way to get started (or to just use for the database), and the second one is for the extraction and analysis part, and
-for advanced usage (such as debugging with an IDE).
+There are two ways to run this code after cloning the repo: with Docker or via uv.
+The first one is the recommended way to get started (or to just use for the database),
+and the second one is for the extraction and analysis part, and for advanced usage (such as debugging with an IDE).
 
 ### Docker
 
@@ -71,7 +71,7 @@ You need data to mess with.
 There's [a dump with the downloaded tweets in the HUMOR repo](https://github.com/pln-fing-udelar/humor/blob/b8943a40548db7cb09f614aa3e795480d0a85c8c/extraction/dump-tweets-without-votes.sql).
 
 First, create a database with the options `DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci`. It could be created
-with [schema.sql](schema.sql):
+with [schema.sql](db/schema.sql):
 
 ```bash
 mysql -u $USER -p < schema.sql
