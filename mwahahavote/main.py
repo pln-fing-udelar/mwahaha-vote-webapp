@@ -1,13 +1,12 @@
-import http
 import itertools
 import os
 import random
 import string
+from collections.abc import Iterable
 from datetime import timedelta
-from typing import Iterable, Tuple
 
 import sentry_sdk
-from flask import Flask, Response, jsonify, redirect, render_template, request, send_from_directory
+from flask import Flask, Response, jsonify, render_template, request, send_from_directory
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 from mwahahavote import database
@@ -33,10 +32,9 @@ app = _create_app()
 
 
 def _stringify_tweet_id(tweet: TYPE_TWEET) -> None:
-    """
-    Converts the tweet field "id" to a string.
+    """Converts the tweet field "id" to a string.
 
-    In JavaScript, the string format should be used fro the tweet IDs instead of numbers.
+    In JavaScript, the string format should be used from the tweet IDs instead of numbers.
     See https://developer.twitter.com/en/docs/basics/twitter-ids.
     """
     tweet["id"] = str(tweet["id"])
@@ -92,8 +90,9 @@ def vote_and_get_new_tweet_route() -> Response:
 
     ignore_tweet_ids = request.form.getlist("ignore_tweet_ids[]")
 
-    tweets = itertools.chain(database.random_least_voted_unseen_tweets(session_id, 1, ignore_tweet_ids),
-                             database.random_tweets(1))
+    tweets = itertools.chain(
+        database.random_least_voted_unseen_tweets(session_id, 1, ignore_tweet_ids), database.random_tweets(1)
+    )
 
     tweet = next(iter(tweets), {})
 
@@ -112,35 +111,25 @@ def vote_count_route() -> Response:
     return jsonify(database.vote_count_without_skips())
 
 
-@app.route("/prolific-consent", methods=["POST"])
-def prolific_consent_route() -> Tuple[str, int]:
-    database.prolific_consent(_get_session_id())
-    return "", http.HTTPStatus.NO_CONTENT
-
-
-@app.route("/prolific-finish", methods=["POST"])
-def prolific_finish_route() -> Response:
-    database.prolific_finish(_get_session_id(), request.form.get("comments", ""))
-    return redirect("https://app.prolific.co/submissions/complete?cc=5E395F77")
-
-
 @app.route("/stats")
-def stats_route() -> Response:
+def stats_route() -> str:
     stats = database.stats()
 
     stats["votes-not-consider-test"] = stats["votes"] - sum(stats["test-tweets-vote-count"])
 
     stats["test-tweets-vote-count"] = ", ".join(str(c) for c in stats["test-tweets-vote-count"])
 
-    stats["histogram"] = [["Cantidad de votos", "Cantidad de tweets"]] + \
-                         [[str(a), b] for a, b in stats["histogram"].items()]
+    stats["histogram"] = [["Cantidad de votos", "Cantidad de tweets"]] + [
+        [str(a), b] for a, b in stats["histogram"].items()
+    ]
 
     stats["votes-per-category"]["No humor"] = stats["votes-per-category"]["x"]
     del stats["votes-per-category"]["x"]
     stats["votes-per-category"]["Saltear"] = stats["votes-per-category"]["n"]
     del stats["votes-per-category"]["n"]
-    stats["votes-per-category"] = [["Voto", "Cantidad de tweets"]] + \
-                                  [[str(a), b] for a, b in stats["votes-per-category"].items()]
+    stats["votes-per-category"] = [["Voto", "Cantidad de tweets"]] + [
+        [str(a), b] for a, b in stats["votes-per-category"].items()
+    ]
 
     return render_template("stats.html", stats=stats)
 
