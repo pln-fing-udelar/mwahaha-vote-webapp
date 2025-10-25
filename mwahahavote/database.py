@@ -113,9 +113,8 @@ engine = create_engine()
 def random_least_voted_unseen_tweets(
     session_id: str, batch_size: int, ignore_tweet_ids: Iterable[TweetIdType] | None = None
 ) -> Iterator[TweetType]:
-    """
-    Returns a random list of the least voted unseen tweets (by the session) with size batch_size, ignoring certain list
-    of tweet IDs.
+    """Returns a random list of the least voted unseen tweets (by the session) with size batch_size, ignoring certain
+    list of tweet IDs.
 
     If there are fewer than batch_size tweets that hold the condition, the response is padded with random tweets.
 
@@ -141,8 +140,7 @@ def random_least_voted_unseen_tweets(
 
 
 def random_tweets(batch_size: int) -> Iterator[TweetType]:
-    """
-    Returns a random list tweets with size batch_size.
+    """Returns a random list tweets with size batch_size.
 
     Each tweet is represented as a dictionary with the fields "id" and "text".
 
@@ -156,8 +154,7 @@ def random_tweets(batch_size: int) -> Iterator[TweetType]:
 
 
 def add_vote(session_id: str, tweet_id: TweetIdType, vote: str, is_offensive: bool) -> None:
-    """
-    Adds a vote for a tweet by a determined session.
+    """Adds a vote for a tweet by a determined session.
 
     If the vote is not one of `VOTE_CHOICES`, it will do nothing. If the session had already voted, the new vote will be
     ignored.
