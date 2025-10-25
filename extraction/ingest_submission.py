@@ -9,7 +9,7 @@ from typing import Literal, cast, get_args
 import pandas as pd
 import sqlalchemy
 
-from extraction import util
+import mwahahavote.database
 
 Task = Literal["task-a-en", "task-a-es", "task-a-zh", "task-b1", "task-b2"]
 
@@ -40,7 +40,7 @@ def main() -> None:
     path = sys.argv[1]
     user = os.path.splitext(os.path.basename(path))[0]
 
-    engine = util.create_engine()
+    engine = mwahahavote.database.create_engine()
     with engine.begin() as connection, zipfile.ZipFile(path) as zip_file:
         connection.execute(
             sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"), {"system_id": user}

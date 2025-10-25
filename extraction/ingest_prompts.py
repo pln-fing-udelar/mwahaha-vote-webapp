@@ -4,7 +4,7 @@ import os
 
 import pandas as pd
 
-from extraction import util
+import mwahahavote.database
 
 
 def read_prompt_file(path: str) -> pd.DataFrame:
@@ -24,7 +24,7 @@ def read_prompt_files(dir_: str) -> pd.DataFrame:
 def main() -> None:
     print(
         "Number of rows affected:",
-        read_prompt_files("prompts/").to_sql("prompts", util.create_engine(), if_exists="append"),
+        read_prompt_files("prompts/").to_sql("prompts", mwahahavote.database.create_engine(), if_exists="append"),
     )
 
 
