@@ -7,8 +7,8 @@ from typing import Any
 import sqlalchemy
 import sqlalchemy.sql
 
-type TweetType = MutableMapping[str, Any]
-type TweetIdType = int | str
+type Tweet = MutableMapping[str, Any]
+type TweetId = int | str
 
 VOTE_CHOICES = frozenset(("1", "2", "3", "4", "5", "x", "n"))
 
@@ -111,8 +111,8 @@ engine = create_engine()
 
 
 def random_least_voted_unseen_tweets(
-    session_id: str, batch_size: int, ignore_tweet_ids: Iterable[TweetIdType] | None = None
-) -> Iterator[TweetType]:
+    session_id: str, batch_size: int, ignore_tweet_ids: Iterable[TweetId] | None = None
+) -> Iterator[Tweet]:
     """Returns a random list of the least voted unseen tweets (by the session) with size batch_size, ignoring certain
     list of tweet IDs.
 
@@ -139,7 +139,7 @@ def random_least_voted_unseen_tweets(
             yield {"id": id_, "text": text}
 
 
-def random_tweets(batch_size: int) -> Iterator[TweetType]:
+def random_tweets(batch_size: int) -> Iterator[Tweet]:
     """Returns a random list tweets with size batch_size.
 
     Each tweet is represented as a dictionary with the fields "id" and "text".
@@ -153,7 +153,7 @@ def random_tweets(batch_size: int) -> Iterator[TweetType]:
             yield {"id": id_, "text": text}
 
 
-def add_vote(session_id: str, tweet_id: TweetIdType, vote: str, is_offensive: bool) -> None:
+def add_vote(session_id: str, tweet_id: TweetId, vote: str, is_offensive: bool) -> None:
     """Adds a vote for a tweet by a determined session.
 
     If the vote is not one of `VOTE_CHOICES`, it will do nothing. If the session had already voted, the new vote will be
@@ -186,7 +186,7 @@ def vote_count_without_skips() -> int:
         return connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True, "pass_test": False}).fetchone()[0]  # type: ignore
 
 
-def stats() -> TweetType:
+def stats() -> Tweet:
     """Returns the vote count, vote count without skips, vote count histogram and votes per category."""
     with engine.connect() as connection:
         result: dict[str, Any] = {
