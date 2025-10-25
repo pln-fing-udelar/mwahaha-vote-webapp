@@ -1,9 +1,10 @@
 let $star;
 let $homeContent;
 let $tweet;
+let $tweet2;
 let $humor;
 let $votesAndToolbox;
-let $toolbox;
+// let $toolbox;
 let $voteClass;
 let $vote1;
 let $vote2;
@@ -78,7 +79,7 @@ function setupElements() {
     $tweet2 = $("#tweet2-text");
     $humor = $("#humor");
     $votesAndToolbox = $("#votes,#toolbox");
-    $toolbox = $("#toolbox");
+    // $toolbox = $("#toolbox");
     $voteClass = $(".vote");
     $vote1 = $("#vote-1");
     $vote2 = $("#vote-2");
@@ -231,16 +232,16 @@ function removeNonWords(text) {
 }
 
 function moveToolboxIfOutside() {
-    const x = $toolbox[0].getBoundingClientRect().x;
-    if (x < 0) {
-        const translation = -x + 10;
-        addPxToLeft($toolbox, translation);
-        addPxToLeft($vote1, translation);
-        addPxToLeft($vote2, translation);
-        addPxToLeft($vote3, translation);
-        addPxToLeft($vote4, translation);
-        addPxToLeft($vote5, translation);
-    }
+    // const x = $toolbox[0].getBoundingClientRect().x;
+    // if (x < 0) {
+    //     const translation = -x + 10;
+    //     addPxToLeft($toolbox, translation);
+    //     addPxToLeft($vote1, translation);
+    //     addPxToLeft($vote2, translation);
+    //     addPxToLeft($vote3, translation);
+    //     addPxToLeft($vote4, translation);
+    //     addPxToLeft($vote5, translation);
+    // }
 }
 
 function addPxToLeft(element, translation) {
