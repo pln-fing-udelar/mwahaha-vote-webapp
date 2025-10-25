@@ -100,14 +100,6 @@ STATEMENT_HISTOGRAM = sqlalchemy.sql.text(
 )
 STATEMENT_VOTE_COUNT_PER_CATEGORY = sqlalchemy.sql.text("SELECT vote, COUNT(*) FROM votes GROUP BY vote ORDER BY vote")
 
-STATEMENT_PROLIFIC_CONSENT = sqlalchemy.sql.text(
-    "INSERT INTO prolific (session_id) VALUES (:session_id) ON DUPLICATE KEY UPDATE session_id = session_id"
-)
-
-STATEMENT_PROLIFIC_FINISH = sqlalchemy.sql.text(
-    "UPDATE prolific SET finish_date = :finish_date,     comments = :comments WHERE session_id = :session_id"
-)
-
 
 def create_engine() -> sqlalchemy.Engine:
     return sqlalchemy.create_engine(

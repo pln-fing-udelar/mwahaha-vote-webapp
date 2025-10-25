@@ -33,24 +33,18 @@ const voteCodeToText = {
 let tweets = [];
 let index = 0;
 
-function getParameterByName(name, url = window.location.href) {
-    name = name.replace(/[\[\]]/g, "\\$&");
-    const regex = new RegExp(`[?&]${name}(=([^&#]*)|&|#|$)`);
-    const results = regex.exec(url);
-    if (!results) {
-        return null;
-    }
-    if (!results[2]) {
-        return "";
-    }
-    return decodeURIComponent(results[2].replace(/\+/g, " "));
-}
-
-const PROLIFIC_TASK_TWEET_COUNT = 200;
-
-const prolificId = getParameterByName("PROLIFIC_PID");
-const isAProlificSession = Boolean(prolificId);
-let voteCount = 0;
+// function getParameterByName(name, url = window.location.href) {
+//     name = name.replace(/[\[\]]/g, "\\$&");
+//     const regex = new RegExp(`[?&]${name}(=([^&#]*)|&|#|$)`);
+//     const results = regex.exec(url);
+//     if (!results) {
+//         return null;
+//     }
+//     if (!results[2]) {
+//         return "";
+//     }
+//     return decodeURIComponent(results[2].replace(/\+/g, " "));
+// }
 
 $(document).ready(main);
 
@@ -62,7 +56,6 @@ function main() {
     getRandomTweets();
     setUiListeners();
     moveToolboxIfOutside();
-    setupProlificSessionIfNeeded();
 }
 
 function setupSentry() {
@@ -180,7 +173,6 @@ function setUiListeners() {
     $("#answers button").mouseup(e => $(e.currentTarget).blur());
 
     $consentForm.submit(e => {
-        localStorage.setItem(`consent-prolific-id-${prolificId}`, "done");
         $consent.modal("hide");
 
         $("#about").modal("show");
@@ -210,11 +202,6 @@ function vote(voteOption) {
     $votesAndToolbox.fadeOut();
 
     $isOffensive.prop("checked", false);
-
-    if (isAProlificSession) {
-        voteCount++;
-        updateVoteCount();
-    }
 }
 
 function toastText(voteOption) {
@@ -244,35 +231,6 @@ function moveToolboxIfOutside() {
     // }
 }
 
-function addPxToLeft(element, translation) {
-    element.css("left", `${(parseInt(element.css("left")) + translation)}px`);
-}
-
-function updateVoteCount() {
-    if (voteCount === PROLIFIC_TASK_TWEET_COUNT) {
-        $("#finished").modal("show");
-    } else {
-        voteCount %= PROLIFIC_TASK_TWEET_COUNT;
-        $voteCount.text(`Progreso: ${voteCount}/${PROLIFIC_TASK_TWEET_COUNT}`);
-    }
-}
-
-function setupProlificSessionIfNeeded() {
-    if (isAProlificSession) {
-        $skip.parent().css("display", "none");
-        $("#skip-instructions").css("display", "none");
-        $("#optional-participation-instructions").css("display", "none");
-
-        if (localStorage.getItem(`consent-prolific-id-${prolificId}`) !== "done") {
-            $("#prolific-id").val(prolificId);
-            $consent.modal("show");
-            $("#consent-continue").click(() => $.post("prolific-consent"));
-        }
-
-        $.getJSON("session-vote-count", count => {
-            voteCount = count;
-            updateVoteCount();
-            $voteCount.css("display", "block");
-        });
-    }
-}
+// function addPxToLeft(element, translation) {
+//     element.css("left", `${(parseInt(element.css("left")) + translation)}px`);
+// }

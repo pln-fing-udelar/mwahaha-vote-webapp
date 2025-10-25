@@ -50,10 +50,7 @@ def _generate_id() -> str:  # From https://stackoverflow.com/a/2257449/1165181
 
 
 def _get_session_id() -> str:
-    if prolific_id := request.args.get("PROLIFIC_PID"):
-        return f"prolific-id-{prolific_id}"
-    else:
-        return request.cookies.get("id") or _generate_id()
+    return request.cookies.get("id") or _generate_id()
 
 
 @app.after_request
