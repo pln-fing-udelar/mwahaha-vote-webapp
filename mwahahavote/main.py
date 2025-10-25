@@ -10,7 +10,7 @@ from flask import Flask, Response, jsonify, render_template, request, send_from_
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 from mwahahavote import database
-from mwahahavote.database import TYPE_TWEET
+from mwahahavote.database import TweetType
 
 REQUEST_TWEET_BATCH_SIZE = 3
 
@@ -31,7 +31,7 @@ sentry_sdk.init(integrations=[FlaskIntegration()], traces_sample_rate=1.0)
 app = _create_app()
 
 
-def _stringify_tweet_id(tweet: TYPE_TWEET) -> None:
+def _stringify_tweet_id(tweet: TweetType) -> None:
     """Converts the tweet field "id" to a string.
 
     In JavaScript, the string format should be used from the tweet IDs instead of numbers.
@@ -40,7 +40,7 @@ def _stringify_tweet_id(tweet: TYPE_TWEET) -> None:
     tweet["id"] = str(tweet["id"])
 
 
-def _stringify_tweet_ids(tweets: Iterable[TYPE_TWEET]) -> None:
+def _stringify_tweet_ids(tweets: Iterable[TweetType]) -> None:
     for tweet in tweets:
         _stringify_tweet_id(tweet)
 
