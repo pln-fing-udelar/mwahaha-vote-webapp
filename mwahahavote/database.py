@@ -2,13 +2,18 @@
 
 import os
 from collections.abc import Iterable, Iterator, MutableMapping
-from typing import Any
+from typing import Any, TypedDict
 
 import sqlalchemy
 import sqlalchemy.sql
 
-type Tweet = MutableMapping[str, Any]
 type TweetId = int | str
+
+
+class Tweet(TypedDict):
+    id: TweetId
+    text: str
+
 
 VOTE_CHOICES = frozenset(("1", "2", "3", "4", "5", "x", "n"))
 
@@ -113,17 +118,15 @@ engine = create_engine()
 def random_least_voted_unseen_tweets(
     session_id: str, batch_size: int, ignore_tweet_ids: Iterable[TweetId] | None = None
 ) -> Iterator[Tweet]:
-    """Returns a random list of the least voted unseen tweets (by the session) with size batch_size, ignoring certain
-    list of tweet IDs.
+    """Returns an iterator with a random subsample the least-voted unseen tweets (by the session) with size batch_size,
+    ignoring certain of tweet IDs.
 
     If there are fewer than batch_size tweets that hold the condition, the response is padded with random tweets.
 
-    Each tweet in the result is represented as a dictionary with the fields "id" and "text".
-
     :param session_id: Session ID
-    :param batch_size: Size of the list to return
-    :param ignore_tweet_ids: List of tweet IDs to ignore, not returning them in the result
-    :return: Random list of the least voted unseen tweets with size batch_size
+    :param batch_size: Number of tweets to return.
+    :param ignore_tweet_ids: Iterable of tweet IDs to ignore, not returning them in the result
+    :return: Iterator of a random sample among the least-voted unseen tweets with size batch_size
     """
     ignore_tweet_ids = ignore_tweet_ids or []
     with engine.connect() as connection:
@@ -136,7 +139,7 @@ def random_least_voted_unseen_tweets(
             },
         )
         for id_, text in result.fetchall():
-            yield {"id": id_, "text": text}
+            yield {"id": id_, "text": text}  # type: ignore
 
 
 def random_tweets(batch_size: int) -> Iterator[Tweet]:
@@ -150,7 +153,7 @@ def random_tweets(batch_size: int) -> Iterator[Tweet]:
     with engine.connect() as connection:
         result = connection.execute(STATEMENT_RANDOM_TWEETS, {"limit": batch_size})
         for id_, text in result.fetchall():
-            yield {"id": id_, "text": text}
+            yield {"id": id_, "text": text}  # type: ignore
 
 
 def add_vote(session_id: str, tweet_id: TweetId, vote: str, is_offensive: bool) -> None:
@@ -186,7 +189,7 @@ def vote_count_without_skips() -> int:
         return connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True, "pass_test": False}).fetchone()[0]  # type: ignore
 
 
-def stats() -> Tweet:
+def stats() -> MutableMapping[str, Any]:
     """Returns the vote count, vote count without skips, vote count histogram and votes per category."""
     with engine.connect() as connection:
         result: dict[str, Any] = {
