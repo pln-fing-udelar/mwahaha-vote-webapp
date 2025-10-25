@@ -17,18 +17,26 @@ class Tweet(TypedDict):
 
 VOTE_CHOICES = frozenset(("1", "2", "3", "4", "5", "x", "n"))
 
-STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_TWEETS = sqlalchemy.sql.text(
-    "SELECT t.tweet_id, text"
-    " FROM tweets t"
-    "   LEFT JOIN (SELECT tweet_id FROM votes WHERE session_id = :session_id) a"
-    "     ON t.tweet_id = a.tweet_id"
-    "   LEFT JOIN (SELECT tweet_id FROM votes WHERE vote != 'n') b"
-    "     ON t.tweet_id = b.tweet_id"
-    " WHERE a.tweet_id IS NULL AND FIND_IN_SET(t.tweet_id, :ignore_tweet_ids) = 0"
-    " GROUP BY t.tweet_id, weight"
-    " ORDER BY weight DESC, COUNT(b.tweet_id), RAND()"
-    " LIMIT :limit"
-)
+STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_TWEETS = sqlalchemy.sql.text("""
+SELECT
+  tweets.tweet_id,
+  text
+FROM
+  tweets
+  NATURAL LEFT JOIN votes votes_from_session
+  NATURAL LEFT JOIN votes unskipped_votes
+WHERE
+  votes_from_session.session_id = :session_id
+  AND votes_from_session.tweet_id IS NULL
+  AND FIND_IN_SET(tweets.tweet_id, :ignore_tweet_ids) = 0
+  AND unskipped_votes.vote != 'n'
+GROUP BY
+  tweets.tweet_id
+ORDER BY
+  COUNT(unskipped_votes.tweet_id),
+  RAND()
+ LIMIT :limit
+""")
 STATEMENT_RANDOM_TWEETS = sqlalchemy.sql.text("SELECT t.tweet_id, text FROM tweets t ORDER BY RAND() LIMIT :limit")
 STATEMENT_ADD_VOTE = sqlalchemy.sql.text(
     "INSERT INTO votes (tweet_id, session_id, vote, is_offensive)"
