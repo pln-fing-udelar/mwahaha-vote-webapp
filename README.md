@@ -52,7 +52,7 @@ mkdir submissions
 3. Create a `.env` file with the following content (setting some env vars values):
 
     ```shell
-    FLASK_APP=mwahahavote/main.py
+    FLASK_APP=mwahahavote/__main__.py
     FLASK_DEBUG=1
     FLASK_SECRET_KEY=SET_VALUE
     DB_HOST=SET_VALUE
