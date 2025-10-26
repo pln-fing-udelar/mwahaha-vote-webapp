@@ -235,7 +235,7 @@ See the options available in the command with `./extraction/persist.py --help`.
 ## Analysis
 
 To compute the agreement (for example, with
-[this annotations_by_tweet.csv file](https://github.com/pln-fing-udelar/humor/blob/main/annotations_by_tweet.csv)):
+[the annotations_by_tweet.csv file](https://github.com/pln-fing-udelar/humor/blob/main/annotations_by_tweet.csv)):
 
 ```bash
 ./analysis/agreement.py FILE
