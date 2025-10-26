@@ -10,4 +10,4 @@ services:
   database:
     environment:
       - MYSQL_ROOT_PASSWORD=123123
-      - MYSQL_DATABASE=pghumor
+      - MYSQL_DATABASE=mwahaha

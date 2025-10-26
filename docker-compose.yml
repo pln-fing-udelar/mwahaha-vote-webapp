@@ -6,7 +6,7 @@ services:
       - DB_HOST=database
       - DB_USER=root
       - DB_PASS
-      - DB_NAME=pghumor
+      - DB_NAME=mwahaha
     networks:
       - net
   database:

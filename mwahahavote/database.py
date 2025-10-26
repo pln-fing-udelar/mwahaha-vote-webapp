@@ -2,38 +2,152 @@
 
 import os
 from collections.abc import Iterable, Iterator, MutableMapping
-from typing import Any, TypedDict
+from dataclasses import dataclass
+from typing import Any, Literal
 
 import sqlalchemy
 import sqlalchemy.sql
 
-type TweetId = int | str
+type Task = Literal["a-es", "a-en", "a-zh", "b1", "b2"]
 
 
-class Tweet(TypedDict):
-    id: TweetId
+@dataclass(frozen=True)
+class System:
+    id: str
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    def __eq__(self, other: Any) -> bool:
+        return self.id == other.id if isinstance(other, type(self)) else NotImplemented
+
+
+@dataclass(frozen=True)
+class Prompt:
+    id: int
+    word1: str | None = None
+    word2: str | None = None
+    headline: str | None = None
+    url: str | None = None
+    prompt: str | None = None
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    def __eq__(self, other: Any) -> bool:
+        return self.id == other.id if isinstance(other, type(self)) else NotImplemented
+
+
+@dataclass(frozen=True)
+class Output:
+    prompt: Prompt
+    system: System
     text: str
+
+    def __hash__(self) -> int:
+        return hash((self.prompt, self.system))
+
+    def __eq__(self, other: Any) -> bool:
+        return (
+            (self.prompt == other.prompt and self.system == other.system)
+            if isinstance(other, type(self))
+            else NotImplemented
+        )
+
+
+@dataclass(frozen=True)
+class Battle:
+    output_a: Output
+    output_b: Output
+
+    def __post_init__(self) -> None:
+        if self.output_a.prompt != self.output_b.prompt:
+            raise ValueError("Both outputs must belong to the same prompt")
+
+    @property
+    def prompt(self) -> Prompt:
+        return self.output_a.prompt
 
 
 VOTE_CHOICES = frozenset(("1", "2", "3", "4", "5", "x", "n"))
 
-STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_TWEETS = sqlalchemy.sql.text("""
+STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_OUTPUTS = sqlalchemy.sql.text("""
+WITH
+  unskipped_votes AS (
+    SELECT
+      prompt_id,
+      system_id_a,
+      system_id_b,
+      session_id
+    FROM
+      votes
+    WHERE
+      vote != "n"
+  ),
+  votes_from_session AS (
+    SELECT
+      prompt_id,
+      system_id_a,
+      system_id_b,
+      session_id
+    FROM
+      votes
+    WHERE
+      session_id = :session_id
+  )
 SELECT
-  tweets.tweet_id,
-  text
+  prompts.prompt_id prompt_id,
+  word1,
+  word2,
+  headline,
+  url,
+  prompt,
+  outputs_a.system_id system_id_a,
+  outputs_a.text text_a,
+  outputs_b.system_id system_id_b,
+  outputs_b.text text_b
 FROM
-  tweets
-  NATURAL LEFT JOIN votes votes_from_session
-  NATURAL LEFT JOIN votes unskipped_votes
+  prompts
+  NATURAL JOIN outputs outputs_a
+  LEFT JOIN votes_from_session votes_from_session_a
+    ON (
+      votes_from_session_a.prompt_id = outputs_a.prompt_id
+      AND (
+        votes_from_session_a.system_id_a = outputs_a.system_id
+        OR votes_from_session_a.system_id_b = outputs_a.system_id
+      )
+    )
+  LEFT JOIN unskipped_votes
+    ON (
+      unskipped_votes.prompt_id = outputs_a.prompt_id
+      AND (
+        unskipped_votes.system_id_a = outputs_a.system_id
+        OR unskipped_votes.system_id_b = outputs_a.system_id
+      )
+    )
+  JOIN outputs as outputs_b
+    ON (
+      outputs_b.prompt_id = outputs_a.prompt_id
+      AND outputs_b.system_id != outputs_a.system_id
+    )
+  LEFT JOIN votes_from_session votes_from_session_b
+    ON (
+      votes_from_session_b.prompt_id = outputs_b.prompt_id
+      AND (
+        votes_from_session_b.system_id_a = outputs_b.system_id
+        OR votes_from_session_b.system_id_b = outputs_b.system_id
+      )
+    )
 WHERE
-  votes_from_session.session_id = :session_id
-  AND votes_from_session.tweet_id IS NULL
-  AND FIND_IN_SET(tweets.tweet_id, :ignore_tweet_ids) = 0
-  AND unskipped_votes.vote != 'n'
+  votes_from_session_a.prompt_id IS NULL
+  AND votes_from_session_b.prompt_id IS NULL
+  AND FIND_IN_SET(CONCAT(outputs_a.prompt_id, outputs_a.system_id), :ignored_output_ids) = 0
+  AND FIND_IN_SET(CONCAT(outputs_b.prompt_id, outputs_b.system_id), :ignored_output_ids) = 0
 GROUP BY
-  tweets.tweet_id
+  prompt_id,
+  system_id_a
 ORDER BY
-  COUNT(unskipped_votes.tweet_id),
+  COUNT(unskipped_votes.prompt_id),
   RAND()
  LIMIT :limit
 """)
@@ -123,34 +237,43 @@ def create_engine() -> sqlalchemy.Engine:
 engine = create_engine()
 
 
-def random_least_voted_unseen_tweets(
-    session_id: str, batch_size: int, ignore_tweet_ids: Iterable[TweetId] | None = None
-) -> Iterator[Tweet]:
-    """Returns an iterator with a random subsample the least-voted unseen tweets (by the session) with size batch_size,
-    ignoring certain of tweet IDs.
-
-    If there are fewer than batch_size tweets that hold the condition, the response is padded with random tweets.
-
-    :param session_id: Session ID
-    :param batch_size: Number of tweets to return.
-    :param ignore_tweet_ids: Iterable of tweet IDs to ignore, not returning them in the result
-    :return: Iterator of a random sample among the least-voted unseen tweets with size batch_size
+def random_least_voted_unseen_outputs(
+    session_id: str, task: Task, batch_size: int, ignored_outputs: Iterable[Output] = ()
+) -> Iterator[Battle]:
+    """Returns an iterator with a random subsample the top `batch_size` least-voted unseen outputs (by the session),
+    each paired in a battle with a random other output for the same prompt.
     """
-    ignore_tweet_ids = ignore_tweet_ids or []
+
+    # TODO: use the task.
+
     with engine.connect() as connection:
         result = connection.execute(
-            STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_TWEETS,
+            STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_OUTPUTS,
             {
                 "session_id": session_id,
                 "limit": batch_size,
-                "ignore_tweet_ids": ",".join(tweet_id for tweet_id in ignore_tweet_ids),
+                "ignored_output_ids": ",".join(str(output.prompt.id) + output.system.id for output in ignored_outputs),
             },
         )
-        for id_, text in result.fetchall():
-            yield {"id": id_, "text": text}  # type: ignore
+        for (
+            prompt_id,
+            word1,
+            word2,
+            headline,
+            url,
+            prompt,
+            system_id_a,
+            text_a,
+            system_id_b,
+            text_b,
+        ) in result.fetchall():
+            prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt)
+            output_a = Output(prompt=prompt, system=System(id=system_id_a), text=text_a)
+            output_b = Output(prompt=prompt, system=System(id=system_id_b), text=text_b)
+            yield Battle(output_a=output_a, output_b=output_b)
 
 
-def random_tweets(batch_size: int) -> Iterator[Tweet]:
+def random_tweets(batch_size: int) -> Iterator[Battle]:
     """Returns a random list tweets with size batch_size.
 
     Each tweet is represented as a dictionary with the fields "id" and "text".
@@ -164,7 +287,7 @@ def random_tweets(batch_size: int) -> Iterator[Tweet]:
             yield {"id": id_, "text": text}  # type: ignore
 
 
-def add_vote(session_id: str, tweet_id: TweetId, vote: str, is_offensive: bool) -> None:
+def add_vote(session_id: str, tweet_id: Battle, vote: str, is_offensive: bool) -> None:
     """Adds a vote for a tweet by a determined session.
 
     If the vote is not one of `VOTE_CHOICES`, it will do nothing. If the session had already voted, the new vote will be

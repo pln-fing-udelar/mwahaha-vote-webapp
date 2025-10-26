@@ -2,7 +2,6 @@ import itertools
 import os
 import random
 import string
-from collections.abc import Iterable
 from datetime import timedelta
 
 import sentry_sdk
@@ -10,9 +9,8 @@ from flask import Flask, Response, jsonify, render_template, request, send_from_
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 from mwahahavote import database
-from mwahahavote.database import Tweet
 
-REQUEST_TWEET_BATCH_SIZE = 3
+REQUEST_BATTLE_BATCH_SIZE = 3
 
 SESSION_ID_MAX_AGE = int(timedelta(weeks=1000).total_seconds())
 
@@ -29,20 +27,6 @@ def _create_app() -> Flask:
 sentry_sdk.init(integrations=[FlaskIntegration()], traces_sample_rate=1.0)
 
 app = _create_app()
-
-
-def _stringify_tweet_id(tweet: Tweet) -> None:
-    """Converts the tweet field "id" to a string.
-
-    In JavaScript, the string format should be used from the tweet IDs instead of numbers.
-    See https://developer.twitter.com/en/docs/basics/twitter-ids.
-    """
-    tweet["id"] = str(tweet["id"])
-
-
-def _stringify_tweet_ids(tweets: Iterable[Tweet]) -> None:
-    for tweet in tweets:
-        _stringify_tweet_id(tweet)
 
 
 def _generate_id() -> str:  # From https://stackoverflow.com/a/2257449/1165181
@@ -63,18 +47,16 @@ def add_header(response: Response) -> Response:
     return response
 
 
-@app.route("/tweets")
-def tweets_route() -> Response:
+@app.route("/battles")
+def battles_route() -> Response:
     session_id = _get_session_id()
 
-    tweets = list(database.random_least_voted_unseen_tweets(session_id, REQUEST_TWEET_BATCH_SIZE))
+    battles = list(database.random_least_voted_unseen_outputs(session_id, REQUEST_BATTLE_BATCH_SIZE))
 
-    if len(tweets) < REQUEST_TWEET_BATCH_SIZE:
-        tweets.extend(database.random_tweets(REQUEST_TWEET_BATCH_SIZE - len(tweets)))
+    if len(battles) < REQUEST_BATTLE_BATCH_SIZE:
+        battles.extend(database.random_tweets(REQUEST_BATTLE_BATCH_SIZE - len(battles)))
 
-    _stringify_tweet_ids(tweets)
-
-    return jsonify(tweets)
+    return jsonify(battles)
 
 
 @app.route("/vote", methods=["POST"])
@@ -85,15 +67,13 @@ def vote_and_get_new_tweet_route() -> Response:
         is_offensive = request.form["is_offensive"].lower() == "true"
         database.add_vote(session_id, request.form["tweet_id"], request.form["vote"], is_offensive)
 
-    ignore_tweet_ids = request.form.getlist("ignore_tweet_ids[]")
+    ignore_tweet_ids = request.form.getlist("ignored_output_ids[]")
 
     tweets = itertools.chain(
-        database.random_least_voted_unseen_tweets(session_id, 1, ignore_tweet_ids), database.random_tweets(1)
+        database.random_least_voted_unseen_outputs(session_id, 1, ignore_tweet_ids), database.random_tweets(1)
     )
 
     tweet = next(iter(tweets), {})
-
-    _stringify_tweet_id(tweet)
 
     return jsonify(tweet)
 
