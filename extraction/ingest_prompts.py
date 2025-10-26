@@ -10,6 +10,10 @@ import mwahahavote.database
 def read_prompt_file(path: str) -> pd.DataFrame:
     df = pd.read_csv(path, delimiter="\t", quoting=csv.QUOTE_NONE, index_col="id", na_values="-")  # type: ignore
     df.index.rename("prompt_id", inplace=True)
+
+    task = os.path.splitext(os.path.basename(path))[0]
+    df["task"] = task.removeprefix("task-")
+
     return df
 
 
