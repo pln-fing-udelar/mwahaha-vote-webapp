@@ -4,7 +4,7 @@ import os
 import shutil
 import sys
 import zipfile
-from typing import cast, get_args
+from typing import cast
 
 import pandas as pd
 import sqlalchemy

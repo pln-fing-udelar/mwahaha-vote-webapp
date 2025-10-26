@@ -51,7 +51,9 @@ def add_header(response: Response) -> Response:
 def battles_route() -> Response:
     session_id = _get_session_id()
 
-    battles = list(database.random_least_voted_unseen_outputs(session_id, REQUEST_BATTLE_BATCH_SIZE))
+    task = request.args.get("task", "a-en")
+
+    battles = list(database.random_least_voted_unseen_outputs(session_id, task, REQUEST_BATTLE_BATCH_SIZE))
 
     if len(battles) < REQUEST_BATTLE_BATCH_SIZE:
         battles.extend(database.random_tweets(REQUEST_BATTLE_BATCH_SIZE - len(battles)))
@@ -63,6 +65,8 @@ def battles_route() -> Response:
 def vote_and_get_new_tweet_route() -> Response:
     session_id = _get_session_id()
 
+    task = request.form.get("task", "a-en")
+
     if "tweet_id" in request.form and "vote" in request.form and "is_offensive" in request.form:
         is_offensive = request.form["is_offensive"].lower() == "true"
         database.add_vote(session_id, request.form["tweet_id"], request.form["vote"], is_offensive)
@@ -70,7 +74,7 @@ def vote_and_get_new_tweet_route() -> Response:
     ignore_tweet_ids = request.form.getlist("ignored_output_ids[]")
 
     tweets = itertools.chain(
-        database.random_least_voted_unseen_outputs(session_id, 1, ignore_tweet_ids), database.random_tweets(1)
+        database.random_least_voted_unseen_outputs(session_id, task, 1, ignore_tweet_ids), database.random_tweets(1)
     )
 
     tweet = next(iter(tweets), {})

@@ -156,7 +156,8 @@ FROM
       )
     )
 WHERE
-  votes_from_session_a.prompt_id IS NULL
+  task = :task
+  AND votes_from_session_a.prompt_id IS NULL
   AND votes_from_session_b.prompt_id IS NULL
   AND FIND_IN_SET(CONCAT(outputs_a.prompt_id, outputs_a.system_id), :ignored_output_ids) = 0
   AND FIND_IN_SET(CONCAT(outputs_b.prompt_id, outputs_b.system_id), :ignored_output_ids) = 0
@@ -261,13 +262,12 @@ def random_least_voted_unseen_outputs(
     each paired in a battle with a random other output for the same prompt.
     """
 
-    # TODO: use the task.
-
     with engine.connect() as connection:
         result = connection.execute(
             STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_OUTPUTS,
             {
                 "session_id": session_id,
+                "task": task,
                 "limit": batch_size,
                 "ignored_output_ids": ",".join(str(output.prompt.id) + output.system.id for output in ignored_outputs),
             },
