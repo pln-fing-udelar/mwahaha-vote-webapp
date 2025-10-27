@@ -227,7 +227,7 @@ ACCESS_TOKEN_SECRET=...
 ### Persist the downloaded tweets into the database
 
 ```bash
-./extraction/persist.py < tweets.jsonl
+./scripts/persist.py < tweets.jsonl
 ```
 
 See the options available in the command with `./extraction/persist.py --help`.

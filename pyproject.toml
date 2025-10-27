@@ -10,8 +10,11 @@ requires-python = ">=3.13"
 dependencies = [
     "flask<4",
     "pandas<3",
+    "requests<3",
     "sentry-sdk[flask]<3",
     "sqlalchemy[mysql]<3",
+    "tqdm<5",
+    "typing-extensions<5",
 ]
 
 [project.urls]
@@ -20,9 +23,12 @@ repository = "TODO"
 
 [dependency-groups]
 dev = [
+    "ipython>=2,<9",
     "jq<2",
     "mycli<2",
     "pandas-stubs",
+    "types-requests",
+    "types-tqdm",
 ]
 
 [build-system]

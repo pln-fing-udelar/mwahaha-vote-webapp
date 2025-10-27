@@ -8,7 +8,7 @@ from typing import Any, Literal, get_args
 import sqlalchemy
 import sqlalchemy.sql
 
-type Task = Literal["a-es", "a-en", "a-zh", "b1", "b2"]
+Task = Literal["a-es", "a-en", "a-zh", "b1", "b2"]
 TASK_CHOICES = frozenset(get_args(Task))
 
 
