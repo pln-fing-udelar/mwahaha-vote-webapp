@@ -55,8 +55,8 @@ def battles_route() -> Response:
 
     battles = list(database.random_least_voted_unseen_outputs(session_id, task, REQUEST_BATTLE_BATCH_SIZE))
 
-    if len(battles) < REQUEST_BATTLE_BATCH_SIZE:
-        battles.extend(database.random_tweets(REQUEST_BATTLE_BATCH_SIZE - len(battles)))
+    # if len(battles) < REQUEST_BATTLE_BATCH_SIZE:
+    #     battles.extend(database.random_tweets(REQUEST_BATTLE_BATCH_SIZE - len(battles)))
 
     return jsonify(battles)
 

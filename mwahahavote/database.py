@@ -111,6 +111,39 @@ WITH
       votes
     WHERE
       session_id = :session_id
+  ),
+  outputs_a AS (
+    SELECT
+      outputs.prompt_id,
+      outputs.system_id,
+      text
+    FROM
+      outputs
+      LEFT JOIN votes_from_session
+      ON (
+        votes_from_session.prompt_id = outputs.prompt_id
+        AND (
+          votes_from_session.system_id_a = outputs.system_id
+          OR votes_from_session.system_id_b = outputs.system_id
+        )
+      )
+      LEFT JOIN unskipped_votes
+      ON (
+        unskipped_votes.prompt_id = outputs.prompt_id
+        AND (
+          unskipped_votes.system_id_a = outputs.system_id
+          OR unskipped_votes.system_id_b = outputs.system_id
+        )
+      )
+  WHERE
+    votes_from_session.prompt_id IS NULL
+    AND FIND_IN_SET(CONCAT(outputs.prompt_id, outputs.system_id), :ignored_output_ids) = 0
+  GROUP BY
+    prompt_id,
+    system_id
+  ORDER BY
+    COUNT(unskipped_votes.prompt_id),
+    RAND()
   )
 SELECT
   prompts.prompt_id prompt_id,
@@ -125,23 +158,7 @@ SELECT
   outputs_b.text text_b
 FROM
   prompts
-  NATURAL JOIN outputs outputs_a
-  LEFT JOIN votes_from_session votes_from_session_a
-    ON (
-      votes_from_session_a.prompt_id = outputs_a.prompt_id
-      AND (
-        votes_from_session_a.system_id_a = outputs_a.system_id
-        OR votes_from_session_a.system_id_b = outputs_a.system_id
-      )
-    )
-  LEFT JOIN unskipped_votes
-    ON (
-      unskipped_votes.prompt_id = outputs_a.prompt_id
-      AND (
-        unskipped_votes.system_id_a = outputs_a.system_id
-        OR unskipped_votes.system_id_b = outputs_a.system_id
-      )
-    )
+  NATURAL JOIN outputs_a
   JOIN outputs as outputs_b
     ON (
       outputs_b.prompt_id = outputs_a.prompt_id
@@ -157,17 +174,11 @@ FROM
     )
 WHERE
   task = :task
-  AND votes_from_session_a.prompt_id IS NULL
   AND votes_from_session_b.prompt_id IS NULL
-  AND FIND_IN_SET(CONCAT(outputs_a.prompt_id, outputs_a.system_id), :ignored_output_ids) = 0
   AND FIND_IN_SET(CONCAT(outputs_b.prompt_id, outputs_b.system_id), :ignored_output_ids) = 0
-GROUP BY
-  prompt_id,
-  system_id_a
 ORDER BY
-  COUNT(unskipped_votes.prompt_id),
-  RAND()
- LIMIT :limit
+    RAND()
+LIMIT :limit
 """)
 STATEMENT_RANDOM_TWEETS = sqlalchemy.sql.text("SELECT t.tweet_id, text FROM tweets t ORDER BY RAND() LIMIT :limit")
 STATEMENT_ADD_VOTE = sqlalchemy.sql.text(
