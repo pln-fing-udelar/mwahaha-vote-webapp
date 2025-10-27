@@ -3,7 +3,7 @@ import os
 import random
 import string
 from datetime import timedelta
-from typing import Any
+from typing import Any, cast
 
 import sentry_sdk
 from flask import Flask, Response, jsonify, render_template, request, send_from_directory
@@ -64,9 +64,10 @@ def add_header(response: Response) -> Response:
 def battles_route() -> Response:
     session_id = _get_session_id()
 
-    task: Task = request.args.get("task", "a-en")  # type: ignore
+    task = request.args.get("task", "a-en")
     if task not in TASK_CHOICES:
         task = "a-en"
+    task = cast(Task, task)
 
     battles = [
         _simplify_battle_object(battle)
