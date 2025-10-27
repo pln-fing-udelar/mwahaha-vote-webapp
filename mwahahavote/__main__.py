@@ -71,14 +71,14 @@ def battles_route() -> Response:
 
     battles = [
         _simplify_battle_object(battle)
-        for battle in database.random_least_voted_unseen_outputs(session_id, task, REQUEST_BATTLE_BATCH_SIZE)
+        for battle in database.random_least_voted_unseen_battles(session_id, task, REQUEST_BATTLE_BATCH_SIZE)
     ]
 
-    # if len(battles) < REQUEST_BATTLE_BATCH_SIZE:
-    #     battles.extend(
-    #         _simplify_battle_object(battle)
-    #         for battle in database.random_tweets(REQUEST_BATTLE_BATCH_SIZE - len(battles))
-    #     )
+    if len(battles) < REQUEST_BATTLE_BATCH_SIZE:
+        battles.extend(
+            _simplify_battle_object(battle)
+            for battle in database.random_battles(task, REQUEST_BATTLE_BATCH_SIZE - len(battles))
+        )
 
     return jsonify(battles)
 
@@ -88,6 +88,9 @@ def vote_and_get_new_tweet_route() -> Response:
     session_id = _get_session_id()
 
     task = request.form.get("task", "a-en")
+    if task not in TASK_CHOICES:
+        task = "a-en"
+    task = cast(Task, task)
 
     if "tweet_id" in request.form and "vote" in request.form and "is_offensive" in request.form:
         is_offensive = request.form["is_offensive"].lower() == "true"
@@ -96,7 +99,8 @@ def vote_and_get_new_tweet_route() -> Response:
     ignore_tweet_ids = request.form.getlist("ignored_output_ids[]")
 
     tweets = itertools.chain(
-        database.random_least_voted_unseen_outputs(session_id, task, 1, ignore_tweet_ids), database.random_tweets(1)
+        database.random_least_voted_unseen_battles(session_id, task, 1, ignore_tweet_ids),
+        database.random_battles(task, 1),
     )
 
     tweet = next(iter(tweets), {})

@@ -7,6 +7,7 @@ from typing import Any, Literal, get_args
 
 import sqlalchemy
 import sqlalchemy.sql
+from sqlalchemy import CursorResult
 
 Task = Literal["a-es", "a-en", "a-zh", "b1", "b2"]
 TASK_CHOICES = frozenset(get_args(Task))
@@ -88,7 +89,7 @@ class Battle:
 
 VOTE_CHOICES = frozenset(("1", "2", "3", "4", "5", "x", "n"))
 
-STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_OUTPUTS = sqlalchemy.sql.text("""
+STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES = sqlalchemy.sql.text("""
 WITH
   unskipped_votes AS (
     SELECT
@@ -99,7 +100,7 @@ WITH
     FROM
       votes
     WHERE
-      vote != "n"
+      vote != 'n'
   ),
   votes_from_session AS (
     SELECT
@@ -112,7 +113,7 @@ WITH
     WHERE
       session_id = :session_id
   ),
-  outputs_a AS (
+  random_least_voted_unseen_outputs_a AS (
     SELECT
       outputs.prompt_id,
       outputs.system_id,
@@ -146,25 +147,25 @@ WITH
     RAND()
   )
 SELECT
-  prompts.prompt_id prompt_id,
+  prompts.prompt_id,
   word1,
   word2,
   headline,
   url,
   prompt,
-  outputs_a.system_id system_id_a,
-  outputs_a.text text_a,
-  outputs_b.system_id system_id_b,
-  outputs_b.text text_b
+  random_least_voted_unseen_outputs_a.system_id AS system_id_a,
+  random_least_voted_unseen_outputs_a.text AS text_a,
+  outputs_b.system_id AS system_id_b,
+  outputs_b.text AS text_b
 FROM
   prompts
-  NATURAL JOIN outputs_a
-  JOIN outputs as outputs_b
+  NATURAL JOIN random_least_voted_unseen_outputs_a
+  JOIN outputs AS outputs_b
     ON (
-      outputs_b.prompt_id = outputs_a.prompt_id
-      AND outputs_b.system_id != outputs_a.system_id
+      outputs_b.prompt_id = random_least_voted_unseen_outputs_a.prompt_id
+      AND outputs_b.system_id != random_least_voted_unseen_outputs_a.system_id
     )
-  LEFT JOIN votes_from_session votes_from_session_b
+  LEFT JOIN votes_from_session AS votes_from_session_b
     ON (
       votes_from_session_b.prompt_id = outputs_b.prompt_id
       AND (
@@ -177,10 +178,37 @@ WHERE
   AND votes_from_session_b.prompt_id IS NULL
   AND FIND_IN_SET(CONCAT(outputs_b.prompt_id, outputs_b.system_id), :ignored_output_ids) = 0
 ORDER BY
-    RAND()
+  RAND()
 LIMIT :limit
 """)
-STATEMENT_RANDOM_TWEETS = sqlalchemy.sql.text("SELECT t.tweet_id, text FROM tweets t ORDER BY RAND() LIMIT :limit")
+
+STATEMENT_RANDOM_BATTLES = sqlalchemy.sql.text("""
+SELECT
+  prompts.prompt_id,
+  word1,
+  word2,
+  headline,
+  url,
+  prompt,
+  outputs_a.system_id AS system_id_a,
+  outputs_a.text AS text_a,
+  outputs_b.system_id AS system_id_b,
+  outputs_b.text AS text_b
+FROM
+  prompts
+  NATURAL JOIN outputs AS outputs_a
+  JOIN outputs AS outputs_b
+    ON (
+      outputs_b.prompt_id = outputs_a.prompt_id
+      AND outputs_b.system_id != outputs_a.system_id
+    )
+WHERE
+  task = :task
+ORDER BY
+  RAND()
+LIMIT :limit
+""")
+
 STATEMENT_ADD_VOTE = sqlalchemy.sql.text(
     "INSERT INTO votes (tweet_id, session_id, vote, is_offensive)"
     " VALUES (:tweet_id, :session_id, :vote, :is_offensive)"
@@ -266,53 +294,56 @@ def create_engine() -> sqlalchemy.Engine:
 engine = create_engine()
 
 
-def random_least_voted_unseen_outputs(
+def _battle_rows_to_objects(
+    result: CursorResult[tuple[int, str | None, str | None, str | None, str | None, str | None, str, str, str, str]],
+) -> Iterator[Battle]:
+    for (
+        prompt_id,
+        word1,
+        word2,
+        headline,
+        url,
+        prompt,
+        system_id_a,
+        text_a,
+        system_id_b,
+        text_b,
+    ) in result:
+        prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt)
+        output_a = Output(prompt=prompt, system=System(id=system_id_a), text=text_a)
+        output_b = Output(prompt=prompt, system=System(id=system_id_b), text=text_b)
+        yield Battle(output_a=output_a, output_b=output_b)
+
+
+def random_least_voted_unseen_battles(
     session_id: str, task: Task, batch_size: int, ignored_outputs: Iterable[Output] = ()
 ) -> Iterator[Battle]:
-    """Returns an iterator with a random subsample the top `batch_size` least-voted unseen outputs (by the session),
-    each paired in a battle with a random other output for the same prompt.
+    """Returns an iterator with a random subsample of the top `batch_size` least-voted unseen outputs (by the session),
+    each paired in a battle with a random other unseen output for the same prompt.
     """
 
     with engine.connect() as connection:
-        result = connection.execute(
-            STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_OUTPUTS,
-            {
-                "session_id": session_id,
-                "task": task,
-                "limit": batch_size,
-                "ignored_output_ids": ",".join(str(output.prompt.id) + output.system.id for output in ignored_outputs),
-            },
+        yield from _battle_rows_to_objects(
+            connection.execute(
+                STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES,
+                {
+                    "session_id": session_id,
+                    "task": task,
+                    "limit": batch_size,
+                    "ignored_output_ids": ",".join(
+                        str(output.prompt.id) + output.system.id for output in ignored_outputs
+                    ),
+                },
+            )
         )
-        for (
-            prompt_id,
-            word1,
-            word2,
-            headline,
-            url,
-            prompt,
-            system_id_a,
-            text_a,
-            system_id_b,
-            text_b,
-        ) in result.fetchall():
-            prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt)
-            output_a = Output(prompt=prompt, system=System(id=system_id_a), text=text_a)
-            output_b = Output(prompt=prompt, system=System(id=system_id_b), text=text_b)
-            yield Battle(output_a=output_a, output_b=output_b)
 
 
-def random_tweets(batch_size: int) -> Iterator[Battle]:
-    """Returns a random list tweets with size batch_size.
-
-    Each tweet is represented as a dictionary with the fields "id" and "text".
-
-    :param batch_size: Size of the list to return
-    :return: Random list of tweets with size batch_size
-    """
+def random_battles(task: Task, batch_size: int) -> Iterator[Battle]:
+    """Returns an iterator with `batch_size` random battles."""
     with engine.connect() as connection:
-        result = connection.execute(STATEMENT_RANDOM_TWEETS, {"limit": batch_size})
-        for id_, text in result.fetchall():
-            yield {"id": id_, "text": text}  # type: ignore
+        yield from _battle_rows_to_objects(
+            connection.execute(STATEMENT_RANDOM_BATTLES, {"task": task, "limit": batch_size})
+        )
 
 
 def add_vote(session_id: str, tweet_id: Battle, vote: str, is_offensive: bool) -> None:
