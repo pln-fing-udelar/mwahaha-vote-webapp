@@ -3,12 +3,14 @@ import os
 import random
 import string
 from datetime import timedelta
+from typing import Any
 
 import sentry_sdk
 from flask import Flask, Response, jsonify, render_template, request, send_from_directory
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 from mwahahavote import database
+from mwahahavote.database import TASK_CHOICES, Battle, Task
 
 REQUEST_BATTLE_BATCH_SIZE = 3
 
@@ -37,6 +39,17 @@ def _get_session_id() -> str:
     return request.cookies.get("id") or _generate_id()
 
 
+def _simplify_battle_object(battle: Battle) -> dict[str, Any]:
+    """Removes redundant fields and simplifies the battle representation for JSON serialization."""
+    return {
+        "prompt": battle.prompt,  # TODO: convert into image + text (either or both).
+        "system_a": battle.output_a.system.id,
+        "output_a": battle.output_a.text,
+        "system_b": battle.output_b.system.id,
+        "output_b": battle.output_b.text,
+    }
+
+
 @app.after_request
 def add_header(response: Response) -> Response:
     response.cache_control.max_age = 0
@@ -51,12 +64,20 @@ def add_header(response: Response) -> Response:
 def battles_route() -> Response:
     session_id = _get_session_id()
 
-    task = request.args.get("task", "a-en")
+    task: Task = request.args.get("task", "a-en")  # type: ignore
+    if task not in TASK_CHOICES:
+        task = "a-en"
 
-    battles = list(database.random_least_voted_unseen_outputs(session_id, task, REQUEST_BATTLE_BATCH_SIZE))
+    battles = [
+        _simplify_battle_object(battle)
+        for battle in database.random_least_voted_unseen_outputs(session_id, task, REQUEST_BATTLE_BATCH_SIZE)
+    ]
 
     # if len(battles) < REQUEST_BATTLE_BATCH_SIZE:
-    #     battles.extend(database.random_tweets(REQUEST_BATTLE_BATCH_SIZE - len(battles)))
+    #     battles.extend(
+    #         _simplify_battle_object(battle)
+    #         for battle in database.random_tweets(REQUEST_BATTLE_BATCH_SIZE - len(battles))
+    #     )
 
     return jsonify(battles)
 
