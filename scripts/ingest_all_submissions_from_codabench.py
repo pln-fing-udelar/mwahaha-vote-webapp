@@ -10,9 +10,13 @@ from ingestion.submission import ingest_submission
 
 
 def main() -> None:
-    submissions = list(list_submissions())
+    # We sort them so they are ingested in order,
+    # so that the latest submission per user per task is the one that remains.
+    submissions = sorted(list_submissions())
+
     affected_rows = 0
     successful: set[Submission] = set()
+
     for submission in tqdm(submissions, desc="Ingesting submissions", unit="submission"):
         # Note we don't check the list of tasks the person submitted for but the actual files.
 
@@ -25,18 +29,22 @@ def main() -> None:
             for chunk in response.iter_content(chunk_size=8192):
                 file.write(chunk)
 
+            # noinspection PyBroadException
             try:
-                affected_rows += ingest_submission(file, submission.user)
+                affected_rows += ingest_submission(submission, file)
                 successful.add(submission)
             except Exception:
-                logging.exception(
-                    f"Failed to ingest the submission ID {submission.id} from the user '{submission.user}'. See below."
-                )
+                logging.exception(f"Failed to ingest the submission {submission}'. See below.")
 
     print(f"{affected_rows} affected rows.")
-    print(f"Ingested {len(successful)}/{len(submissions)} submissions.")
-    print(f"Successful submissions: {sorted(successful)}")
-    print(f"Failed submissions: {sorted(set(submissions) - successful)}")
+    print(f"{len(successful)}/{len(submissions)} submissions ingested successfully:")
+    for submission in sorted(successful):
+        print(f"- {submission}")
+
+    if failed := set(submissions) - successful:
+        print("Failed submissions:")
+        for submission in sorted(failed):
+            print(f"- {submission}")
 
 
 if __name__ == "__main__":

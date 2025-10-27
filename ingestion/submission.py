@@ -2,15 +2,16 @@ import os
 import tempfile
 import zipfile
 from collections.abc import Iterable
-from typing import Any, cast
+from typing import Any
 
 import pandas as pd
 import sqlalchemy
 import sqlalchemy.dialects.mysql
 from pandas.io.sql import SQLTable
-from typing_extensions import Reader
+from typing_extensions import Reader  # type: ignore
 
-from mwahahavote.database import TASK_CHOICES, Task, engine, task_to_prompt_id_sql_like_expression
+from ingestion.codabench import Submission
+from mwahahavote.database import engine, task_to_prompt_id_sql_like_expression
 
 
 def _mysql_insert_on_conflict_update(
@@ -28,14 +29,12 @@ def read_submission(path: str) -> pd.DataFrame:
     return df
 
 
-def ingest_submission(file: str | Reader[bytes], user: str) -> int:
-    """Ingest a submission file into the database.
-
-    Returns the number of affected rows.
-    """
+def ingest_submission(submission: Submission, file: str | os.PathLike | Reader[bytes]) -> int:  # type: ignore
+    """Ingest a submission into the database. Returns the number of affected rows."""
     with engine.begin() as connection, tempfile.TemporaryDirectory() as dir_:
         connection.execute(
-            sqlalchemy.sql.text("INSERT IGNORE INTO systems (system_id) VALUES (:system_id)"), {"system_id": user}
+            sqlalchemy.sql.text("INSERT IGNORE INTO systems (system_id) VALUES (:system_id)"),
+            {"system_id": submission.user},
         )
 
         with zipfile.ZipFile(file) as zip_file:
@@ -43,40 +42,35 @@ def ingest_submission(file: str | Reader[bytes], user: str) -> int:
 
         affected_rows = 0
 
-        for filename in sorted(zip_file.namelist()):
-            filename = filename.lower()
-            task, ext = os.path.splitext(filename)
-            task = task.removeprefix("task-")
+        path = os.path.join(dir_, f"task-{submission.task}.tsv")
 
-            if ext == ".tsv" and os.path.isfile(submission_path := os.path.join(dir_, filename)):
-                if task not in TASK_CHOICES:
-                    raise ValueError(f"Unknown task '{task}' from the filename '{filename}'.")
+        if not os.path.exists(path):
+            raise ValueError(f"The file that corresponds to the task '{submission.task}' doesn't exist.")
 
-                task = cast(Task, task)
+        if not os.path.isfile(path):
+            raise ValueError(f"The file that corresponds to the task '{submission.task}' isn't a file.")
 
-                submission_df = read_submission(submission_path)
+        submission_df = read_submission(path)
 
-                cursor = connection.execute(
-                    sqlalchemy.sql.text("SELECT prompt_id FROM prompts WHERE prompt_id LIKE :prompt_id_like"),
-                    {"prompt_id_like": task_to_prompt_id_sql_like_expression(task)},
-                )
-                reference_prompt_ids = frozenset(t[0] for t in cursor.fetchall())
-                submitted_prompt_ids = frozenset(submission_df.index)
+        cursor = connection.execute(
+            sqlalchemy.sql.text("SELECT prompt_id FROM prompts WHERE prompt_id LIKE :prompt_id_like"),
+            {"prompt_id_like": task_to_prompt_id_sql_like_expression(submission.task)},
+        )
+        reference_prompt_ids = frozenset(t[0] for t in cursor.fetchall())
+        submitted_prompt_ids = frozenset(submission_df.index)
 
-                if submitted_prompt_ids != reference_prompt_ids:
-                    raise ValueError(
-                        f"The submitted prompt IDs for the file from the user '{user}'"
-                        f" do not match the reference IDs for the task '{task}'."
-                        f" Missing IDs: {sorted(reference_prompt_ids - submitted_prompt_ids)}."
-                        f" Extra IDs: {sorted(submitted_prompt_ids - reference_prompt_ids)}."
-                    )
+        if submitted_prompt_ids != reference_prompt_ids:
+            raise ValueError(
+                f"The submitted prompt IDs for the file from the submission '{submission}'"
+                f" do not match the reference IDs for the task '{submission.task}'."
+                f" Missing IDs: {sorted(reference_prompt_ids - submitted_prompt_ids)}."
+                f" Extra IDs: {sorted(submitted_prompt_ids - reference_prompt_ids)}."
+            )
 
-                submission_df["system_id"] = user
-                affected_rows += (
-                    submission_df.to_sql(
-                        "outputs", connection, if_exists="append", method=_mysql_insert_on_conflict_update
-                    )
-                    or 0
-                )
+        submission_df["system_id"] = submission.user
+        affected_rows += (
+            submission_df.to_sql("outputs", connection, if_exists="append", method=_mysql_insert_on_conflict_update)
+            or 0
+        )
 
         return affected_rows
