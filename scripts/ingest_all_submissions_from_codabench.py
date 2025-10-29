@@ -5,22 +5,39 @@ import fsspec
 from tqdm.auto import tqdm
 
 from ingestion.codabench import Submission, get_submission_url, list_submissions
-from ingestion.submission import ingest_submission, list_submitted_system_ids
+from ingestion.submission import ingest_submission, list_ingested_system_ids
 
 
 def main() -> None:
-    already_submitted_system_ids = frozenset(list_submitted_system_ids())
+    print(
+        "Obtaining the metadata for all submissions that passed the submission test for at least one subtask and were"
+        " not deleted… ",
+        end="",
+    )
+    already_ingested_system_ids = frozenset(list_ingested_system_ids())
+    print("✅")
 
     # We sort them so they are ingested in order,
     # so that the latest submission per user per task is the one that remains.
     submissions = sorted(list_submissions())
+
+    print()
+    print("Submission stats so far:")
+    print()
+    print(f"Total number of submissions: {len(submissions)}")
+    print(f"Total number of submission-subtask pairs: {sum(len(submission.tasks) for submission in submissions)}")
+    print(
+        f"Unique number of users that submitted at least once:"
+        f" {len(frozenset(submission.user for submission in submissions))}"
+    )
+    print()
 
     affected_rows = 0
     successful: set[Submission] = set()
     skipped: set[Submission] = set()
 
     for submission in tqdm(submissions, desc="Ingesting submissions", unit="submission"):
-        if submission.system_id in already_submitted_system_ids:
+        if submission.system_id in already_ingested_system_ids:
             skipped.add(submission)
         else:
             # Note we don't check the list of tasks the person submitted for but the actual files.
