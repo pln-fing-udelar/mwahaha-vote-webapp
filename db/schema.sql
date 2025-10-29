@@ -16,14 +16,14 @@ CREATE TABLE prompts
 
 CREATE TABLE systems
 (
-  system_id VARCHAR(64) NOT NULL,
+  system_id VARCHAR(100) NOT NULL,
   PRIMARY KEY (system_id)
 ) ENGINE InnoDB;
 
 CREATE TABLE outputs
 (
   prompt_id VARCHAR(10)   NOT NULL,
-  system_id VARCHAR(64)   NOT NULL,
+  system_id VARCHAR(100) NOT NULL,
   text      VARCHAR(2048) NOT NULL,
   PRIMARY KEY (prompt_id, system_id),
   INDEX (prompt_id),
@@ -35,8 +35,8 @@ CREATE TABLE outputs
 CREATE TABLE votes
 (
   prompt_id    VARCHAR(10) NOT NULL,
-  system_id_a  VARCHAR(64) NOT NULL,
-  system_id_b  VARCHAR(64) NOT NULL,
+  system_id_a VARCHAR(100) NOT NULL,
+  system_id_b VARCHAR(100) NOT NULL,
   session_id   CHAR(100)   NOT NULL,
   vote         CHAR(1)     NOT NULL,
   date         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

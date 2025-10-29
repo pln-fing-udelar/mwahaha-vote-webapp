@@ -389,9 +389,9 @@ def stats() -> MutableMapping[str, Any]:
             "sessions": connection.execute(  # type: ignore
                 STATEMENT_SESSION_COUNT, {"without_skips": False, "pass_test": False}
             ).fetchone()[0],
-            "test-tweets-vote-count": [t[0] for t in connection.execute(STATEMENT_TEST_TWEETS_VOTE_COUNT).fetchall()],
-            "histogram": dict(connection.execute(STATEMENT_HISTOGRAM).fetchall()),  # type: ignore
-            "votes-per-category": dict(connection.execute(STATEMENT_VOTE_COUNT_PER_CATEGORY).fetchall()),  # type: ignore
+            "test-tweets-vote-count": [t[0] for t in connection.execute(STATEMENT_TEST_TWEETS_VOTE_COUNT)],
+            "histogram": dict(connection.execute(STATEMENT_HISTOGRAM)),  # type: ignore
+            "votes-per-category": dict(connection.execute(STATEMENT_VOTE_COUNT_PER_CATEGORY)),  # type: ignore
             "votes-without-skips": connection.execute(  # type: ignore
                 STATEMENT_VOTE_COUNT, {"without_skips": True, "pass_test": False}
             ).fetchone()[0],

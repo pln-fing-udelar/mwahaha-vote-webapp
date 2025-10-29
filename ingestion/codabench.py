@@ -42,6 +42,10 @@ class Submission:
     user: str
     task: Task
 
+    @property
+    def system_id(self) -> str:
+        return f"{self.user}-{self.id}"
+
     def __hash__(self) -> int:
         return hash(self.id)
 

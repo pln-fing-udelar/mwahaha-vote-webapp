@@ -14,6 +14,13 @@ from ingestion.codabench import Submission
 from mwahahavote.database import engine, task_to_prompt_id_sql_like_expression
 
 
+def list_submitted_system_ids() -> Iterable[str]:
+    """List all system IDs in the database."""
+    with engine.begin() as connection:
+        for row in connection.execute(sqlalchemy.sql.text("SELECT system_id FROM systems")):
+            yield row[0]
+
+
 def _mysql_insert_on_conflict_update(
     table: SQLTable, connection: Any, keys: list[str], data_iter: Iterable[tuple]
 ) -> int:
@@ -23,7 +30,7 @@ def _mysql_insert_on_conflict_update(
     return connection.execute(statement.on_duplicate_key_update(**statement.inserted)).rowcount
 
 
-def read_submission(path: str) -> pd.DataFrame:
+def _read_submission_file(path: str) -> pd.DataFrame:
     df = pd.read_csv(path, delimiter="\t", index_col="id")  # type: ignore
     df.index.rename("prompt_id", inplace=True)
     return df
@@ -31,32 +38,31 @@ def read_submission(path: str) -> pd.DataFrame:
 
 def ingest_submission(submission: Submission, file: str | os.PathLike | Reader[bytes]) -> int:  # type: ignore
     """Ingest a submission into the database. Returns the number of affected rows."""
-    with engine.begin() as connection, tempfile.TemporaryDirectory() as dir_:
+    with engine.begin() as connection:
         connection.execute(
-            sqlalchemy.sql.text("INSERT IGNORE INTO systems (system_id) VALUES (:system_id)"),
-            {"system_id": submission.user},
+            sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"),
+            {"system_id": submission.system_id},
         )
 
-        with zipfile.ZipFile(file) as zip_file:
-            zip_file.extractall(dir_)
+        with tempfile.TemporaryDirectory() as dir_:
+            with zipfile.ZipFile(file) as zip_file:
+                zip_file.extractall(dir_)
 
-        affected_rows = 0
+            path = os.path.join(dir_, f"task-{submission.task}.tsv")
 
-        path = os.path.join(dir_, f"task-{submission.task}.tsv")
+            if not os.path.exists(path):
+                raise ValueError(f"The file that corresponds to the task '{submission.task}' doesn't exist.")
 
-        if not os.path.exists(path):
-            raise ValueError(f"The file that corresponds to the task '{submission.task}' doesn't exist.")
+            if not os.path.isfile(path):
+                raise ValueError(f"The file that corresponds to the task '{submission.task}' isn't a file.")
 
-        if not os.path.isfile(path):
-            raise ValueError(f"The file that corresponds to the task '{submission.task}' isn't a file.")
-
-        submission_df = read_submission(path)
+            submission_df = _read_submission_file(path)
 
         cursor = connection.execute(
             sqlalchemy.sql.text("SELECT prompt_id FROM prompts WHERE prompt_id LIKE :prompt_id_like"),
             {"prompt_id_like": task_to_prompt_id_sql_like_expression(submission.task)},
         )
-        reference_prompt_ids = frozenset(t[0] for t in cursor.fetchall())
+        reference_prompt_ids = frozenset(row[0] for row in cursor)
         submitted_prompt_ids = frozenset(submission_df.index)
 
         if submitted_prompt_ids != reference_prompt_ids:
@@ -67,10 +73,5 @@ def ingest_submission(submission: Submission, file: str | os.PathLike | Reader[b
                 f" Extra IDs: {sorted(submitted_prompt_ids - reference_prompt_ids)}."
             )
 
-        submission_df["system_id"] = submission.user
-        affected_rows += (
-            submission_df.to_sql("outputs", connection, if_exists="append", method=_mysql_insert_on_conflict_update)
-            or 0
-        )
-
-        return affected_rows
+        submission_df["system_id"] = submission.system_id
+        return submission_df.to_sql("outputs", connection, if_exists="append") or 0
