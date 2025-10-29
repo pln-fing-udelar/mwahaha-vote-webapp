@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "flask<4",
+    "fsspec[http]<=2026",
     "pandas<3",
     "requests<3",
     "sentry-sdk[flask]<3",

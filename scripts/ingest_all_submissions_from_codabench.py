@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 import logging
-import tempfile
 
-import requests
+import fsspec
 from tqdm.auto import tqdm
 
 from ingestion.codabench import Submission, get_submission_url, list_submissions
@@ -19,16 +18,8 @@ def main() -> None:
 
     for submission in tqdm(submissions, desc="Ingesting submissions", unit="submission"):
         # Note we don't check the list of tasks the person submitted for but the actual files.
-
         url = get_submission_url(submission.id)
-
-        # Note `ZipFile` will need a seekable file, so we need to download it fully first.
-        with requests.get(url, stream=True) as response, tempfile.TemporaryFile() as file:
-            response.raise_for_status()
-
-            for chunk in response.iter_content(chunk_size=8192):
-                file.write(chunk)
-
+        with fsspec.open(url) as file:
             # noinspection PyBroadException
             try:
                 affected_rows += ingest_submission(submission, file)
