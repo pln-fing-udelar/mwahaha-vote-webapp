@@ -51,7 +51,7 @@ def main() -> None:
 
     if failed := attempted - successful:
         print()
-        print(f"The following {len(failed)}/{len(attempted)} submissions failed to be ingested:")
+        print(f"The following {len(failed)}/{len(attempted)} new submissions failed to be ingested:")
         for submission in sorted(failed):
             print(f"- {submission}")
 
