@@ -93,7 +93,7 @@ def _read_submission_file(path: str) -> pd.DataFrame:
 
 def ingest_submission(submission: Submission, file: str | os.PathLike | Reader[bytes]) -> int:  # type: ignore
     """Ingest a submission into the database. Returns the number of affected rows."""
-    with engine.begin() as connection, tempfile.TemporaryDirectory(delete=False) as dir_:  # FIXME
+    with engine.begin() as connection, tempfile.TemporaryDirectory() as dir_:
         connection.execute(
             sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"),
             {"system_id": submission.system_id},
