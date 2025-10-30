@@ -22,7 +22,7 @@ def main() -> None:
     submissions = sorted(list_submissions())
 
     print()
-    print("Submission stats so far:")
+    print("Stats so far for the submissions that passed the test:")
     print()
     print(f"Total number of submissions: {len(submissions)}")
     print(f"Total number of submission-subtask pairs: {sum(len(submission.tasks) for submission in submissions)}")

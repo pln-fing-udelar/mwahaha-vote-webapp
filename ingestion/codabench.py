@@ -14,6 +14,9 @@ BASE_URL = "https://www.codabench.org/api/"
 
 COMPETITION_ID = 9719
 
+EVALUATION_TRIAL_PHASE_ID = 15784
+EVALUATION_PHASE_ID = 15785
+
 
 def get_environ_session_id() -> str:
     return os.environ["CODABENCH_SESSION_ID"]
@@ -56,18 +59,25 @@ class Submission:
         return self.id < other.id
 
 
-def list_submissions(competition_id: int = COMPETITION_ID, session_id: str | None = None) -> Iterable[Submission]:
+def list_submissions(  # noqa: C901
+    competition_id: int | None = COMPETITION_ID,
+    phase_id: int | None = None,
+    session_id: str | None = None,
+) -> Iterable[Submission]:
     """List all "parent" or single-task submissions for a competition that passed the submission test for at least one
     task and were not deleted.
     """
 
-    # TODO: filter by phase?
+    query_params = {}
+
+    if phase_id is None:
+        query_params["phase__competition"] = competition_id
+    else:
+        query_params["phase"] = phase_id
 
     session_id = session_id or get_environ_session_id()
     # noinspection SpellCheckingInspection
-    response = requests.get(
-        BASE_URL + "submissions", params={"phase__competition": competition_id}, cookies={"sessionid": session_id}
-    )
+    response = requests.get(BASE_URL + "submissions", params=query_params, cookies={"sessionid": session_id})
     response.raise_for_status()
 
     # There's a concept of "parent" and "children" submissions.
