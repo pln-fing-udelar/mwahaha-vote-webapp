@@ -1,36 +1,38 @@
 #!/usr/bin/env python
+import dataclasses
 import logging
 
 import fsspec
 from tqdm.auto import tqdm
 
 from ingestion.codabench import Submission, get_submission_url, list_submissions
-from ingestion.submission import ingest_submission, list_ingested_system_ids
+from ingestion.submission import ingest_submission, list_ingested_system_ids, print_stats
 
 
 def main() -> None:
-    print(
-        "Obtaining the metadata for all submissions that passed the submission test for at least one subtask and were"
-        " not deleted… ",
-        end="",
-    )
-    already_ingested_system_ids = frozenset(list_ingested_system_ids())
-    print("✅")
-
     # We sort them so they are ingested in order,
     # so that the latest submission per user per task is the one that remains.
-    submissions = sorted(list_submissions())
 
-    print()
-    print("Stats so far for the submissions that passed the test:")
-    print()
-    print(f"Total number of submissions: {len(submissions)}")
-    print(f"Total number of submission-subtask pairs: {sum(len(submission.tasks) for submission in submissions)}")
-    print(
-        f"Unique number of users that submitted at least once:"
-        f" {len(frozenset(submission.user for submission in submissions))}"
-    )
-    print()
+    print("Obtaining the list of all submissions so far… ", end="")
+    submissions = sorted(list_submissions())
+    print("✅")
+
+    print_stats(submissions)
+
+    # Keep only the valid submissions:
+    submissions = [
+        dataclasses.replace(
+            submission,
+            tasks=[
+                task for task, test_passed in zip(submission.tasks, submission.tests_passed, strict=True) if test_passed
+            ],
+            tests_passed=[True] * sum(submission.tests_passed),
+        )
+        for submission in submissions
+        if not submission.is_deleted and any(submission.tests_passed)
+    ]
+
+    already_ingested_system_ids = frozenset(list_ingested_system_ids())
 
     affected_rows = 0
     successful: set[Submission] = set()

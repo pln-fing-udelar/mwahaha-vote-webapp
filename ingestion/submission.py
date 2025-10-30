@@ -11,7 +11,62 @@ from pandas.io.sql import SQLTable
 from typing_extensions import Reader  # type: ignore
 
 from ingestion.codabench import Submission
-from mwahahavote.database import engine, task_to_prompt_id_sql_like_expression
+from mwahahavote.database import TASK_CHOICES, engine, task_to_prompt_id_sql_like_expression
+
+
+def print_stats(submissions: list[Submission]) -> None:
+    """Prints statistics about the submissions."""
+    print()
+    print("Submission stats:")
+    print()
+
+    print(f"{len(submissions):>3} submissions.")
+
+    non_deleted_submissions = [submission for submission in submissions if not submission.is_deleted]
+    print(f"{len(non_deleted_submissions):>3} submissions that were not deleted.")
+
+    print()
+    print(f"Last submission date: {max(submission.date for submission in submissions)}")
+    print()
+
+    non_deleted_submissions_that_passed_a_test = [
+        submission for submission in submissions if not submission.is_deleted and any(submission.tests_passed)
+    ]
+    print(
+        f"{len(non_deleted_submissions_that_passed_a_test):>3} submissions that were not deleted and passed the test"
+        f" (valid submissions)."
+    )
+
+    print()
+    print(
+        f"{sum(sum(submission.tests_passed) for submission in non_deleted_submissions_that_passed_a_test):>3}"
+        f" valid submission-subtask pairs:"
+    )
+    print()
+
+    for task in sorted(TASK_CHOICES):
+        valid_task_submissions = sum(
+            1
+            for submission in non_deleted_submissions_that_passed_a_test
+            for some_task, test_passed in zip(submission.tasks, submission.tests_passed, strict=True)
+            if some_task == task and test_passed
+        )
+        print(f"- {task:>4}: {valid_task_submissions}")
+
+    print()
+    print("User stats:")
+    print()
+
+    print(f"{len(frozenset(submission.user for submission in submissions)):>3} users submitted at least once.")
+    users_with_valid_submissions = sorted(
+        frozenset(submission.user for submission in non_deleted_submissions_that_passed_a_test)
+    )
+    print(
+        f"{len(users_with_valid_submissions):>3} users that submitted at least one valid submission:"
+        f" {users_with_valid_submissions}."
+    )
+
+    print()
 
 
 def list_ingested_system_ids() -> Iterable[str]:
@@ -38,7 +93,7 @@ def _read_submission_file(path: str) -> pd.DataFrame:
 
 def ingest_submission(submission: Submission, file: str | os.PathLike | Reader[bytes]) -> int:  # type: ignore
     """Ingest a submission into the database. Returns the number of affected rows."""
-    with engine.begin() as connection, tempfile.TemporaryDirectory(delete=False) as dir_:
+    with engine.begin() as connection, tempfile.TemporaryDirectory(delete=False) as dir_:  # FIXME
         connection.execute(
             sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"),
             {"system_id": submission.system_id},
@@ -53,10 +108,10 @@ def ingest_submission(submission: Submission, file: str | os.PathLike | Reader[b
             path = os.path.join(dir_, f"task-{task}.tsv")
 
             if not os.path.exists(path):
-                raise ValueError(f"The file that corresponds to the task '{task}' doesn't exist.")
+                raise ValueError(f"The file that corresponds to the task '{task}' doesn't exist: {path}")
 
             if not os.path.isfile(path):
-                raise ValueError(f"The file that corresponds to the task '{task}' isn't a file.")
+                raise ValueError(f"The file that corresponds to the task '{task}' isn't a file: {path}")
 
             submission_df = _read_submission_file(path)
 
