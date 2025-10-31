@@ -9,7 +9,7 @@ import sqlalchemy
 import sqlalchemy.sql
 from sqlalchemy import CursorResult
 
-Task = Literal["a-es", "a-en", "a-zh", "b1", "b2"]
+Task = Literal["a-en", "a-es", "a-zh", "b1", "b2"]
 TASK_CHOICES = frozenset(get_args(Task))
 
 
@@ -42,7 +42,7 @@ class System:
 
 @dataclass(frozen=True)
 class Prompt:
-    id: int
+    id: str
     word1: str | None = None
     word2: str | None = None
     headline: str | None = None
@@ -65,11 +65,47 @@ class Prompt:
             raise ValueError("One of `word1`+`word2`, `headline`, or `url` must be set.")
 
     @property
+    def task(self) -> Task:
+        if self.id.startswith(("en_", "es_", "zh_")):
+            return f"a-{self.id[:2]}"  # type: ignore
+        elif self.id.startswith("img_2_"):
+            return "b2"
+        elif self.id.startswith("img_"):
+            return "b1"
+        else:
+            raise ValueError(f"Cannot determine the task for prompt ID '{self.id}'")
+
+    @property
+    def language(self) -> Literal["en", "es", "zh"]:
+        if self.id.startswith("es_"):
+            return "es"
+        elif self.id.startswith("zh_"):
+            return "zh"
+        else:
+            return "en"
+
+    @property
     def verbalized(self) -> str | None:
         if self.word1 and self.word2:
-            return f"The output needs to contain the words '{self.word1}' and '{self.word2}'."
+            match self.language:
+                case "en":
+                    return f"The output needs to contain the words '{self.word1}' and '{self.word2}'."
+                case "es":
+                    return f"La salida debe contener las palabras '{self.word1}' y '{self.word2}'."
+                case "zh":
+                    return f"输出需要包含词语“{self.word1}”和“{self.word2}”。"  # TODO: verify.
+                case _:
+                    raise ValueError(f"Unknown language: {self.language}")
         elif self.headline:
-            return f"News headline: {self.headline}"
+            match self.language:
+                case "en":
+                    return f"News headline: {self.headline}"
+                case "es":
+                    return f"Título de noticia: {self.headline}"
+                case "zh":
+                    return f"新闻标题: {self.headline}"  # TODO: verify.
+                case _:
+                    raise ValueError(f"Unknown language: {self.language}")
         elif self.url:
             return self.prompt
         else:
@@ -292,7 +328,7 @@ def _battle_rows_to_objects(
 
 
 def random_least_voted_unseen_battles(
-    session_id: str, task: Task, batch_size: int, ignored_outputs: Iterable[Output] = ()
+    session_id: str, task: Task, batch_size: int, ignored_output_ids: Iterable[tuple[str, str]] = ()
 ) -> Iterator[Battle]:
     """Returns an iterator with a random subsample of the top `batch_size` least-voted unseen outputs (by the session),
     each paired in a battle with a random other unseen output for the same prompt.
@@ -307,7 +343,7 @@ def random_least_voted_unseen_battles(
                     "task": task,
                     "limit": batch_size,
                     "ignored_output_ids": ",".join(
-                        str(output.prompt.id) + output.system.id for output in ignored_outputs
+                        prompt_id + "-" + system_id for prompt_id, system_id in ignored_output_ids
                     ),
                 },
             )
@@ -322,8 +358,16 @@ def random_battles(task: Task, batch_size: int) -> Iterator[Battle]:
         )
 
 
-def add_vote(session_id: str, battle: Battle, vote: str, is_offensive_a: bool, is_offensive_b: bool) -> None:
-    """Adds a vote for a battle by a determined session."""
+def add_vote(
+    session_id: str,
+    prompt_id: str,
+    system_id_a: str,
+    system_id_b: str,
+    vote: str,
+    is_offensive_a: bool,
+    is_offensive_b: bool,
+) -> None:
+    """Adds a vote for a battle ID by a determined session."""
     if vote not in VOTE_CHOICES:
         raise ValueError(f"Invalid vote: {vote}")
 
@@ -331,9 +375,9 @@ def add_vote(session_id: str, battle: Battle, vote: str, is_offensive_a: bool, i
         connection.execute(
             STATEMENT_ADD_VOTE,
             {
-                "prompt_id": battle.prompt.id,
-                "system_id_a": battle.output_a.system.id,
-                "system_id_b": battle.output_b.system.id,
+                "prompt_id": prompt_id,
+                "system_id_a": system_id_a,
+                "system_id_b": system_id_b,
                 "session_id": session_id,
                 "vote": vote,
                 "is_offensive_a": is_offensive_a,

@@ -42,11 +42,12 @@ def _get_session_id() -> str:
 def _simplify_battle_object(battle: Battle) -> dict[str, Any]:
     """Removes redundant fields and simplifies the battle representation for JSON serialization."""
     return {
-        "prompt_image_url": battle.prompt.url,
+        "prompt_id": battle.prompt.id,
         "prompt": battle.prompt.verbalized,
-        "system_a": battle.output_a.system.id,
+        "prompt_image_url": battle.prompt.url,
+        "system_id_a": battle.output_a.system.id,
         "output_a": battle.output_a.text,
-        "system_b": battle.output_b.system.id,
+        "system_id_b": battle.output_b.system.id,
         "output_b": battle.output_b.text,
     }
 
@@ -85,7 +86,7 @@ def battles_route() -> Response:
 
 
 @app.route("/vote", methods=["POST"])
-def vote_and_get_new_tweet_route() -> Response:
+def vote_and_get_new_battle_route() -> Response:
     session_id = _get_session_id()
 
     task = request.form.get("task", "a-en")
@@ -93,20 +94,31 @@ def vote_and_get_new_tweet_route() -> Response:
         task = "a-en"
     task = cast(Task, task)
 
-    if "tweet_id" in request.form and "vote" in request.form and "is_offensive" in request.form:
-        is_offensive = request.form["is_offensive"].lower() == "true"
-        database.add_vote(session_id, request.form["tweet_id"], request.form["vote"], is_offensive)
+    if all(
+        key in request.form
+        for key in ("prompt_id", "system_id_a", "system_id_b", "vote", "is_offensive_a", "is_offensive_b")
+    ):
+        database.add_vote(
+            session_id,
+            request.form["prompt_id"],
+            request.form["system_id_a"],
+            request.form["system_id_b"],
+            request.form["vote"],
+            is_offensive_a=request.form["is_offensive_a"].lower() == "true",
+            is_offensive_b=request.form["is_offensive_b"].lower() == "true",
+        )
 
-    ignore_tweet_ids = request.form.getlist("ignored_output_ids[]")
+    ignored_output_id_strs = request.form.getlist("ignored_output_ids[]", type=str)
+    ignored_output_ids: list[tuple[str, str]] = [tuple(str_.split(" ", maxsplit=1)) for str_ in ignored_output_id_strs]  # type: ignore
 
-    tweets = itertools.chain(
-        database.random_least_voted_unseen_battles(session_id, task, 1, ignore_tweet_ids),
+    battles = itertools.chain(
+        database.random_least_voted_unseen_battles(session_id, task, 1, ignored_output_ids),
         database.random_battles(task, 1),
     )
 
-    tweet = next(iter(tweets), {})
+    battle = next(iter(battles), {})
 
-    return jsonify(tweet)
+    return jsonify(battle)
 
 
 @app.route("/session-vote-count")
@@ -122,23 +134,8 @@ def vote_count_route() -> Response:
 @app.route("/stats")
 def stats_route() -> str:
     stats = database.stats()
-
-    stats["votes-not-consider-test"] = stats["votes"] - sum(stats["test-tweets-vote-count"])
-
-    stats["test-tweets-vote-count"] = ", ".join(str(c) for c in stats["test-tweets-vote-count"])
-
-    stats["histogram"] = [["Cantidad de votos", "Cantidad de tweets"]] + [
-        [str(a), b] for a, b in stats["histogram"].items()
-    ]
-
-    stats["votes-per-category"]["No humor"] = stats["votes-per-category"]["x"]
-    del stats["votes-per-category"]["x"]
-    stats["votes-per-category"]["Saltear"] = stats["votes-per-category"]["n"]
-    del stats["votes-per-category"]["n"]
-    stats["votes-per-category"] = [["Voto", "Cantidad de tweets"]] + [
-        [str(a), b] for a, b in stats["votes-per-category"].items()
-    ]
-
+    stats["histogram"] = [["Vote count", "Prompt count"]] + [[str(a), b] for a, b in stats["histogram"].items()]
+    stats["votes-per-category"] = [["Vote", "Prompt count"]] + list(stats["votes-per-category"].items())
     return render_template("stats.html", stats=stats)
 
 
