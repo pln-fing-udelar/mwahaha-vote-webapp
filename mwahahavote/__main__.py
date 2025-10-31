@@ -42,7 +42,8 @@ def _get_session_id() -> str:
 def _simplify_battle_object(battle: Battle) -> dict[str, Any]:
     """Removes redundant fields and simplifies the battle representation for JSON serialization."""
     return {
-        "prompt": battle.prompt,  # TODO: convert into image + text (either or both).
+        "prompt_image_url": battle.prompt.url,
+        "prompt": battle.prompt.verbalized,
         "system_a": battle.output_a.system.id,
         "output_a": battle.output_a.text,
         "system_b": battle.output_b.system.id,

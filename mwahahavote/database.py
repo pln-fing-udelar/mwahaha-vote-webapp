@@ -49,6 +49,32 @@ class Prompt:
     url: str | None = None
     prompt: str | None = None
 
+    def __post_init__(self) -> None:
+        if self.word1:
+            if not self.word2 or self.headline or self.prompt or self.url:
+                raise ValueError(
+                    "If `word1` is set, `word2` must be set and `headline`, `prompt` and `url` must be none."
+                )
+        elif self.headline:
+            if self.word1 or self.word2 or self.prompt or self.url:
+                raise ValueError("If `headline` is set, `word1`, `word2`, `prompt`, and `url` must be none.")
+        elif self.url:
+            if self.word1 or self.word2 or self.headline:
+                raise ValueError("If `url` is set, `word1`, `word2`, and `headline` must be none.")
+        else:
+            raise ValueError("One of `word1`+`word2`, `headline`, or `url` must be set.")
+
+    @property
+    def verbalized(self) -> str | None:
+        if self.word1 and self.word2:
+            return f"The output needs to contain the words '{self.word1}' and '{self.word2}'."
+        elif self.headline:
+            return f"News headline: {self.headline}"
+        elif self.url:
+            return self.prompt
+        else:
+            raise ValueError("The prompt is not properly defined.")
+
     def __hash__(self) -> int:
         return hash(self.id)
 
