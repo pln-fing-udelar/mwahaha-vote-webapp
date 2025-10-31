@@ -162,9 +162,9 @@ function vote(voteOption) {
 
 function toastText(voteOption) {
     if (voteOption === "a") {
-        return "Left is better. Thanks!";
+        return "Left is funnier. Thanks!";
     } else if (voteOption === "b") {
-        return "Right is better. Thanks!";
+        return "Right is funnier. Thanks!";
     } else {
         return "Battle skipped. Thanks!";
     }
