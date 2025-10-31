@@ -109,11 +109,14 @@ def vote_and_get_new_battle_route() -> Response:
         )
 
     ignored_output_id_strs = request.form.getlist("ignored_output_ids[]", type=str)
-    ignored_output_ids: list[tuple[str, str]] = [tuple(str_.split(" ", maxsplit=1)) for str_ in ignored_output_id_strs]  # type: ignore
+    ignored_output_ids: list[tuple[str, str]] = [tuple(str_.split("-", maxsplit=1)) for str_ in ignored_output_id_strs]  # type: ignore
 
-    battles = itertools.chain(
-        database.random_least_voted_unseen_battles(session_id, task, 1, ignored_output_ids),
-        database.random_battles(task, 1),
+    battles = (
+        _simplify_battle_object(battle)
+        for battle in itertools.chain(
+            database.random_least_voted_unseen_battles(session_id, task, 1, ignored_output_ids),
+            database.random_battles(task, 1),
+        )
     )
 
     battle = next(iter(battles), {})

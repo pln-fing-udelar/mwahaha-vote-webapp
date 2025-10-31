@@ -89,39 +89,49 @@
       <h1>Which One is Funnier?</h1>
 
       <div id="prompt" class="row">
-        Prompt: <p id="prompt-text" class="tweet-text">Will England make the World Cup final?</p>
+        <p>Prompt:</p>
+        <p id="prompt-text"></p>
       </div>
 
       <div class="row">
-        <div class="tweet col-xs-6">
+        <div class="output col-xs-6">
           <p>System A's output:</p>
-          <p id="tweet-text" class="tweet-text"></p>
+          <p id="output-a-text" class="output-text"></p>
         </div>
-        <div class="tweet col-xs-6">
+        <div class="output col-xs-6">
           <p>System B's output:</p>
-          <p id="tweet2-text" class="tweet-text"></p>
+          <p id="output-b-text" class="output-text"></p>
         </div>
       </div>
 
       <div id="form-container">
         <ul id="answers">
-          <li id="humor-answer" class="answer">
-            <button id="humor" type="button" class="btn btn-lg btn-default btn-answer">⬅️ Left is funnier</button>
+          <li class="answer">
+            <label class="is-offensive-label" for="is-offensive-left">
+              <input id="is-offensive-left" class="is-offensive" type="checkbox"/>
+              Left is offensive ⚠️
+            </label>
           </li>
-          <li id="tie-answer" class="answer">
-            <button id="tie" type="button" class="btn btn-lg btn-default btn-answer">It's a tie 🤝</button>
+
+          <li id="left-answer" class="answer">
+            <button id="vote-left" type="button" class="btn btn-lg btn-default btn-answer">⬅️ Left is funnier</button>
           </li>
-          <li id="both-bad-answer" class="answer">
-            <button id="both-bad" type="button" class="btn btn-lg btn-default btn-answer">Both are bad 🚫</button>
+          <li id="skip-answer" class="answer">
+            <button id="skip" type="button" class="btn btn-lg btn-default btn-answer">It's a tie / Skip 🚫</button>
           </li>
-          <li id="not-humor-answer" class="answer">
-            <button id="not-humor" type="button" class="btn btn-lg btn-default btn-answer">Right is funnier ➡️</button>
+          <li id="right-answer" class="answer">
+            <button id="vote-right" type="button" class="btn btn-lg btn-default btn-answer">Right is funnier ➡️</button>
+          </li>
+
+          <li class="answer">
+            <label class="is-offensive-label" for="is-offensive-right">
+              <input id="is-offensive-right" class="is-offensive" type="checkbox"/>
+              Right is offensive ⚠️
+            </label>
           </li>
         </ul>
       </div>
     </div>
-
-    <p id="vote-count"></p>
   </div>
 
   <!--<footer class="container">
@@ -150,134 +160,6 @@
       </div>
     </div>
   </footer>-->
-</div>
-
-<div id="consent" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false"
-     aria-labelledby="modal-consent">
-  <div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h4 class="modal-title" id="modal-consent">Información y Formulario de Consentimiento</h4>
-      </div>
-      <div class="modal-body">
-        <p>
-          Por favor, lea cuidadosamente la siguiente información. Recomendamos que guarde una captura de esta
-          página.
-        </p>
-
-        <h4>¿Quiénes son los investigadores?</h4>
-
-        <p>
-          Los investigadores detrás de este trabajo son Luis Chiruzzo, Santiago Castro, Santiago Góngora,
-          Aiala Rosá,
-          Julie-Anne Meaney y Rada Mihalcea.
-        </p>
-
-        <h4>¿Cuál es el propósito de este estudio?</h4>
-
-        <p>
-          El propósito de este proceso de anotación es examinar qué textos son considerados humorísticos o no
-          humorísticos por las personas y en qué grado.
-        </p>
-
-        <h4>¿Por qué me han pedido que forme parte de este estudio?</h4>
-
-        <p>Esta investigación busca anotadores que hablen español como primera lengua.</p>
-
-        <h4>¿Estoy obligado a participar?</h4>
-
-        <p>
-          No. La participación en este estudio es enteramente voluntaria. Puede darse de baja del estudio en
-          cualquier
-          momento, sin dar ninguna explicación. Sus derechos no se verán afectados. Si desea darse de baja del
-          estudio,
-          por favor contáctenos a <a href="mailto:haha@fing.edu.uy">haha@fing.edu.uy</a>. No utilizaremos sus
-          datos en
-          ninguna publicación o presentaciones si usted se dio de baja del estudio. Sin embargo, mantendremos
-          una copia
-          del formulario de consentimiento original y de su pedido para darse de baja.
-        </p>
-
-        <h4>¿Hay algún riesgo asociado con formar parte de este estudio?</h4>
-
-        <p>
-          No hay riesgos significativos asociados con la participación. Sin embargo, algunos de los textos
-          pueden llegar
-          a ser ofensivos. Si en cualquier momento desea darse de baja, por favor no dude en hacerlo.
-        </p>
-
-        <h4>¿Hay algún beneficio asociado con formar parte de este estudio?</h4>
-
-        <p>
-          No hay beneficios significativos por formar parte del estudio, pero podría encontrar algunos textos
-          graciosos.
-        </p>
-
-        <h4>¿Cómo puedo contactarlos?</h4>
-
-        <p>
-          Si tiene más preguntas acerca del estudio, o desea formular una queja sobre él, por favor
-          <a href="mailto:haha@fing.edu.uy">haha@fing.edu.uy</a>. Cuando nos contacte, por favor indique el
-          título del
-          estudio y la naturaleza de su queja.
-        </p>
-
-        <hr>
-
-        <form>
-          <div class="checkbox">
-            <label>
-              <input type="checkbox" required/>
-              Confirmo que he leído y entendido la información indicada arriba, que he tenido la
-              oportunidad de realizar
-              preguntas, y de que las preguntas que he tenido han sido respondidas satisfactoriamente.
-            </label>
-          </div>
-
-          <div class="checkbox">
-            <label>
-              <input type="checkbox" required/>
-              Entiendo que mi participación es voluntaria, y que puedo darme de baja en cualquier momento
-              sin dar una
-              razón. Darme de baja no afectará mis derechos.
-            </label>
-          </div>
-
-          <div class="checkbox">
-            <label>
-              <input type="checkbox" required/>
-              Doy mi consentimiento para que mis datos anonimizados se utilicen en publicaciones y
-              presentaciones
-              académicas.
-            </label>
-          </div>
-
-          <div class="checkbox">
-            <label>
-              <input type="checkbox" required/>
-              Entiendo que mis datos anonimizados podrán ser guardados por un mínimo de dos años.
-            </label>
-          </div>
-
-          <div class="checkbox">
-            <label>
-              <input type="checkbox" required/>
-              Permito que mis datos sean utilizados en futuras investigaciones de manera ética.
-            </label>
-          </div>
-
-          <div class="checkbox">
-            <label>
-              <input type="checkbox" required/>
-              Estoy de acuerdo en formar parte de este estudio.
-            </label>
-          </div>
-
-          <button id="consent-continue" type="submit" class="btn btn-primary">Continuar</button>
-        </form>
-      </div>
-    </div>
-  </div>
 </div>
 
 <div id="about" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="about-label">

@@ -23,7 +23,29 @@ h2 {
   color: #777777;
 }
 
-.tweet {
+#prompt {
+    border-radius: 5px;
+    border: 1px solid #e1e8ed;
+    display: flex;
+    margin: auto;
+    max-width: 500px;
+    min-height: 50px;
+    padding: 20px;
+}
+
+#prompt-text {
+    color: #1c2022;
+    cursor: text;
+    font-family: Helvetica, Roboto, "Segoe UI", Calibri, sans-serif;
+    font-size: 18px;
+    line-height: 1.4;
+    margin: auto;
+    white-space: pre-wrap;
+    width: 100%;
+    word-wrap: break-word;
+}
+
+.output {
   border-radius: 5px;
   border: 1px solid #e1e8ed;
   display: flex;
@@ -33,7 +55,7 @@ h2 {
   padding: 20px;
 }
 
-.tweet-text {
+.output-text {
   color: #1c2022;
   cursor: text;
   font-family: Helvetica, Roboto, "Segoe UI", Calibri, sans-serif;
@@ -96,43 +118,37 @@ button.no-hover:hover {
   transition-delay: 75ms;
 }
 
-#humor-container {
-  display: inline-flex;
-  flex-wrap: wrap;
-}
+/*#humor-container {*/
+/*  display: inline-flex;*/
+/*  flex-wrap: wrap;*/
+/*}*/
 
-#funniness-container {
-  display: inline-flex;
-  flex-wrap: wrap;
-  margin: auto;
-}
+/*#funniness-container {*/
+/*  display: inline-flex;*/
+/*  flex-wrap: wrap;*/
+/*  margin: auto;*/
+/*}*/
 
-#funniness-question {
-  margin: auto;
-}
+/*#funniness-question {*/
+/*  margin: auto;*/
+/*}*/
 
-#skip {
-  font-size: 14px;
-  margin: 16px 16px 16px 10px;
-  min-width: 100px;
-  padding: 0;
-  text-decoration: none;
-}
+/*#skip {*/
+/*  font-size: 14px;*/
+/*  margin: 16px 16px 16px 10px;*/
+/*  min-width: 100px;*/
+/*  padding: 0;*/
+/*  text-decoration: none;*/
+/*}*/
 
-#is-offensive-label {
+.is-offensive-label {
   font-weight: normal;
   margin: 0;
   text-align: center;
 }
 
-#is-offensive {
+.is-offensive {
   vertical-align: top;
-}
-
-#vote-count {
-  display: none;
-  margin-top: 20px;
-  text-align: center;
 }
 
 #about-us-content {

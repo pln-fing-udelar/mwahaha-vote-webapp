@@ -89,21 +89,21 @@ class Prompt:
         if self.word1 and self.word2:
             match self.language:
                 case "en":
-                    return f"The output needs to contain the words '{self.word1}' and '{self.word2}'."
+                    return f"The outputs must contain the words <b>{self.word1}</b> and <b>{self.word2}</b>."
                 case "es":
-                    return f"La salida debe contener las palabras '{self.word1}' y '{self.word2}'."
+                    return f"La salidas deben contener las palabras <b>{self.word1}</b> y <b>{self.word2}</b>."
                 case "zh":
-                    return f"输出需要包含词语“{self.word1}”和“{self.word2}”。"  # TODO: verify.
+                    return f"输出需要包含词语“<b>{self.word1}</b>”和“<b>{self.word2}</b>”。"  # TODO: verify.
                 case _:
                     raise ValueError(f"Unknown language: {self.language}")
         elif self.headline:
             match self.language:
                 case "en":
-                    return f"News headline: {self.headline}"
+                    return f"<b>News headline:</b> {self.headline}"
                 case "es":
-                    return f"Título de noticia: {self.headline}"
+                    return f"<b>Titular:</b> {self.headline}"
                 case "zh":
-                    return f"新闻标题: {self.headline}"  # TODO: verify.
+                    return f"<b>新闻标题:</b> {self.headline}"  # TODO: verify.
                 case _:
                     raise ValueError(f"Unknown language: {self.language}")
         elif self.url:
@@ -272,8 +272,9 @@ LIMIT :limit
 """)
 
 STATEMENT_ADD_VOTE = sqlalchemy.sql.text("""
-INSERT IGNORE INTO votes (prompt_id, system_id_a, system_id_b, session_id, vote, date, is_offensive_a, is_offensive_b)
+INSERT INTO votes (prompt_id, system_id_a, system_id_b, session_id, vote, date, is_offensive_a, is_offensive_b)
 VALUES (:prompt_id, :system_id_a, :system_id_b, :session_id, :vote, NOW(), :is_offensive_a, :is_offensive_b)
+ON DUPLICATE KEY UPDATE prompt_id = prompt_id
 """)
 STATEMENT_SESSION_VOTE_COUNT = sqlalchemy.sql.text(
     "SELECT COUNT(*) FROM votes v WHERE session_id = :session_id AND (NOT :without_skips OR vote != 'n')"
@@ -371,7 +372,7 @@ def add_vote(
     if vote not in VOTE_CHOICES:
         raise ValueError(f"Invalid vote: {vote}")
 
-    with engine.connect() as connection:
+    with engine.begin() as connection:
         connection.execute(
             STATEMENT_ADD_VOTE,
             {
