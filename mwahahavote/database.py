@@ -87,7 +87,7 @@ class Battle:
         return self.output_a.prompt
 
 
-VOTE_CHOICES = frozenset(("1", "2", "3", "4", "5", "x", "n"))
+VOTE_CHOICES = frozenset(("a", "b", "n"))
 
 STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES = sqlalchemy.sql.text("""
 WITH
@@ -209,79 +209,29 @@ ORDER BY
 LIMIT :limit
 """)
 
-STATEMENT_ADD_VOTE = sqlalchemy.sql.text(
-    "INSERT INTO votes (tweet_id, session_id, vote, is_offensive)"
-    " VALUES (:tweet_id, :session_id, :vote, :is_offensive)"
-    " ON DUPLICATE KEY UPDATE tweet_id = tweet_id"
-)
+STATEMENT_ADD_VOTE = sqlalchemy.sql.text("""
+INSERT IGNORE INTO votes (prompt_id, system_id_a, system_id_b, session_id, vote, date, is_offensive_a, is_offensive_b)
+VALUES (:prompt_id, :system_id_a, :system_id_b, :session_id, :vote, NOW(), :is_offensive_a, :is_offensive_b)
+""")
 STATEMENT_SESSION_VOTE_COUNT = sqlalchemy.sql.text(
-    "SELECT COUNT(*) FROM votes v WHERE session_id = :session_id   AND (NOT :without_skips OR vote != 'n')"
+    "SELECT COUNT(*) FROM votes v WHERE session_id = :session_id AND (NOT :without_skips OR vote != 'n')"
 )
-STATEMENT_VOTE_COUNT = sqlalchemy.sql.text(
-    "SELECT COUNT(*)"
-    " FROM votes v"
-    "   LEFT JOIN (SELECT session_id"
-    "               FROM votes"
-    "               WHERE tweet_id = 1092855393188020224 AND vote = 'x') s1"
-    "     ON v.session_id = s1.session_id"
-    "   LEFT JOIN (SELECT session_id"
-    "               FROM votes"
-    "               WHERE tweet_id = 1088158691633713152 AND vote = 'x') s2"
-    "     ON v.session_id = s2.session_id"
-    "   LEFT JOIN (SELECT session_id"
-    "               FROM votes"
-    "               WHERE tweet_id = 1086371400431095813"
-    "                 AND vote != 'x'"
-    "                 AND vote != 'n') s3"
-    "     ON v.session_id = s3.session_id"
-    " WHERE (NOT :without_skips OR vote != 'n')"
-    "   AND (NOT :pass_test"
-    "     OR (s1.session_id IS NOT NULL"
-    "       AND s2.session_id IS NOT NULL"
-    "       AND s3.session_id IS NOT NULL))"
-)
+STATEMENT_VOTE_COUNT = sqlalchemy.sql.text("SELECT COUNT(*) FROM votes WHERE NOT :without_skips OR vote != 'n'")
 STATEMENT_SESSION_COUNT = sqlalchemy.sql.text(
-    "SELECT COUNT(DISTINCT v.session_id)"
-    " FROM votes v"
-    "   LEFT JOIN (SELECT session_id"
-    "               FROM votes"
-    "               WHERE tweet_id = 1092855393188020224 AND vote = 'x') s1"
-    "     ON v.session_id = s1.session_id"
-    "   LEFT JOIN (SELECT session_id"
-    "               FROM votes"
-    "               WHERE tweet_id = 1088158691633713152 AND vote = 'x') s2"
-    "     ON v.session_id = s2.session_id"
-    "   LEFT JOIN (SELECT session_id"
-    "               FROM votes"
-    "               WHERE tweet_id = 1086371400431095813"
-    "                 AND vote != 'x'"
-    "                 AND vote != 'n') s3"
-    "     ON v.session_id = s3.session_id"
-    " WHERE (NOT :without_skips OR vote != 'n')"
-    "   AND (NOT :pass_test"
-    "     OR (s1.session_id IS NOT NULL"
-    "       AND s2.session_id IS NOT NULL"
-    "       AND s3.session_id IS NOT NULL))"
+    "SELECT COUNT(DISTINCT v.session_id) FROM votes v WHERE NOT :without_skips OR vote != 'n'"
 )
-STATEMENT_TEST_TWEETS_VOTE_COUNT = sqlalchemy.sql.text(
-    "SELECT COUNT(v.tweet_id) AS c"
-    " FROM tweets t"
-    "   LEFT JOIN votes v ON t.tweet_id = v.tweet_id"
-    " WHERE weight > 1"
-    " GROUP BY t.tweet_id"
-    " ORDER BY c DESC"
-)
-STATEMENT_HISTOGRAM = sqlalchemy.sql.text(
-    "SELECT c, COUNT(*) as freq"
-    " FROM (SELECT COUNT(v.tweet_id) c"
-    "        FROM tweets t"
-    "          LEFT JOIN (SELECT tweet_id FROM votes) v"  # WHERE vote != 'n'
-    "            ON t.tweet_id = v.tweet_id"
-    "        WHERE weight <= 1 AND t.tweet_id <> 1088158691633713152"
-    "        GROUP BY t.tweet_id) a"
-    " GROUP BY c"
-    " ORDER BY c"
-)
+STATEMENT_HISTOGRAM = sqlalchemy.sql.text("""
+WITH
+  prompt_counts AS (
+    SELECT
+      COUNT(votes.prompt_id) c
+    FROM
+      prompts
+      LEFT JOIN votes ON prompts.prompt_id = votes.prompt_id
+    GROUP BY prompts.prompt_id
+  )
+SELECT c, COUNT(*) as freq FROM prompt_counts GROUP BY c ORDER BY c
+""")
 STATEMENT_VOTE_COUNT_PER_CATEGORY = sqlalchemy.sql.text("SELECT vote, COUNT(*) FROM votes GROUP BY vote ORDER BY vote")
 
 
@@ -346,23 +296,24 @@ def random_battles(task: Task, batch_size: int) -> Iterator[Battle]:
         )
 
 
-def add_vote(session_id: str, tweet_id: Battle, vote: str, is_offensive: bool) -> None:
-    """Adds a vote for a tweet by a determined session.
+def add_vote(session_id: str, battle: Battle, vote: str, is_offensive_a: bool, is_offensive_b: bool) -> None:
+    """Adds a vote for a battle by a determined session."""
+    if vote not in VOTE_CHOICES:
+        raise ValueError(f"Invalid vote: {vote}")
 
-    If the vote is not one of `VOTE_CHOICES`, it will do nothing. If the session had already voted, the new vote will be
-    ignored.
-
-    :param session_id: Session ID
-    :param tweet_id: Tweet ID
-    :param vote: Vote of the tweet: "1" to "5" for the stars, "x" for non-humorous and "n" for skipped
-    :param is_offensive: If the tweet is considered offensive
-    """
-    if vote in VOTE_CHOICES:
-        with engine.connect() as connection:
-            connection.execute(
-                STATEMENT_ADD_VOTE,
-                {"tweet_id": tweet_id, "session_id": session_id, "vote": vote, "is_offensive": is_offensive},
-            )
+    with engine.connect() as connection:
+        connection.execute(
+            STATEMENT_ADD_VOTE,
+            {
+                "prompt_id": battle.prompt.id,
+                "system_id_a": battle.output_a.system.id,
+                "system_id_b": battle.output_b.system.id,
+                "session_id": session_id,
+                "vote": vote,
+                "is_offensive_a": is_offensive_a,
+                "is_offensive_b": is_offensive_b,
+            },
+        )
 
 
 def session_vote_count_with_skips(session_id: str) -> int:
@@ -376,34 +327,21 @@ def session_vote_count_with_skips(session_id: str) -> int:
 def vote_count_without_skips() -> int:
     """Returns the vote count, not including skips."""
     with engine.connect() as connection:
-        return connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True, "pass_test": False}).fetchone()[0]  # type: ignore
+        return connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True}).fetchone()[0]  # type: ignore
 
 
 def stats() -> MutableMapping[str, Any]:
     """Returns the vote count, vote count without skips, vote count histogram and votes per category."""
     with engine.connect() as connection:
         result: dict[str, Any] = {
-            "votes": connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": False, "pass_test": False}).fetchone()[  # type: ignore
-                0
-            ],
-            "sessions": connection.execute(  # type: ignore
-                STATEMENT_SESSION_COUNT, {"without_skips": False, "pass_test": False}
-            ).fetchone()[0],
-            "test-tweets-vote-count": [t[0] for t in connection.execute(STATEMENT_TEST_TWEETS_VOTE_COUNT)],
+            "votes": connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": False}).fetchone()[0],  # type: ignore
+            "sessions": connection.execute(STATEMENT_SESSION_COUNT, {"without_skips": False}).fetchone()[0],  # type: ignore
             "histogram": dict(connection.execute(STATEMENT_HISTOGRAM)),  # type: ignore
             "votes-per-category": dict(connection.execute(STATEMENT_VOTE_COUNT_PER_CATEGORY)),  # type: ignore
-            "votes-without-skips": connection.execute(  # type: ignore
-                STATEMENT_VOTE_COUNT, {"without_skips": True, "pass_test": False}
-            ).fetchone()[0],
-            "sessions-without-skips": connection.execute(  # type: ignore
-                STATEMENT_SESSION_COUNT, {"without_skips": True, "pass_test": False}
-            ).fetchone()[0],
-            "votes-pass-test": connection.execute(  # type: ignore
-                STATEMENT_VOTE_COUNT, {"without_skips": True, "pass_test": True}
-            ).fetchone()[0],
-            "sessions-pass-test": connection.execute(  # type: ignore
-                STATEMENT_SESSION_COUNT, {"without_skips": True, "pass_test": True}
-            ).fetchone()[0],
+            "votes-without-skips": connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True}).fetchone()[0],  # type: ignore
+            "sessions-without-skips": connection.execute(STATEMENT_SESSION_COUNT, {"without_skips": True}).fetchone()[  # type: ignore
+                0
+            ],
         }
 
     for category in VOTE_CHOICES:

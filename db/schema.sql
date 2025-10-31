@@ -34,13 +34,14 @@ CREATE TABLE outputs
 
 CREATE TABLE votes
 (
-  prompt_id    VARCHAR(10) NOT NULL,
-  system_id_a VARCHAR(100) NOT NULL,
-  system_id_b VARCHAR(100) NOT NULL,
-  session_id   CHAR(100)   NOT NULL,
-  vote         CHAR(1)     NOT NULL,
-  date         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  is_offensive BOOL      DEFAULT 0,
+  prompt_id      VARCHAR(10)  NOT NULL,
+  system_id_a    VARCHAR(100) NOT NULL,
+  system_id_b    VARCHAR(100) NOT NULL,
+  session_id     CHAR(100)    NOT NULL,
+  vote           CHAR(1)      NOT NULL,
+  date           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  is_offensive_a BOOL      DEFAULT 0,
+  is_offensive_b BOOL      DEFAULT 0,
   PRIMARY KEY (prompt_id, system_id_a, system_id_b, session_id),
   INDEX (prompt_id, system_id_a, system_id_b),
   INDEX (prompt_id, system_id_a),
