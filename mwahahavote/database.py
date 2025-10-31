@@ -93,7 +93,7 @@ class Prompt:
                 case "es":
                     return f"La salidas deben contener las palabras <b>{self.word1}</b> y <b>{self.word2}</b>."
                 case "zh":
-                    return f"输出需要包含词语“<b>{self.word1}</b>”和“<b>{self.word2}</b>”。"  # TODO: verify.
+                    return f"输出需要包含词语“<b>{self.word1}</b>”和“<b>{self.word2}</b>”。"
                 case _:
                     raise ValueError(f"Unknown language: {self.language}")
         elif self.headline:
@@ -103,7 +103,7 @@ class Prompt:
                 case "es":
                     return f"<b>Titular:</b> {self.headline}"
                 case "zh":
-                    return f"<b>新闻标题:</b> {self.headline}"  # TODO: verify.
+                    return f"<b>新闻标题:</b> {self.headline}"
                 case _:
                     raise ValueError(f"Unknown language: {self.language}")
         elif self.url:
