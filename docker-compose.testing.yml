@@ -7,3 +7,9 @@ services:
       - DB_PASS=123123
     ports:
       - '5000:80'
+    networks:
+      - net
+networks:
+  net:
+    name: clasificahumor_net
+    external: true
