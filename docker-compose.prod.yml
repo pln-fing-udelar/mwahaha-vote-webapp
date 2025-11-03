@@ -4,42 +4,15 @@ services:
       dockerfile: Dockerfile.prod
     environment:
       - SENTRY_DSN
-      - VIRTUAL_HOST=mwahahavote.com,www.mwahahavote.com
-      - LETSENCRYPT_HOST=mwahahavote.com,www.mwahahavote.com
-      - LETSENCRYPT_EMAIL=sacastro@fing.edu.uy
+      - VIRTUAL_HOST=mwahaha.clasificahumor.com
     networks:
-      - reverse_proxy_net
-    restart: always
-  database:
-    restart: always
-  nginx-proxy:
-    image: jwilder/nginx-proxy
-    labels:
-      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
-    ports:
-      - '80:80'
-      - '443:443'
-    volumes:
-      - certs:/etc/nginx/certs:ro
-      - vhost:/etc/nginx/vhost.d
-      - html:/usr/share/nginx/html
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-    networks:
-      - reverse_proxy_net
-    restart: always
-  letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion
-    volumes:
-      - certs:/etc/nginx/certs:rw
-      - vhost:/etc/nginx/vhost.d
-      - html:/usr/share/nginx/html
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
+      - net
       - reverse_proxy_net
     restart: always
 networks:
+  net:
+    name: clasificahumor_net
+    external: true
   reverse_proxy_net:
-volumes:
-  certs:
-  html:
-  vhost:
+    name: clasificahumor_reverse_proxy_net
+    external: true

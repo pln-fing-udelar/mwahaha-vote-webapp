@@ -7,7 +7,3 @@ services:
       - DB_PASS=123123
     ports:
       - '5000:80'
-  database:
-    environment:
-      - MYSQL_ROOT_PASSWORD=123123
-      - MYSQL_DATABASE=mwahaha
