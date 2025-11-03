@@ -139,7 +139,7 @@ def stats_route() -> str:
     stats = database.stats()
     stats["histogram"] = [["Vote count", "Prompt count"]] + [[str(a), b] for a, b in stats["histogram"].items()]
     stats["votes-per-category"] = [["Vote", "Prompt count"], *list(stats["votes-per-category"].items())]
-    return render_template("stats.html", stats=stats)
+    return render_template("templates/stats.html", stats=stats)
 
 
 @app.route("/", defaults={"path": "index.html"})

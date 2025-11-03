@@ -7,8 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import requests
-
-from mwahahavote.database import Task
+from web.mwahahavote.database import Task
 
 # Reference API (old?): https://qtim-challenges.southcentralus.cloudapp.azure.com/api/docs/
 

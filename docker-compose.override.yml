@@ -8,7 +8,7 @@ services:
     ports:
       - '5000:5000'
     volumes:
-      - ./mwahahavote:/usr/src/app/mwahahavote
+      - ./web/mwahahavote:/usr/src/app/mwahahavote
   database:
     environment:
       - MYSQL_ROOT_PASSWORD=123123
