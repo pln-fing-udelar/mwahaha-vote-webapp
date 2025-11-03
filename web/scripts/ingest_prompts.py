@@ -4,6 +4,8 @@ import os
 
 import pandas as pd
 
+import mwahahavote.database
+
 
 def read_prompt_file(path: str) -> pd.DataFrame:
     df = pd.read_csv(path, delimiter="\t", quoting=csv.QUOTE_NONE, index_col="id", na_values="-")  # type: ignore
@@ -26,7 +28,7 @@ def read_prompt_files(dir_: str) -> pd.DataFrame:
 def main() -> None:
     print(
         "Number of rows affected:",
-        read_prompt_files("prompts/").to_sql("prompts", web.mwahahavote.database.create_engine(), if_exists="append"),
+        read_prompt_files("prompts/").to_sql("prompts", mwahahavote.database.create_engine(), if_exists="append"),
     )
 
 
