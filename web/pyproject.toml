@@ -2,11 +2,10 @@
 name = "mwahahavote"
 version = "0.1.0.dev0"
 description = "A web app to crowd-annotate for the MWAHAHA competition."
-readme = "README.md"
 authors = [
     { name = "Santiago Castro", email = "sacastro@fing.edu.uy" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "flask<4",
     "fsspec[http]<=2026",
