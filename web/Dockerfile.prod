@@ -1,4 +1,5 @@
 FROM tiangolo/uwsgi-nginx-flask:python3.12
+# 3.13 is not supported.
 COPY --from=ghcr.io/astral-sh/uv /uv /uvx /bin/
 ENV UV_PROJECT_ENVIRONMENT=/usr/local/
 RUN touch README.md

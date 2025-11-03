@@ -11,7 +11,7 @@ from pandas.io.sql import SQLTable
 from typing_extensions import Reader  # type: ignore
 
 from ingestion.codabench import Submission
-from web.mwahahavote.database import TASK_CHOICES, engine, task_to_prompt_id_sql_like_expression
+from mwahahavote.database import TASK_CHOICES, engine, task_to_prompt_id_sql_like_expression
 
 
 def print_stats(submissions: list[Submission]) -> None:
