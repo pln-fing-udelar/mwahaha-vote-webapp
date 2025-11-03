@@ -97,9 +97,10 @@ a local `mysql`:
 ```bash
 # First check the IP address of the container.
 # Note the actual Docker container name depends on the local folder name.
-DB_IP_ADDRESS=$(docker container inspect mwahaha-vote-webapp-database-1 | jq -r '.[0].NetworkSettings.Networks."mwahaha-vote-webapp_net".IPAddress')
+# (It needs `jq` installed.)
+DB_HOST=$(docker container inspect mwahaha-vote-webapp-database-1 | jq -r '.[0].NetworkSettings.Networks."mwahaha-vote-webapp_net".IPAddress')
 # Then use the IP address (e.g., 172.19.0.3) to connect:
-mycli -h "$DB_IP_ADDRESS" -u root -p
+mycli -h "$DB_HOST" -u root -p
 # You can also set the password in the command like: -p$PASSWORD
 ```
 
