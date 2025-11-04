@@ -175,7 +175,7 @@ subcommand doesn't.
 
 ## Production setup
 
-The repo was first cloned in production in `/opt/mwahahavote`. The following command was run:
+The repo was first cloned in production in `/opt/mwahaha-vote-webapp`. The following command was run:
 
 ```bash
 git config receive.denyCurrentBranch updateInstead
@@ -197,7 +197,7 @@ popd > /dev/null
 Add a git remote to push to production:
 
 ```bash
-git remote add production $YOUR_USERNAME@mwahahavote.com:/opt/mwahahavote
+git remote add production $YOUR_USERNAME@clasificahumor.com:/opt/mwahaha-vote-webapp
 ```
 
 Then just push to production:
