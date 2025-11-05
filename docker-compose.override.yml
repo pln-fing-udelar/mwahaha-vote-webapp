@@ -1,14 +1,14 @@
 services:
   web:
     environment:
-      - FLASK_APP=mwahahavote/__main__.py
+      - FLASK_APP=src/mwahahavote/__main__.py
       - FLASK_DEBUG=1
       - FLASK_SECRET_KEY=ze4f2fWLmEY9dADjhwvhym3U
       - DB_PASS=123123
     ports:
       - '5000:5000'
     volumes:
-      - ./web/mwahahavote:/usr/src/app/mwahahavote
+      - ./web:/usr/src/app
     networks:
       - net
   database:

@@ -9,3 +9,5 @@ Some differences:
 
 * The database name is `mwahaha` instead of `pghumor`.
 * The Docker container names are prefixed with `mwahaha-vote-webapp-` instead of `clasificahumor-`.
+
+TODO: symlink .env
