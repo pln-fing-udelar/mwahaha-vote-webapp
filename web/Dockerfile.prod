@@ -6,5 +6,5 @@ RUN touch README.md
 COPY pyproject.toml uv.lock ./
 COPY mwahahavote mwahahavote
 RUN uv sync --no-default-groups --no-managed-python --inexact --locked
-COPY uwsgi.ini prestart.sh ./
+COPY uwsgi.ini ./
 COPY uwsgi.conf /etc/nginx/conf.d/
