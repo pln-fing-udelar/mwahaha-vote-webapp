@@ -19,7 +19,7 @@ dependencies = [
 
 [project.urls]
 homepage = "TODO"
-repository = "TODO"
+repository = "https://github.com/pln-fing-udelar/mwahaha-vote-webapp"
 
 [dependency-groups]
 dev = [
