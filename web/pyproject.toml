@@ -23,7 +23,7 @@ repository = "https://github.com/pln-fing-udelar/mwahaha-vote-webapp"
 
 [dependency-groups]
 dev = [
-    "ipython>=2,<9",
+    "ipython>=2,<10",
     "jq<2",
     "mycli<2",
     "pandas-stubs",
