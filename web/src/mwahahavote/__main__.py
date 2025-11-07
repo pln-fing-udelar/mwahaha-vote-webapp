@@ -10,7 +10,7 @@ from flask import Flask, Response, jsonify, render_template, request, send_from_
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 from mwahahavote import database
-from mwahahavote.database import TASK_CHOICES, Battle, Task
+from mwahahavote.database import TASK_CHOICES, Battle, Task, prompt_id_to_task
 
 REQUEST_BATTLE_BATCH_SIZE = 3
 
@@ -89,11 +89,6 @@ def battles_route() -> Response:
 def vote_and_get_new_battle_route() -> Response:
     session_id = _get_session_id()
 
-    task = request.form.get("task", "a-en")
-    if task not in TASK_CHOICES:
-        task = "a-en"
-    task = cast(Task, task)
-
     if all(
         key in request.form
         for key in ("prompt_id", "system_id_a", "system_id_b", "vote", "is_offensive_a", "is_offensive_b")
@@ -107,6 +102,13 @@ def vote_and_get_new_battle_route() -> Response:
             is_offensive_a=request.form["is_offensive_a"].lower() == "true",
             is_offensive_b=request.form["is_offensive_b"].lower() == "true",
         )
+
+    task: Task = "a-en"
+    if "prompt_id" in request.form:
+        try:
+            task = prompt_id_to_task(request.form["prompt_id"])
+        except ValueError:
+            pass
 
     ignored_output_id_strs = request.form.getlist("ignored_output_ids[]", type=str)
     ignored_output_ids: list[tuple[str, str]] = [tuple(str_.split("-", maxsplit=1)) for str_ in ignored_output_id_strs]  # type: ignore

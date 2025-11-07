@@ -1,5 +1,6 @@
 let $star;
 let $homeContent;
+let $task;
 let $prompt;
 let $outputA;
 let $outputB;
@@ -13,21 +14,9 @@ let $isOffensiveLeft;
 let $isOffensiveRight;
 let emoji;
 
+let task = "a-en";
 let battles = [];
 let index = 0;
-
-// function getParameterByName(name, url = window.location.href) {
-//     name = name.replace(/[\[\]]/g, "\\$&");
-//     const regex = new RegExp(`[?&]${name}(=([^&#]*)|&|#|$)`);
-//     const results = regex.exec(url);
-//     if (!results) {
-//         return null;
-//     }
-//     if (!results[2]) {
-//         return "";
-//     }
-//     return decodeURIComponent(results[2].replace(/\+/g, " "));
-// }
 
 $(document).ready(main);
 
@@ -36,6 +25,7 @@ function main() {
     setupElements();
     setupPlaceload();
     setupEmojiConverter();
+    getTask();
     getRandomBattles();
     setUiListeners();
     moveToolboxIfOutside();
@@ -51,6 +41,7 @@ function setupSentry() {
 function setupElements() {
     $star = $("*");
     $homeContent = $("#home-content");
+    $task = $("#task");
     $prompt = $("#prompt-text");
     $outputA = $("#output-a-text");
     $outputB = $("#output-b-text");
@@ -70,7 +61,7 @@ function showBattle() {
     } else {
         $prompt.fadeOut(100, () => {
             // TODO: add the image.
-            $prompt.html(emoji.replace_unified(battles[index].prompt.replace(/\n/mg, "<br/>"))).text();
+            $prompt.html((emoji.replace_unified(battles[index].prompt || "").replace(/\n/mg, "<br/>"))).text();
             $prompt.fadeIn(100);
         });
         $outputA.fadeOut(100, () => {
@@ -114,18 +105,29 @@ function setupEmojiConverter() {
     emoji.img_sets.twitter.path = "https://raw.githubusercontent.com/iamcal/emoji-data/" + "a97b2d2efa64535d6300660eb2cd15ecb584e79e/img-twitter-64/";
 }
 
+function getTask() {
+    const urlParams = new URLSearchParams(window.location.search);
+    task = urlParams.get("task") || "a-en";
+    $task.val(task);
+}
+
 function getRandomBattles() {
-    $.getJSON("battles", data => {
+    $.getJSON("battles", {task: task}, data => {
         battles = data;
         showBattle();
     });
 }
 
 function setUiListeners() {
+    $task.change(() => changeTask());
     $voteLeft.click(() => vote("a"));
     $voteRight.click(() => vote("b"));
     $skip.click(() => vote("n"));
     $("#answers button").mouseup(e => $(e.currentTarget).blur());
+}
+
+function changeTask() {
+    window.location.href = "?task=" + encodeURIComponent($task.val());
 }
 
 function vote(voteOption) {
@@ -135,7 +137,6 @@ function vote(voteOption) {
     const otherIndex = (index + 1) % battles.length;
 
     $.post("vote", {
-        task: "a-en",
         prompt_id: battles[oldIndex].prompt_id,
         system_id_a: battles[oldIndex].system_id_a,
         system_id_b: battles[oldIndex].system_id_b,

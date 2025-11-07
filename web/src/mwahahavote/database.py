@@ -40,6 +40,17 @@ class System:
         return self.id == other.id if isinstance(other, type(self)) else NotImplemented
 
 
+def prompt_id_to_task(prompt_id: str) -> Task:
+    if prompt_id.startswith(("en_", "es_", "zh_")):
+        return f"a-{prompt_id[:2]}"  # type: ignore
+    elif prompt_id.startswith("img_2_"):
+        return "b2"
+    elif prompt_id.startswith("img_"):
+        return "b1"
+    else:
+        raise ValueError(f"Cannot determine the task for prompt ID '{prompt_id}'")
+
+
 @dataclass(frozen=True)
 class Prompt:
     id: str
@@ -66,14 +77,7 @@ class Prompt:
 
     @property
     def task(self) -> Task:
-        if self.id.startswith(("en_", "es_", "zh_")):
-            return f"a-{self.id[:2]}"  # type: ignore
-        elif self.id.startswith("img_2_"):
-            return "b2"
-        elif self.id.startswith("img_"):
-            return "b1"
-        else:
-            raise ValueError(f"Cannot determine the task for prompt ID '{self.id}'")
+        return prompt_id_to_task(self.id)
 
     @property
     def language(self) -> Literal["en", "es", "zh"]:
