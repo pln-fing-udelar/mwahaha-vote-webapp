@@ -60,8 +60,12 @@ function showBattle() {
         console.error("There are no battles to display.");
     } else {
         $prompt.fadeOut(100, () => {
-            // TODO: add the image.
-            $prompt.html((emoji.replace_unified(battles[index].prompt || "").replace(/\n/mg, "<br/>"))).text();
+            const prompt_image_url = battles[index].prompt_image_url;
+            let imageHtml = "";
+            if (prompt_image_url) {
+                imageHtml = '<img src="' + prompt_image_url + '" alt="Prompt image"><br/>';
+            }
+            $prompt.html(imageHtml + emoji.replace_unified(battles[index].prompt || "").replace(/\n/mg, "<br/>")).text();
             $prompt.fadeIn(100);
         });
         $outputA.fadeOut(100, () => {
