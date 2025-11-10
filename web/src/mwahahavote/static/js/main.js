@@ -39,7 +39,7 @@ function setupSentry() {
         // Alternatively, use `process.env.npm_package_version` for a dynamic release version
         // if your build tool supports it.
         release: "mwahahavote@0.1.0",
-        denyUrls: ["localhost", "127.0.0.1"],
+        denyUrls: [/https?:\/\/localhost/, /https?:\/\/127\.0\.0\.1/, /https?:\/\/\[::1?]/],
     });
 }
 
