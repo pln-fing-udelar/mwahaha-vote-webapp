@@ -7,7 +7,6 @@ from typing import Any, cast
 
 import sentry_sdk
 from flask import Flask, Response, jsonify, render_template, request, send_from_directory
-from sentry_sdk.integrations.flask import FlaskIntegration
 
 from mwahahavote import database
 from mwahahavote.database import TASK_CHOICES, Battle, Task, prompt_id_to_task
@@ -26,7 +25,7 @@ def _create_app() -> Flask:
     return app_
 
 
-sentry_sdk.init(integrations=[FlaskIntegration()], traces_sample_rate=1.0)
+sentry_sdk.init(send_default_pii=True, traces_sample_rate=1.0)
 
 app = _create_app()
 

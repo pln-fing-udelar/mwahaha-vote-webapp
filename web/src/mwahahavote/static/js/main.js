@@ -33,9 +33,14 @@ function main() {
 
 function setupSentry() {
     // The following key is public.
-    // Raven.config("https://3afb3f9917f44b2a87e6fbb070a8977b@sentry.io/298102", {
-    //     ignoreUrls: ["localhost", "127.0.0.1"]
-    // }).install();
+    window.sentryOnLoad = () => Sentry.init({
+        dsn: "https://85c805830c8feb48a02488382cecd1a5@o134888.ingest.us.sentry.io/4510338807627776",
+        sendDefaultPii: true,
+        // Alternatively, use `process.env.npm_package_version` for a dynamic release version
+        // if your build tool supports it.
+        release: "mwahahavote@0.1.0",
+        denyUrls: ["localhost", "127.0.0.1"],
+    });
 }
 
 function setupElements() {
