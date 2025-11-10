@@ -62,7 +62,11 @@ function setupElements() {
 
 function showBattle() {
     if (battles.length === 0) {
-        console.error("There are no battles to display.");
+        $("#prompt").fadeOut(0);
+        $("#output-a").fadeOut(0);
+        $("#output-b").fadeOut(0);
+        $("#outputs").append("<p class=\"col-xs-12\" style=\"padding: 10px\">There are no battles to display for this task.</p>");
+        $("#answers").fadeOut(0);
     } else {
         $prompt.fadeOut(100, () => {
             const prompt_image_url = battles[index].prompt_image_url;
@@ -85,6 +89,16 @@ function showBattle() {
 }
 
 function setupPlaceload() {
+    Placeload
+        .$("#prompt-text")
+        .config({speed: "1s"})
+        .line(element => element.width(100).height(15))
+        .config({spaceBetween: "7px"})
+        .line(element => element.width(100).height(15))
+        .config({spaceBetween: "7px"})
+        .line(element => element.width(40).height(15)).fold(() => {
+    }, () => {
+    });
     Placeload
         .$("#output-a-text")
         .config({speed: "1s"})
@@ -158,7 +172,9 @@ function vote(voteOption) {
         ],
         is_offensive_a: $isOffensiveLeft.prop("checked"),
         is_offensive_b: $isOffensiveRight.prop("checked"),
-    }, battle => battles[oldIndex] = battle, "json");
+    }, battle => battles[oldIndex] = battle, "json").fail(() =>
+        $.mdtoast("Sorry, an error occurred! Please try again later.", {duration: 3000})
+    );
 
     showBattle();
 

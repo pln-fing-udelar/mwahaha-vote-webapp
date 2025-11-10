@@ -824,7 +824,6 @@ source = { editable = "." }
 dependencies = [
     { name = "flask" },
     { name = "fsspec", extra = ["http"] },
-    { name = "ipython" },
     { name = "pandas" },
     { name = "requests" },
     { name = "sentry-sdk", extra = ["flask"] },
@@ -847,7 +846,6 @@ dev = [
 requires-dist = [
     { name = "flask", specifier = "<4" },
     { name = "fsspec", extras = ["http"], specifier = "<=2026" },
-    { name = "ipython", specifier = ">=9.6.0" },
     { name = "pandas", specifier = "<3" },
     { name = "requests", specifier = "<3" },
     { name = "sentry-sdk", extras = ["flask"], specifier = "<3" },
