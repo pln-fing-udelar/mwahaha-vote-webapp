@@ -304,7 +304,9 @@ STATEMENT_VOTE_COUNT_PER_CATEGORY = sqlalchemy.sql.text("SELECT vote, COUNT(*) F
 
 def create_engine() -> sqlalchemy.Engine:
     return sqlalchemy.create_engine(
-        f"mysql://{os.environ['DB_USER']}:{os.environ['DB_PASS']}@{os.environ['DB_HOST']}/{os.environ['DB_NAME']}"
+        f"mysql://{os.environ['DB_USER']}:{os.environ['DB_PASS']}@{os.environ['DB_HOST']}/{os.environ['DB_NAME']}",
+        pool_size=10,
+        pool_recycle=3600,
     )
 
 
