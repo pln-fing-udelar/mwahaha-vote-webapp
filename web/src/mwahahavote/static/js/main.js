@@ -72,7 +72,7 @@ function showBattle() {
             const prompt_image_url = battles[index].prompt_image_url;
             let imageHtml = "";
             if (prompt_image_url) {
-                imageHtml = '<img src="' + prompt_image_url + '" alt="Prompt image"><br/>';
+                imageHtml = '<img id="prompt-image" src="' + prompt_image_url + '" alt="Prompt image"><br/>';
             }
             $prompt.html(imageHtml + emoji.replace_unified(battles[index].prompt || "").replace(/\n/mg, "<br/>")).text();
             $prompt.fadeIn(100);
@@ -92,11 +92,7 @@ function setupPlaceload() {
     Placeload
         .$("#prompt-text")
         .config({speed: "1s"})
-        .line(element => element.width(100).height(15))
-        .config({spaceBetween: "7px"})
-        .line(element => element.width(100).height(15))
-        .config({spaceBetween: "7px"})
-        .line(element => element.width(40).height(15)).fold(() => {
+        .line(element => element.width(100).height(15)).fold(() => {
     }, () => {
     });
     Placeload

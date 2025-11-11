@@ -26,6 +26,10 @@
 
   <title>Which One is Funnier?</title>
 
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"
+        rel="stylesheet">
   <link href="css/normalize.css" rel="stylesheet"/>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
         integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
@@ -89,7 +93,7 @@
     <div id="home-content" class="content">
       <h1>Which One is Funnier?</h1>
 
-      <label for="task">Task</label>
+      <label for="task" id="task-label">Task:</label>
       <select class="form-control" id="task">
         <option value="a-en">Task A: Joke in English</option>
         <option value="a-es">Task A: Joke in Spanish</option>
@@ -99,17 +103,19 @@
       </select>
 
       <div id="prompt" class="row">
-        <p>Prompt:</p>
-        <p id="prompt-text"></p>
+        <div class="col-xs-12">
+          <p class="prompt-label">Prompt:</p>
+          <p id="prompt-text"></p>
+        </div>
       </div>
 
       <div class="row" id="outputs">
         <div class="output col-xs-6" id="output-a">
-          <p>System A's output:</p>
+          <p class="output-label">System A's output:</p>
           <p id="output-a-text" class="output-text"></p>
         </div>
         <div class="output col-xs-6" id="output-b">
-          <p>System B's output:</p>
+          <p class="output-label">System B's output:</p>
           <p id="output-b-text" class="output-text"></p>
         </div>
       </div>

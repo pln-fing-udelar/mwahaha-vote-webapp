@@ -95,39 +95,3 @@
   opacity: 1;
   visibility: visible;
 }
-
-#humor-container:hover #vote-2 {
-  transition-delay: 0.03s;
-}
-
-#humor-container:hover #vote-3 {
-  transition-delay: 0.06s;
-}
-
-#humor-container:hover #vote-4 {
-  transition-delay: 0.09s;
-}
-
-#humor-container:hover #vote-5 {
-  transition-delay: 0.12s;
-}
-
-#vote-2 {
-  background-position: 0 -48px;
-  left: 50px;
-}
-
-#vote-3 {
-  background-position: 0 -96px;
-  left: 100px;
-}
-
-#vote-4 {
-  background-position: 0 -144px;
-  left: 150px;
-}
-
-#vote-5 {
-  background-position: 0 -192px;
-  left: 200px;
-}
