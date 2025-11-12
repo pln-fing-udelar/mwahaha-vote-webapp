@@ -20,9 +20,21 @@ h1 {
   margin-bottom: 30px;
 }
 
+#task-container {
+  align-items: center;
+  flex-direction: row;
+  display: inline-flex;
+  text-align: center;
+}
+
 #task-label {
   color: gray;
   font-weight: 400;
+  margin: 10px;
+}
+
+#task {
+  max-width: fit-content;
 }
 
 #prompt {
