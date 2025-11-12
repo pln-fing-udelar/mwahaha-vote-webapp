@@ -113,6 +113,7 @@ h1 {
 .answer {
   align-items: center;
   display: flex;
+  justify-content: center;
   margin: 0 20px 20px 20px;
   min-width: 180px;
 }
