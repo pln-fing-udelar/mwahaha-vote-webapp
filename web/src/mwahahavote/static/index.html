@@ -127,24 +127,34 @@
           <li class="answer">
             <label class="is-offensive-label" for="is-offensive-left">
               <input id="is-offensive-left" class="is-offensive" type="checkbox"/>
-              Left is offensive
+              <span class="hidden-md hidden-lg">A is offensive</span>
+              <span class="hidden-xs hidden-sm">Left is offensive</span>
             </label>
           </li>
 
           <li id="left-answer" class="answer">
-            <button id="vote-left" type="button" class="btn btn-lg btn-default btn-answer">⬅️ Left is funnier</button>
+            <button class="btn btn-lg btn-default btn-answer" id="vote-left" type="button">
+              <span class="hidden-md hidden-lg">A is funnier</span>
+              <span class="hidden-xs hidden-sm">⬅️ Left is funnier</span>
+            </button>
           </li>
+
           <li id="skip-answer" class="answer">
             <button id="skip" type="button" class="btn btn-lg btn-default btn-answer">It's a tie / Skip 🚫</button>
           </li>
+
           <li id="right-answer" class="answer">
-            <button id="vote-right" type="button" class="btn btn-lg btn-default btn-answer">Right is funnier ➡️</button>
+            <button class="btn btn-lg btn-default btn-answer" id="vote-right" type="button">
+              <span class="hidden-md hidden-lg">B is funnier</span>
+              <span class="hidden-xs hidden-sm">Right is funnier ➡️</span>
+            </button>
           </li>
 
           <li class="answer">
             <label class="is-offensive-label" for="is-offensive-right">
               <input id="is-offensive-right" class="is-offensive" type="checkbox"/>
-              Right is offensive
+              <span class="hidden-md hidden-lg">B is offensive</span>
+              <span class="hidden-xs hidden-sm">Right is offensive</span>
             </label>
           </li>
         </ul>
