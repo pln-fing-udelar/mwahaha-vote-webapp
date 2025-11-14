@@ -5,6 +5,9 @@ services:
     environment:
       - SENTRY_DSN
       - VIRTUAL_HOST=thefunnier.com,www.thefunnier.com
+      - VIRTUAL_PATH=/
+      - LETSENCRYPT_HOST=thefunnier.com,www.thefunnier.com
+      - LETSENCRYPT_EMAIL=sacastro@fing.edu.uy
     networks:
       - net
       - reverse_proxy_net
