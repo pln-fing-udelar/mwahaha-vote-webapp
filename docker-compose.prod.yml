@@ -4,9 +4,7 @@ services:
       dockerfile: Dockerfile.prod
     environment:
       - SENTRY_DSN
-      - VIRTUAL_HOST=clasificahumor.com,www.clasificahumor.com
-      - VIRTUAL_PATH=/mwahaha/
-      - VIRTUAL_DEST=/
+      - VIRTUAL_HOST=thefunnier.com,www.thefunnier.com
     networks:
       - net
       - reverse_proxy_net
