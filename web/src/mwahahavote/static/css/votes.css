@@ -14,7 +14,6 @@
 
 .vote {
   border: none;
-  background: transparent url('../img/votes.png');
   display: block;
   cursor: pointer;
   height: 48px;
