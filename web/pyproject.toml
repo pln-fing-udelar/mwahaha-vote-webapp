@@ -11,9 +11,11 @@ dependencies = [
     "fsspec[http]<=2026",
     "pandas<3",
     "requests<3",
+    "ruff>=0.3,<1",
     "sentry-sdk[flask]<3",
     "sqlalchemy[mysql]<3",
     "tqdm<5",
+    "ty<1",
     "typing-extensions<5",
 ]
 
