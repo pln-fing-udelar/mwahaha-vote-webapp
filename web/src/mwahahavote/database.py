@@ -1,5 +1,5 @@
 """Provides mechanisms to handle the database."""
-
+import datetime
 import os
 from collections.abc import Iterable, Iterator, MutableMapping
 from dataclasses import dataclass
@@ -153,7 +153,19 @@ class Battle:
         return self.output_a.prompt
 
 
-VOTE_CHOICES = frozenset(("a", "b", "n"))
+VoteString = Literal["a", "b", "n"]
+VOTE_CHOICES = frozenset(get_args(VoteString))
+
+
+@dataclass(frozen=True)
+class Vote:
+    battle: Battle
+    session_id: str
+    vote: VoteString
+    date: datetime.datetime
+    is_offensive_a: bool
+    is_offensive_b: bool
+
 
 STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES = sqlalchemy.sql.text("""
 WITH
@@ -370,14 +382,11 @@ def add_vote(
     prompt_id: str,
     system_id_a: str,
     system_id_b: str,
-    vote: str,
+    vote: VoteString,
     is_offensive_a: bool,
     is_offensive_b: bool,
 ) -> None:
     """Adds a vote for a battle ID by a determined session."""
-    if vote not in VOTE_CHOICES:
-        raise ValueError(f"Invalid vote: {vote}")
-
     with engine.begin() as connection:
         connection.execute(
             STATEMENT_ADD_VOTE,
@@ -391,6 +400,40 @@ def add_vote(
                 "is_offensive_b": is_offensive_b,
             },
         )
+
+
+def get_votes(task: Task) -> Iterator[Vote]:
+    """Returns all votes for a given task."""
+    with engine.connect() as connection:
+        for (
+            prompt_id,
+            system_id_a,
+            system_id_b,
+            session_id,
+            vote,
+            date,
+            is_offensive_a,
+            is_offensive_b,
+        ) in connection.execute(
+            sqlalchemy.sql.text("""
+                SELECT prompt_id, system_id_a, system_id_b, session_id, vote, date, is_offensive_a, is_offensive_b
+                FROM votes NATURAL join prompts
+                WHERE task = :task
+            """),
+            {"task": task},
+        ):
+            prompt = Prompt(id=prompt_id, headline="<placeholder>")
+            yield Vote(
+                battle=Battle(
+                    output_a=Output(prompt=prompt, system=System(id=system_id_a), text=None),  # type: ignore
+                    output_b=Output(prompt=prompt, system=System(id=system_id_b), text=None),  # type: ignore
+                ),
+                session_id=session_id,
+                vote=vote,
+                date=date,
+                is_offensive_a=is_offensive_a,
+                is_offensive_b=is_offensive_b,
+            )
 
 
 def session_vote_count_with_skips(session_id: str) -> int:

@@ -9,7 +9,7 @@ import sentry_sdk
 from flask import Flask, Response, jsonify, render_template, request, send_from_directory
 
 from mwahahavote import database
-from mwahahavote.database import TASK_CHOICES, Battle, Task, prompt_id_to_task
+from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString, prompt_id_to_task
 
 REQUEST_BATTLE_BATCH_SIZE = 3
 
@@ -92,12 +92,17 @@ def vote_and_get_new_battle_route() -> Response:
         key in request.form
         for key in ("prompt_id", "system_id_a", "system_id_b", "vote", "is_offensive_a", "is_offensive_b")
     ):
+        vote = request.form["vote"]
+        if vote not in VOTE_CHOICES:
+            raise ValueError(f"Invalid vote: {vote}")
+        vote = cast(VoteString, vote)
+
         database.add_vote(
             session_id,
             request.form["prompt_id"],
             request.form["system_id_a"],
             request.form["system_id_b"],
-            request.form["vote"],
+            vote,
             is_offensive_a=request.form["is_offensive_a"].lower() == "true",
             is_offensive_b=request.form["is_offensive_b"].lower() == "true",
         )
