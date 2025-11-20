@@ -1,12 +1,14 @@
 import itertools
+import logging
 import os
+import pickle
 import random
 import string
 from datetime import timedelta
 from typing import Any, cast
 
 import sentry_sdk
-from flask import Flask, Response, jsonify, render_template, request, send_from_directory
+from flask import Flask, Response, jsonify, render_template, request, send_from_directory, make_response
 
 from mwahahavote import database
 from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString, prompt_id_to_task
@@ -128,6 +130,26 @@ def vote_and_get_new_battle_route() -> Response:
     battle = next(iter(battles), {})
 
     return jsonify(battle)
+
+
+@app.route("/leaderboard")
+def leaderboard_route() -> Response:
+    task = request.args.get("task", "a-en")
+    if task not in TASK_CHOICES:
+        task = "a-en"
+    task = cast(Task, task)
+
+    path = f"scoring/elo_results_{task}.pkl"
+
+    if os.path.exists(path):
+        with open(path, "rb") as file:
+            results = pickle.load(file)["full"]["leaderboard_table"]
+    else:
+        results = ""
+
+    response = make_response(results, 200)
+    response.mimetype = "text/plain"
+    return response
 
 
 @app.route("/session-vote-count")

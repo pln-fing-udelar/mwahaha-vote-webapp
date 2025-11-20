@@ -4,6 +4,6 @@ WORKDIR /usr/src/app
 RUN touch README.md
 COPY pyproject.toml uv.lock ./
 COPY src/mwahahavote src/mwahahavote
-RUN uv sync --locked
+RUN uv sync --no-default-groups --no-managed-python --inexact --locked
 EXPOSE 5000
 CMD ["uv", "run", "flask", "run", "-h", "::", "--debug"]
