@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 import zipfile
@@ -91,13 +92,21 @@ def _read_submission_file(path: str) -> pd.DataFrame:
     return df
 
 
-def ingest_submission(submission: Submission, file: str | os.PathLike | Reader[bytes]) -> int:  # type: ignore
+def ingest_submission(
+    submission: Submission, file: str | os.PathLike | Reader[bytes], system_exists_ok: bool = False  # type: ignore
+) -> int:
     """Ingest a submission into the database. Returns the number of affected rows."""
     with engine.begin() as connection, tempfile.TemporaryDirectory() as dir_:
-        connection.execute(
-            sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"),
-            {"system_id": submission.system_id},
-        )
+        try:
+            connection.execute(
+                sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"),
+                {"system_id": submission.system_id},
+            )
+        except sqlalchemy.exc.IntegrityError:
+            if system_exists_ok:
+                logging.info("The system already exists in the table `systems`. Not adding a row.")
+            else:
+                raise
 
         with zipfile.ZipFile(file) as zip_file:  # type: ignore
             zip_file.extractall(dir_)

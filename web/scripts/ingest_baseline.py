@@ -15,6 +15,7 @@ def main() -> None:
             tests_passed=[True, True, True],
         ),
         file="baselines/baseline.zip",
+        system_exists_ok=True,
     )
 
 
