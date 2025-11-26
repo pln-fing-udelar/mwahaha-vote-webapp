@@ -1,4 +1,4 @@
-FROM python:3.13
+FROM python:3.14
 COPY --from=ghcr.io/astral-sh/uv /uv /uvx /bin/
 WORKDIR /usr/src/app
 RUN touch README.md
