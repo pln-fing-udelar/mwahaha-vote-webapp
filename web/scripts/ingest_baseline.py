@@ -6,13 +6,16 @@ from ingestion.submission import ingest_submission
 
 
 def main() -> None:
-    with open("baselines/baseline.zip", "rb") as file:
-        ingest_submission(
-            Submission(
-                user="baseline", id=1, date=datetime.datetime.now(), tasks=["a-en", "b2"], tests_passed=[True, True]
-            ),
-            file,
-        )
+    ingest_submission(
+        Submission(
+            user="baseline",
+            id=1,
+            date=datetime.datetime.now(),
+            tasks=["a-en", "a-zh", "b2"],
+            tests_passed=[True, True, True],
+        ),
+        file="baselines/baseline.zip",
+    )
 
 
 if __name__ == "__main__":
