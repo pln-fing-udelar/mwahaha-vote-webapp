@@ -4,14 +4,13 @@ let $task;
 let $prompt;
 let $outputA;
 let $outputB;
-let $votesAndToolbox;
-// let $toolbox;
-let $voteLeft;
-let $voteRight;
-let $legendVote;
-let $skip;
 let $isOffensiveLeft;
+let $voteLeft;
+let $tie;
+let $skip;
+let $voteRight;
 let $isOffensiveRight;
+let $legendVote;
 let emoji;
 
 let task = "a-en";
@@ -28,7 +27,6 @@ function main() {
     getTask();
     getRandomBattles();
     setUiListeners();
-    moveToolboxIfOutside();
 }
 
 function setupSentry() {
@@ -50,14 +48,13 @@ function setupElements() {
     $prompt = $("#prompt-text");
     $outputA = $("#output-a-text");
     $outputB = $("#output-b-text");
-    $voteLeft = $("#vote-left");
-    $voteRight = $("#vote-right");
-    $votesAndToolbox = $("#votes,#toolbox");
-    // $toolbox = $("#toolbox");
-    $legendVote = $(".legend-vote");
-    $skip = $("#skip");
     $isOffensiveLeft = $("#is-offensive-left");
+    $voteLeft = $("#vote-left");
+    $tie = $("#tie");
+    $skip = $("#skip");
+    $voteRight = $("#vote-right");
     $isOffensiveRight = $("#is-offensive-right");
+    $legendVote = $(".legend-vote");
 }
 
 function showBattle() {
@@ -140,8 +137,9 @@ function getRandomBattles() {
 function setUiListeners() {
     $task.change(() => changeTask());
     $voteLeft.click(() => vote("a"));
-    $voteRight.click(() => vote("b"));
+    $tie.click(() => vote("t"));
     $skip.click(() => vote("n"));
+    $voteRight.click(() => vote("b"));
     $("#answers button").mouseup(e => $(e.currentTarget).blur());
 }
 
@@ -176,8 +174,6 @@ function vote(voteOption) {
 
     $.mdtoast(toastText(voteOption), {duration: 3000});
 
-    $votesAndToolbox.fadeOut();
-
     $isOffensiveLeft.prop("checked", false);
     $isOffensiveRight.prop("checked", false);
 }
@@ -187,24 +183,9 @@ function toastText(voteOption) {
         return "Left is funnier. Thanks!";
     } else if (voteOption === "b") {
         return "Right is funnier. Thanks!";
+    } else if (voteOption === "t") {
+        return "It's a tie. Thanks!";
     } else {
         return "Battle skipped. Thanks!";
     }
 }
-
-function moveToolboxIfOutside() {
-    // const x = $toolbox[0].getBoundingClientRect().x;
-    // if (x < 0) {
-    //     const translation = -x + 10;
-    //     addPxToLeft($toolbox, translation);
-    //     addPxToLeft($vote1, translation);
-    //     addPxToLeft($vote2, translation);
-    //     addPxToLeft($vote3, translation);
-    //     addPxToLeft($vote4, translation);
-    //     addPxToLeft($vote5, translation);
-    // }
-}
-
-// function addPxToLeft(element, translation) {
-//     element.css("left", `${(parseInt(element.css("left")) + translation)}px`);
-// }

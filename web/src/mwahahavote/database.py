@@ -153,7 +153,7 @@ class Battle:
         return self.output_a.prompt
 
 
-VoteString = Literal["a", "b", "n"]
+VoteString = Literal["a", "b", "n", "t"]
 VOTE_CHOICES = frozenset(get_args(VoteString))
 
 
@@ -402,8 +402,8 @@ def add_vote(
         )
 
 
-def get_votes(task: Task) -> Iterator[Vote]:
-    """Returns all votes for a given task."""
+def get_non_skip_votes(task: Task) -> Iterator[Vote]:
+    """Returns all non-skip votes for a given task."""
     with engine.connect() as connection:
         for (
             prompt_id,
@@ -417,8 +417,8 @@ def get_votes(task: Task) -> Iterator[Vote]:
         ) in connection.execute(
             sqlalchemy.sql.text("""
                 SELECT prompt_id, system_id_a, system_id_b, session_id, vote, date, is_offensive_a, is_offensive_b
-                FROM votes NATURAL join prompts
-                WHERE task = :task
+                FROM votes NATURAL JOIN prompts
+                WHERE task = :task AND vote != 'n'
             """),
             {"task": task},
         ):
