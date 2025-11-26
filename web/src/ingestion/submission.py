@@ -99,7 +99,7 @@ def ingest_submission(submission: Submission, file: str | os.PathLike | Reader[b
             {"system_id": submission.system_id},
         )
 
-        with zipfile.ZipFile(file) as zip_file:
+        with zipfile.ZipFile(file) as zip_file:  # type: ignore
             zip_file.extractall(dir_)
 
         affected_rows = 0
