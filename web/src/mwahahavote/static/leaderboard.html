@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SemEval-2026 Humor Gen Leaderboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Hide scrollbar for tab container but allow scroll */
+    .hide-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .hide-scroll {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans selection:bg-blue-100 min-h-screen flex flex-col">
+
+<!-- HEADER -->
+<header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-2 rounded-lg shadow-sm">
+        <!-- Trophy Icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             class="w-6 h-6">
+          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+          <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+          <path d="M4 22h16"></path>
+          <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+          <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+          <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 tracking-tight">SemEval-2026 Humor Gen</h1>
+        <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Live Arena Leaderboard</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-4">
+      <a href="https://pln-fing-udelar.github.io/semeval-2026-humor-gen/" target="_blank" rel="noreferrer"
+         class="hidden sm:flex text-sm text-gray-500 hover:text-blue-600 transition-colors">
+        Competition Info
+      </a>
+      <a href="https://www.codabench.org/competitions/9719/" target="_blank" rel="noreferrer"
+         class="hidden sm:flex px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors shadow-sm">
+        Submit System
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+  <!-- CONTROLS: TABS -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <!-- TABS -->
+    <div class="flex p-1 space-x-1 bg-gray-200/60 rounded-xl overflow-x-auto hide-scroll" id="tabs-container">
+      <!-- Tabs will be injected here by JS -->
+    </div>
+  </div>
+
+  <!-- TABLE CARD -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+        <tr class="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-semibold">
+          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group w-24 text-center sort-header"
+              data-key="final_ranking">
+            <div class="flex items-center justify-center">
+              Rank <span class="sort-icon ml-1"></span>
+            </div>
+          </th>
+          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group sort-header" data-key="system">
+            <div class="flex items-center">
+              Model <span class="sort-icon ml-1"></span>
+            </div>
+          </th>
+          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group text-center sort-header"
+              data-key="rating">
+            <div class="flex items-center justify-center">
+              Elo Score <span class="sort-icon ml-1"></span>
+            </div>
+          </th>
+          <th class="px-6 py-4 text-center cursor-default">
+            95% CI
+          </th>
+          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group text-right sort-header"
+              data-key="num_battles">
+            <div class="flex items-center justify-end">
+              Battles <span class="sort-icon ml-1"></span>
+            </div>
+          </th>
+          <th class="px-6 py-4 text-right text-gray-400 font-normal">
+            Variance
+          </th>
+        </tr>
+        </thead>
+        <tbody id="leaderboard-body" class="divide-y divide-gray-100">
+        <!-- Rows injected by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+      <p class="text-xs text-gray-500 text-center" id="last-updated">
+        <!-- Date injected by JS -->
+      </p>
+    </div>
+  </div>
+
+  <!-- INFO BOX -->
+  <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mt-8 flex items-start gap-4">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+         class="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M12 16v-4"></path>
+      <path d="M12 8h.01"></path>
+    </svg>
+    <div class="space-y-2">
+      <h3 class="font-semibold text-blue-900">About the Leaderboard</h3>
+      <p class="text-sm text-blue-800 leading-relaxed max-w-4xl">
+        This leaderboard ranks humor generation systems based on 1-on-1 pairwise battles.
+        The rating system is based on Elo (with variance). Confidence intervals (95% CI) are shown to reflect
+        the uncertainty in the rating.
+        <br/>
+        <span class="opacity-80 mt-1 block">Higher Elo rating indicates a system that is more likely to generate outputs perceived as humorous by the judges.</span>
+      </p>
+    </div>
+  </div>
+</main>
+
+<script>
+    const tasks = ["a-en", "a-es", "a-zh", "b1", "b2"];
+
+    // --- STATE & CONFIG ---
+    let activeTab = "a-en";
+    const dataSets = {};
+    let sortConfig = {key: 'rating', direction: 'desc'};
+    const TASKS = ["a-en", "a-es", "a-zh", "b1", "b2"];
+
+    // --- DOM ELEMENTS ---
+    const tabsContainer = document.getElementById('tabs-container');
+    const leaderboardBody = document.getElementById('leaderboard-body');
+
+    // --- SVG ICONS ---
+    const icons = {
+        globe: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>`,
+        fileText: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>`,
+        trophyGold: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500 w-5 h-5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`,
+        trophySilver: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 w-5 h-5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`,
+        trophyBronze: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-700 w-5 h-5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`,
+        chevronUp: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600 inline-block ml-1"><polyline points="18 15 12 9 6 15"/></svg>`,
+        chevronDown: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600 inline-block ml-1"><polyline points="6 9 12 15 18 9"/></svg>`,
+        alertCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto text-gray-300 mb-3"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`
+    };
+
+    const tabs = [
+        {id: 'a-en', label: 'Task A: English', icon: icons.globe},
+        {id: 'a-es', label: 'Task A: Spanish', icon: icons.globe},
+        {id: 'a-zh', label: 'Task A: Chinese', icon: icons.globe},
+        {id: 'b1', label: 'Task B1', icon: icons.fileText},
+        {id: 'b2', label: 'Task B2', icon: icons.fileText},
+    ];
+
+    // --- RENDER FUNCTIONS ---
+
+    function renderTabs() {
+        tabsContainer.innerHTML = tabs.map(tab => {
+            const isActive = activeTab === tab.id;
+            const baseClasses = "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 whitespace-nowrap cursor-pointer select-none";
+            const activeClasses = "bg-white text-blue-600 shadow-sm ring-1 ring-black/5 tab-active";
+            const inactiveClasses = "text-gray-600 hover:bg-gray-200/50 hover:text-gray-900 tab-inactive";
+
+            return `
+                    <div
+                        onclick="switchTab('${tab.id}')"
+                        class="${baseClasses} ${isActive ? activeClasses : inactiveClasses}"
+                    >
+                        ${tab.icon}
+                        ${tab.label}
+                    </div>
+                `;
+        }).join('');
+    }
+
+    function renderSortIcons() {
+        document.querySelectorAll('.sort-header').forEach(header => {
+            const key = header.getAttribute('data-key');
+            const iconContainer = header.querySelector('.sort-icon');
+
+            if (sortConfig.key === key) {
+                iconContainer.innerHTML = sortConfig.direction === 'asc' ? icons.chevronUp : icons.chevronDown;
+                iconContainer.classList.remove('opacity-0');
+            } else {
+                iconContainer.innerHTML = '<span class="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">↕</span>';
+            }
+        });
+    }
+
+    function getRankIcon(rank) {
+        if (rank === 1) return icons.trophyGold;
+        if (rank === 2) return icons.trophySilver;
+        if (rank === 3) return icons.trophyBronze;
+        return `<span class="text-gray-500 font-mono">${rank}</span>`;
+    }
+
+    function renderTable() {
+        // 1. Get Data
+        let data = [...(dataSets[activeTab] || [])];
+
+        // 2. Sort Data
+        if (sortConfig.key) {
+            data.sort((a, b) => {
+                const valA = a[sortConfig.key];
+                const valB = b[sortConfig.key];
+
+                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        // 3. Render Rows
+        if (data.length === 0) {
+            leaderboardBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            ${icons.alertCircle}
+                            <p>No data available for this task.</p>
+                        </td>
+                    </tr>
+                `;
+            return;
+        }
+
+        leaderboardBody.innerHTML = data.map((row, _index) => {
+            const upper = Math.round(row.rating_q975 - row.rating);
+            const lower = Math.round(row.rating - row.rating_q025);
+            const rating = Math.round(row.rating);
+            const variance = Math.round(row.variance).toLocaleString();
+
+            return `
+                    <tr class="hover:bg-blue-50/30 transition-colors duration-150 group">
+                        <td class="px-6 py-4 text-center font-medium">
+                            <div class="flex justify-center items-center">
+                                ${getRankIcon(row.final_ranking)}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                                ${row.system}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-bold bg-gray-100 text-gray-800 border border-gray-200">
+                                ${rating}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex flex-col items-center justify-center text-xs text-gray-500">
+                                <span class="font-medium text-gray-700">
+                                    +${upper} / -${lower}
+                                </span>
+                                <div class="w-24 h-1 bg-gray-200 rounded-full mt-1 overflow-hidden relative">
+                                    <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gray-400 transform -translate-x-1/2"></div>
+                                    <div
+                                        class="absolute top-0 bottom-0 bg-blue-400 opacity-50"
+                                        style="left: 20%; right: 20%;"
+                                    ></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-right font-mono text-sm text-gray-600">
+                            ${row.num_battles}
+                        </td>
+                        <td class="px-6 py-4 text-right font-mono text-xs text-gray-400">
+                            ${variance}
+                        </td>
+                    </tr>
+                `;
+        }).join('');
+
+        renderSortIcons();
+    }
+
+    // --- ACTIONS ---
+
+    function switchTab(tabId) {
+        activeTab = tabId;
+        renderTabs();
+        renderTable();
+    }
+
+    function handleSort(key) {
+        let direction = 'desc';
+        if (sortConfig.key === key && sortConfig.direction === 'desc') {
+            direction = 'asc';
+        }
+        sortConfig = {key, direction};
+        renderTable();
+    }
+
+    function parseCSV(text) {
+        const lines = text.trim().split('\n');
+        if (lines.length < 2) return [];
+
+        return lines.slice(1).map(line => {
+            const [system, rating, variance, rating_q975, rating_q025, num_battles, final_ranking] = line.split(',');
+            // Skip empty lines
+            if (!system) return null;
+
+            return {
+                system: system.trim(),
+                rating: parseFloat(rating),
+                variance: parseFloat(variance),
+                rating_q975: parseFloat(rating_q975),
+                rating_q025: parseFloat(rating_q025),
+                num_battles: parseInt(num_battles, 10),
+                final_ranking: parseInt(final_ranking, 10)
+            };
+        }).filter(row => row !== null);
+    }
+
+    // --- DATA LOADING ---
+
+    async function loadInitialData() {
+        const promises = TASKS.map(async (task) => {
+            try {
+                const response = await fetch(`scores/${task}.json`);
+                if (!response.ok) {
+                    console.warn(`No data found for ${task} at scores/${task}.json`);
+                    return;
+                }
+                dataSets[task] = await response.json();
+            } catch (e) {
+                console.error(`Error loading data for ${task}:`, e);
+            }
+        });
+
+        await Promise.all(promises);
+        renderTable(); // Re-render after fetching
+    }
+
+    // --- EVENT LISTENERS ---
+
+    // Sort Headers
+    document.querySelectorAll('.sort-header').forEach(header => {
+        header.addEventListener('click', () => {
+            handleSort(header.getAttribute('data-key'));
+        });
+    });
+
+    // --- INIT ---
+    document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleDateString()}`;
+    renderTabs();
+    loadInitialData();
+</script>
+</body>
+</html>

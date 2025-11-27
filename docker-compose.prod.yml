@@ -10,6 +10,7 @@ services:
       - LETSENCRYPT_EMAIL=sacastro@fing.edu.uy
     volumes:
       - ./web/scoring/:/app/scoring
+      - ./web/src/mwahahavote/static/scores:/app/src/mwahahavote/static/scores
     networks:
       - net
       - reverse_proxy_net

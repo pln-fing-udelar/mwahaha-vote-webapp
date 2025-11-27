@@ -13,3 +13,5 @@ for task in a-en a-es a-zh b1 b2; do
     mv elo_results_*.pkl "scoring/elo_results_$task.pkl"
   fi
 done
+
+uv run --env-file ../.env scripts/postprocess_scores.py

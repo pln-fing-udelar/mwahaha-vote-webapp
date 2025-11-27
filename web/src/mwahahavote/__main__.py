@@ -6,7 +6,14 @@ from datetime import timedelta
 from typing import Any, cast
 
 import sentry_sdk
-from flask import Flask, Response, jsonify, make_response, render_template, request, send_from_directory
+from flask import (
+    Flask,
+    Response,
+    jsonify,
+    render_template,
+    request,
+    send_from_directory,
+)
 
 from mwahahavote import database
 from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString, prompt_id_to_task
@@ -132,22 +139,7 @@ def vote_and_get_new_battle_route() -> Response:
 
 @app.route("/leaderboard")
 def leaderboard_route() -> Response:
-    task = request.args.get("task", "a-en")
-    if task not in TASK_CHOICES:
-        task = "a-en"
-    task = cast(Task, task)
-
-    path = f"scoring/elo_results_{task}.csv"
-
-    if os.path.exists(path):
-        with open(path) as file:
-            results = file.read()
-    else:
-        results = ""
-
-    response = make_response(results, 200)
-    response.mimetype = "text/plain"
-    return response
+    return send_from_directory("static", "leaderboard.html")
 
 
 @app.route("/session-vote-count")
