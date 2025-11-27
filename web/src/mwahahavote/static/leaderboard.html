@@ -269,7 +269,7 @@
                         </td>
                     </tr>
                 `;
-        }).join('');
+        }).join("");
 
         renderSortIcons();
     }
@@ -283,9 +283,9 @@
     }
 
     function handleSort(key) {
-        let direction = 'desc';
-        if (sortConfig.key === key && sortConfig.direction === 'desc') {
-            direction = 'asc';
+        let direction = "desc";
+        if (sortConfig.key === key && sortConfig.direction === "desc") {
+            direction = "asc";
         }
         sortConfig = {key, direction};
         renderTable();
@@ -314,14 +314,11 @@
     // --- EVENT LISTENERS ---
 
     // Sort Headers
-    document.querySelectorAll('.sort-header').forEach(header => {
-        header.addEventListener('click', () => {
-            handleSort(header.getAttribute('data-key'));
-        });
-    });
+    document.querySelectorAll(".sort-header").forEach(header =>
+        header.addEventListener("click", () => handleSort(header.getAttribute("data-key"))));
 
     // --- INIT ---
-    document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleDateString()}`;
+    document.getElementById("last-updated").textContent = `Last updated: ${new Date().toLocaleDateString()}`;
     renderTabs();
     loadInitialData();
 </script>
