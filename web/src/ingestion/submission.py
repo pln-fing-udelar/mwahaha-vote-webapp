@@ -149,7 +149,7 @@ def ingest_submission(
                         f" for the following prompt IDs: {nan_prompt_ids}."
                     )
 
-                submission_df["text"].fillna("-", inplace=True)
+                    submission_df.loc[:, "text"].fillna("-", inplace=True)
 
             submission_df["system_id"] = submission.system_id
             affected_rows += submission_df.to_sql("outputs", connection, if_exists="append") or 0
