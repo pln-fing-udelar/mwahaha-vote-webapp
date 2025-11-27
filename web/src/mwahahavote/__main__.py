@@ -138,11 +138,11 @@ def leaderboard_route() -> Response:
         task = "a-en"
     task = cast(Task, task)
 
-    path = f"scoring/elo_results_{task}.pkl"
+    path = f"scoring/elo_results_{task}.csv"
 
     if os.path.exists(path):
-        with open(path, "rb") as file:
-            results = pickle.load(file)["full"]["leaderboard_table"]
+        with open(path) as file:
+            results = file.read()
     else:
         results = ""
 
