@@ -95,9 +95,6 @@
               Battles <span class="sort-icon ml-1"></span>
             </div>
           </th>
-          <th class="px-6 py-4 text-right text-gray-400 font-normal">
-            Variance
-          </th>
         </tr>
         </thead>
         <tbody id="leaderboard-body" class="divide-y divide-gray-100">
@@ -243,7 +240,6 @@
             const upper = Math.round(row.rating_q975 - row.rating);
             const lower = Math.round(row.rating - row.rating_q025);
             const rating = Math.round(row.rating);
-            const variance = Math.round(row.variance).toLocaleString();
 
             return `
                     <tr class="hover:bg-blue-50/30 transition-colors duration-150 group">
@@ -278,9 +274,6 @@
                         </td>
                         <td class="px-6 py-4 text-right font-mono text-sm text-gray-600">
                             ${row.num_battles}
-                        </td>
-                        <td class="px-6 py-4 text-right font-mono text-xs text-gray-400">
-                            ${variance}
                         </td>
                     </tr>
                 `;
