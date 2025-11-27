@@ -432,23 +432,27 @@ def get_votes_for_scoring(task: Task) -> Iterator[Vote]:
                   WHERE
                     task = :task
                     AND v.vote != 'n'
+                ), systems_a AS (
+                  SELECT system_id_a FROM votes_and_prompts GROUP BY system_id_a
+                ), systems_b AS (
+                  SELECT system_id_b FROM votes_and_prompts GROUP BY system_id_b
                 )
                 SELECT
-                  v.prompt_id,
+                  prompt_id,
                   v.system_id_a,
                   v.system_id_b,
-                  v.session_id,
-                  v.vote,
-                  v.date,
-                  v.is_offensive_a,
-                  v.is_offensive_b
+                  session_id,
+                  vote,
+                  date,
+                  is_offensive_a,
+                  is_offensive_b
                 FROM
                   votes_and_prompts v
                   -- We only want the votes from those systems that appear at least once on each side of the votes.
                   -- Otherwise, it causes issues in the scoring calculation.
                   -- And it'd also mean the system has too few votes.
-                  JOIN votes_and_prompts v2 ON (v.system_id_a = v2.system_id_b)
-                  JOIN votes_and_prompts v3 ON (v.system_id_b = v3.system_id_a)
+                  JOIN systems_b ON (v.system_id_a = systems_b.system_id_b)
+                  JOIN systems_a ON (v.system_id_b = systems_a.system_id_a)
             """),
             {"task": task},
         ):
