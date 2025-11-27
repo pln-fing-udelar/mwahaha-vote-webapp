@@ -6,14 +6,7 @@ from datetime import timedelta
 from typing import Any, cast
 
 import sentry_sdk
-from flask import (
-    Flask,
-    Response,
-    jsonify,
-    render_template,
-    request,
-    send_from_directory,
-)
+from flask import Flask, Response, jsonify, render_template, request, send_from_directory
 
 from mwahahavote import database
 from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString, prompt_id_to_task
