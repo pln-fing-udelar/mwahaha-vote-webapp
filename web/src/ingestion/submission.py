@@ -93,7 +93,10 @@ def _read_submission_file(path: str) -> pd.DataFrame:
 
 
 def ingest_submission(
-    submission: Submission, file: str | os.PathLike | Reader[bytes], system_exists_ok: bool = False  # type: ignore
+    submission: Submission,
+    file: str | os.PathLike | Reader[bytes],  # type: ignore
+    system_exists_ok: bool = False,
+    accept_null_texts: bool = True,
 ) -> int:
     """Ingest a submission into the database. Returns the number of affected rows."""
     with engine.begin() as connection, tempfile.TemporaryDirectory() as dir_:
@@ -138,6 +141,15 @@ def ingest_submission(
                     f" Missing IDs: {sorted(reference_prompt_ids - submitted_prompt_ids)}."
                     f" Extra IDs: {sorted(submitted_prompt_ids - reference_prompt_ids)}."
                 )
+
+            if accept_null_texts:
+                if nan_prompt_ids := submission_df.index[submission_df["text"].isna()].tolist():
+                    logging.warning(
+                        f"Null 'text' values for the submission '{submission}' and task '{task}',"
+                        f" for the following prompt IDs: {nan_prompt_ids}."
+                    )
+
+                submission_df["text"].fillna("-", inplace=True)
 
             submission_df["system_id"] = submission.system_id
             affected_rows += submission_df.to_sql("outputs", connection, if_exists="append") or 0
