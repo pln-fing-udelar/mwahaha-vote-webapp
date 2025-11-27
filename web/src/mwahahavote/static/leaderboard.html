@@ -6,6 +6,16 @@
   <title>SemEval-2026 Humor Gen Leaderboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <style>
+    @theme {
+      /* Custom Colors Migration */
+      --color-gray-750: #2d3748;
+      --color-gray-850: #1a202c;
+      --color-gray-950: #0d1117;
+    }
+
+    /* Force class-based dark mode manually */
+    @custom-variant dark (&:where(.dark, .dark *));
+
     /* Hide scrollbar for tab container but allow scroll */
     .hide-scroll::-webkit-scrollbar {
       display: none;
@@ -17,17 +27,19 @@
     }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans selection:bg-blue-100 min-h-screen flex flex-col">
+
+<body
+    class="bg-gray-50 text-gray-800 font-sans selection:bg-blue-100 min-h-screen flex flex-col dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200">
 
 <!-- HEADER -->
-<header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+<header
+    class="bg-white border-b border-gray-200 sticky top-0 z-30 dark:bg-gray-800 dark:border-gray-700 transition-colors duration-200">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
     <div class="flex items-center space-x-3">
       <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-2 rounded-lg shadow-sm">
         <!-- Trophy Icon -->
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: none;"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             class="w-6 h-6">
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
           <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
           <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
           <path d="M4 22h16"></path>
@@ -37,18 +49,39 @@
         </svg>
       </div>
       <div>
-        <h1 class="text-xl font-bold text-gray-900 tracking-tight">SemEval-2026 Humor Gen</h1>
-        <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Live Arena Leaderboard</p>
+        <h1 class="text-xl font-bold text-gray-900 tracking-tight dark:text-white">SemEval-2026 Humor Gen</h1>
+        <p class="text-xs text-gray-500 font-medium uppercase tracking-wide dark:text-gray-400">
+          Live Arena Leaderboard
+        </p>
       </div>
     </div>
-    <div class="flex items-center space-x-4">
+    <div class="flex items-center space-x-2 sm:space-x-4">
+      <!-- Dark Mode Toggle -->
+      <button id="theme-toggle"
+              class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+        <!-- Sun Icon -->
+        <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" style="fill: currentColor;" viewBox="0 0 20 20">
+          <path
+              d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+              fill-rule="evenodd" clip-rule="evenodd"></path>
+        </svg>
+        <!-- Moon Icon -->
+        <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" style="fill: currentColor;" viewBox="0 0 20 20">
+          <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+        </svg>
+      </button>
+
       <a href="https://pln-fing-udelar.github.io/semeval-2026-humor-gen/" target="_blank" rel="noreferrer"
-         class="hidden sm:flex text-sm text-gray-500 hover:text-blue-600 transition-colors">
+         class="hidden lg:flex text-sm text-gray-500 hover:text-blue-600 transition-colors dark:text-gray-400 dark:hover:text-blue-400">
         More Info
       </a>
+      <a href="https://thefunnier.com/" target="_blank" rel="noreferrer"
+         class="hidden sm:flex px-3 py-2 bg-pink-600 text-white text-sm font-medium rounded-md hover:bg-pink-700 transition-colors shadow-sm items-center gap-1">
+        <span>Help us Vote!</span>
+      </a>
       <a href="https://www.codabench.org/competitions/9719/" target="_blank" rel="noreferrer"
-         class="hidden sm:flex px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors shadow-sm">
-        Participate
+         class="hidden sm:flex px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors shadow-sm dark:bg-blue-600 dark:hover:bg-blue-700">
+        Submit a System
       </a>
     </div>
   </div>
@@ -58,29 +91,42 @@
   <!-- CONTROLS: TABS -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <!-- TABS -->
-    <div class="flex p-1 space-x-1 bg-gray-200/60 rounded-xl overflow-x-auto hide-scroll" id="tabs-container">
+    <div class="hidden sm:flex p-1 space-x-1 bg-gray-200/60 rounded-xl overflow-x-auto hide-scroll dark:bg-gray-800"
+         id="tabs-container">
       <!-- Tabs will be injected here by JS -->
+    </div>
+
+    <!-- TABS (Mobile Dropdown) -->
+    <div class="block sm:hidden w-full">
+      <label for="mobile-tabs" style="display: none">Task:</label>
+      <select id="mobile-tabs"
+              class="block w-full rounded-lg border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+              onchange="switchTab(this.value)">
+        <!-- Options injected by JS -->
+      </select>
     </div>
   </div>
 
   <!-- TABLE CARD -->
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+  <div
+      class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden dark:bg-gray-800 dark:border-gray-700 transition-colors duration-200">
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
-        <tr class="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-semibold">
-          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group w-24 text-center sort-header"
+        <tr class="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-semibold dark:bg-gray-900/50 dark:border-gray-700 dark:text-gray-400">
+          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group w-24 text-center sort-header dark:hover:bg-gray-700"
               data-key="final_ranking">
-            <div class="flex items-center justify-center">
+            <div class="flex items-center justify-end">
               Rank <span class="sort-icon ml-1"></span>
             </div>
           </th>
-          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group sort-header" data-key="system">
-            <div class="flex items-center">
+          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group sort-header text-center dark:hover:bg-gray-700"
+              data-key="system">
+            <div class="flex items-center justify-center">
               System <span class="sort-icon ml-1"></span>
             </div>
           </th>
-          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group text-center sort-header"
+          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group text-center sort-header dark:hover:bg-gray-700"
               data-key="rating">
             <div class="flex items-center justify-center">
               Rating <span class="sort-icon ml-1"></span>
@@ -89,44 +135,47 @@
           <th class="px-6 py-4 text-center cursor-default">
             95% CI
           </th>
-          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group text-right sort-header"
+          <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group text-center sort-header dark:hover:bg-gray-700"
               data-key="num_battles">
-            <div class="flex items-center justify-end">
+            <div class="flex items-center justify-center">
               Battles <span class="sort-icon ml-1"></span>
             </div>
           </th>
         </tr>
         </thead>
-        <tbody id="leaderboard-body" class="divide-y divide-gray-100">
+        <tbody id="leaderboard-body" class="divide-y divide-gray-100 dark:divide-gray-700">
         <!-- Rows injected by JS -->
         </tbody>
       </table>
     </div>
 
-    <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
-      <p class="text-xs text-gray-500 text-center" id="last-updated">
+    <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+      <p class="text-xs text-gray-500 text-center dark:text-gray-400" id="last-updated">
         <!-- Date injected by JS -->
       </p>
     </div>
   </div>
 
   <!-- INFO BOX -->
-  <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mt-8 flex items-start gap-4">
+  <div
+      class="bg-blue-50 border border-blue-100 rounded-xl p-6 mt-8 flex items-start gap-4 dark:bg-blue-900/20 dark:border-blue-800">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: none;"
          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-         class="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5">
+         class="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5 dark:text-blue-400">
       <circle cx="12" cy="12" r="10"></circle>
       <path d="M12 16v-4"></path>
       <path d="M12 8h.01"></path>
     </svg>
     <div class="space-y-2">
-      <h3 class="font-semibold text-blue-900">About the Leaderboard</h3>
-      <p class="text-sm text-blue-800 leading-relaxed max-w-4xl">
+      <h3 class="font-semibold text-blue-900 dark:text-blue-100">About the Leaderboard</h3>
+      <p class="text-sm text-blue-800 leading-relaxed max-w-4xl dark:text-blue-200">
         This leaderboard ranks humor generation systems based on 1-on-1 pairwise battles.
-        The rating system is based on Elo (with variance). Confidence intervals (95% CI) are shown to reflect
-        the uncertainty in the rating.
+        The rating system is based on Elo (with variance). Confidence intervals (95% CI) are shown to reflect the
+        uncertainty in the rating.
         <br/>
-        <span class="opacity-80 mt-1 block">Higher Elo rating indicates a system that is more likely to generate outputs perceived as humorous by the judges.</span>
+        <span class="opacity-80 mt-1 block">
+          Higher Elo rating indicates a system that is more likely to generate outputs perceived as humorous by the judges.
+        </span>
       </p>
     </div>
   </div>
@@ -138,79 +187,180 @@
     const dataSets = {};
     let sortConfig = {key: 'rating', direction: 'desc'};
     const TASKS = ["a-en", "a-es", "a-zh", "b1", "b2"];
+    let taskLastModified = {}; // Stores date strings per task
 
     // --- DOM ELEMENTS ---
-    const tabsContainer = document.getElementById('tabs-container');
-    const leaderboardBody = document.getElementById('leaderboard-body');
+    const tabsContainer = document.getElementById("tabs-container");
+    const mobileTabsSelect = document.getElementById("mobile-tabs");
+    const leaderboardBody = document.getElementById("leaderboard-body");
+    const btnShowUpload = document.getElementById("btn-show-upload");
+    const btnCancelUpload = document.getElementById("btn-cancel-upload");
+    const uploadBtnContainer = document.getElementById("upload-btn-container");
+    const uploadInputContainer = document.getElementById("upload-input-container");
+    const csvFileInput = document.getElementById("csv-file-input");
+    const themeToggleBtn = document.getElementById("theme-toggle");
+    const themeToggleDarkIcon = document.getElementById("theme-toggle-dark-icon");
+    const themeToggleLightIcon = document.getElementById("theme-toggle-light-icon");
 
     // --- SVG ICONS ---
     const icons = {
         globe: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="fill: none;" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>`,
         fileText: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="fill: none;" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>`,
-        chevronUp: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="fill: none;" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600 inline-block ml-1"><polyline points="18 15 12 9 6 15"/></svg>`,
-        chevronDown: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="fill: none;" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600 inline-block ml-1"><polyline points="6 9 12 15 18 9"/></svg>`,
-        alertCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" style="fill: none;" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto text-gray-300 mb-3"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`
+        image: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="fill: none;" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
+        //{#trophyGold: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" style="fill: currentColor;" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-500 w-5 h-5 drop-shadow-sm"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`,#}
+        //{#trophySilver: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 w-5 h-5 drop-shadow-sm"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`,#}
+        //{#trophyBronze: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-700 w-5 h-5 drop-shadow-sm"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`,#}
+        chevronUp: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="fill: none;" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600 inline-block ml-1 dark:text-blue-400"><polyline points="18 15 12 9 6 15"/></svg>`,
+        chevronDown: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="fill: none;" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600 inline-block ml-1 dark:text-blue-400"><polyline points="6 9 12 15 18 9"/></svg>`,
+        alertCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" style="fill: none;" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto text-gray-300 mb-3 dark:text-gray-600"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`
     };
 
     const tabs = [
-        {id: "a-en", label: "Task A: Joke in English", icon: icons.globe},
-        {id: "a-es", label: "Task A: Joke in Spanish", icon: icons.globe},
-        {id: "a-zh", label: "Task A: Joke in Chinese", icon: icons.globe},
-        {id: "b1", label: "Task B1: Caption the GIF", icon: icons.fileText},
-        {id: "b2", label: "Task B2: Fill in the GIF Caption", icon: icons.fileText},
+        {id: "a-en", label: "Task A: Joke in English", icon: icons.fileText},
+        {id: "a-es", label: "Task A: Joke in Spanish", icon: icons.fileText},
+        {id: "a-zh", label: "Task A: Joke in Chinese", icon: icons.fileText},
+        {id: "b1", label: "Task B1: Caption the GIF", icon: icons.image},
+        {id: "b2", label: "Task B2: Fill in the GIF Caption", icon: icons.image},
     ];
+
+    // --- DARK MODE LOGIC ---
+    // TODO: change it to be light by default.
+    function initTheme() {
+        if (localStorage.getItem("color-theme") === "dark" || (!("color-theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+            document.documentElement.classList.add("dark");
+            themeToggleDarkIcon.classList.remove("hidden");
+        } else {
+            document.documentElement.classList.remove("dark");
+            themeToggleLightIcon.classList.remove("hidden");
+        }
+    }
+
+    themeToggleBtn.addEventListener("click", () => {
+        // Toggle icons
+        themeToggleDarkIcon.classList.toggle("hidden");
+        themeToggleLightIcon.classList.toggle("hidden");
+
+        // Toggle Dark Mode
+        if (localStorage.getItem("color-theme")) {
+            if (localStorage.getItem("color-theme") === "light") {
+                document.documentElement.classList.add("dark");
+                localStorage.setItem("color-theme", "dark");
+            } else {
+                document.documentElement.classList.remove("dark");
+                localStorage.setItem("color-theme", "light");
+            }
+        } else {
+            if (document.documentElement.classList.contains("dark")) {
+                document.documentElement.classList.remove("dark");
+                localStorage.setItem("color-theme", "light");
+            } else {
+                document.documentElement.classList.add("dark");
+                localStorage.setItem("color-theme", "dark");
+            }
+        }
+    });
+
+    // --- INIT LOGIC (Language & Params) ---
+    function initApp() {
+        initTheme();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get("task");
+
+        if (tabParam && TASKS.includes(tabParam)) {
+            activeTab = tabParam;
+        } else {
+            // Language detection
+            if (navigator.language.startsWith("es")) {
+                activeTab = "a-es";
+            } else if (navigator.language.startsWith("zh")) {
+                activeTab = "a-zh";
+            } else {
+                activeTab = "a-en";
+            }
+            // Update URL to reflect default
+            updateUrlParam(activeTab);
+        }
+    }
+
+    function updateUrlParam(tabId) {
+        if (history.pushState) {
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?task=" + tabId;
+            window.history.pushState({path: newUrl}, "", newUrl);
+        }
+    }
 
     // --- RENDER FUNCTIONS ---
 
     function renderTabs() {
+        // Desktop Tabs
         tabsContainer.innerHTML = tabs.map(tab => {
             const isActive = activeTab === tab.id;
             const baseClasses = "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 whitespace-nowrap cursor-pointer select-none";
-            const activeClasses = "bg-white text-blue-600 shadow-sm ring-1 ring-black/5 tab-active";
-            const inactiveClasses = "text-gray-600 hover:bg-gray-200/50 hover:text-gray-900 tab-inactive";
+            const activeClasses = "bg-white text-blue-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-blue-400 dark:ring-gray-600";
+            const inactiveClasses = "text-gray-600 hover:bg-gray-200/50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200";
 
             return `
-                    <div
-                        onclick="switchTab('${tab.id}')"
-                        class="${baseClasses} ${isActive ? activeClasses : inactiveClasses}"
-                    >
-                        ${tab.icon}
-                        ${tab.label}
-                    </div>
-                `;
-        }).join('');
+                <div
+                    onclick="switchTab('${tab.id}')"
+                    class="${baseClasses} ${isActive ? activeClasses : inactiveClasses}"
+                >
+                    ${tab.icon}
+                    ${tab.label}
+                </div>
+            `;
+        }).join("");
+
+        // Mobile Dropdown
+        mobileTabsSelect.innerHTML = tabs.map(tab => {
+            return `<option value="${tab.id}" ${activeTab === tab.id ? 'selected' : ''}>${tab.label}</option>`;
+        }).join("");
     }
 
     function renderSortIcons() {
-        document.querySelectorAll('.sort-header').forEach(header => {
-            const key = header.getAttribute('data-key');
-            const iconContainer = header.querySelector('.sort-icon');
+        document.querySelectorAll(".sort-header").forEach(header => {
+            const key = header.getAttribute("data-key");
+            const iconContainer = header.querySelector(".sort-icon");
 
             if (sortConfig.key === key) {
-                iconContainer.innerHTML = sortConfig.direction === 'asc' ? icons.chevronUp : icons.chevronDown;
+                iconContainer.innerHTML = sortConfig.direction === "asc" ? icons.chevronUp : icons.chevronDown;
                 iconContainer.classList.remove('opacity-0');
             } else {
-                iconContainer.innerHTML = '<span class="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">↕</span>';
+                iconContainer.innerHTML = '<span class="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity dark:text-gray-600">↕</span>';
             }
         });
     }
 
     function getRankIcon(rank) {
-        return `<span class="text-gray-500 font-mono">${rank}</span>`;
+        return `<span class="text-gray-500 font-mono dark:text-gray-400">${rank}</span>`;
+    }
+
+    function getRowStyle(rank, systemName) {
+        // Baseline special color
+        if (systemName === "baseline-1") {
+            return "bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30";
+        }
+        // Top 3 colors
+        if (rank === 1) return "bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-900/10 dark:hover:bg-yellow-900/20";
+        if (rank === 2) return "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800/50 dark:hover:bg-gray-800/80";
+        if (rank === 3) return "bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/10 dark:hover:bg-orange-900/20";
+        // Default
+        return "hover:bg-blue-50/30 dark:hover:bg-gray-700/30";
     }
 
     function renderTable() {
         // 1. Get Data
         let data = [...(dataSets[activeTab] || [])];
+        const lastMod = taskLastModified[activeTab] || new Date().toLocaleString();
+        document.getElementById("last-updated").textContent = `Last updated: ${lastMod}`;
 
         // 2. Sort Data
         if (sortConfig.key) {
             data.sort((a, b) => {
                 const valA = a[sortConfig.key];
                 const valB = b[sortConfig.key];
-
-                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
                 return 0;
             });
         }
@@ -218,57 +368,78 @@
         // 3. Render Rows
         if (data.length === 0) {
             leaderboardBody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                            ${icons.alertCircle}
-                            <p>No data available for this task.</p>
-                        </td>
-                    </tr>
-                `;
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                        ${icons.alertCircle}
+                        <p>No data available for this task.</p>
+                    </td>
+                </tr>
+            `;
             return;
         }
 
-        leaderboardBody.innerHTML = data.map((row, _index) => {
+        // Calculate global min/max for CI bars scaling within this view
+        let allLowers = data.map(d => d.rating_q025);
+        let allUppers = data.map(d => d.rating_q975);
+        let minVal = Math.min(...allLowers);
+        let maxVal = Math.max(...allUppers);
+        // Add padding to range
+        let range = maxVal - minVal;
+        if (range === 0) range = 100; // avoid div by zero
+
+        leaderboardBody.innerHTML = data.map((row) => {
             const upper = Math.round(row.rating_q975 - row.rating);
             const lower = Math.round(row.rating - row.rating_q025);
             const rating = Math.round(row.rating);
 
+            // Calculate CI Bar dimensions
+            const leftPercent = ((row.rating_q025 - minVal) / range) * 100;
+            const widthPercent = ((row.rating_q975 - row.rating_q025) / range) * 100;
+            const meanPercent = ((row.rating - minVal) / range) * 100;
+
+            const rowClass = getRowStyle(row.final_ranking, row.system);
+
             return `
-                    <tr class="hover:bg-blue-50/30 transition-colors duration-150 group">
-                        <td class="px-6 py-4 text-center font-medium">
-                            <div class="flex justify-center items-center">
-                                ${getRankIcon(row.final_ranking)}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
-                                ${row.system}
+                <tr class="${rowClass} transition-colors duration-150 group border-b border-gray-100 dark:border-gray-800">
+                    <td class="px-6 py-4 text-center font-medium">
+                        <div class="flex justify-center items-center">
+                            ${getRankIcon(row.final_ranking)}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors dark:text-gray-100 dark:group-hover:text-blue-400">
+                            ${row.system}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-bold bg-white text-gray-800 border border-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">
+                            ${rating}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex flex-col items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+                            <span class="font-medium text-gray-700 dark:text-gray-300">
+                                +${upper} / -${lower}
                             </span>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-bold bg-gray-100 text-gray-800 border border-gray-200">
-                                ${rating}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <div class="flex flex-col items-center justify-center text-xs text-gray-500">
-                                <span class="font-medium text-gray-700">
-                                    +${upper} / -${lower}
-                                </span>
-                                <div class="w-24 h-1 bg-gray-200 rounded-full mt-1 overflow-hidden relative">
-                                    <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gray-400 transform -translate-x-1/2"></div>
-                                    <div
-                                        class="absolute top-0 bottom-0 bg-blue-400 opacity-50"
-                                        style="left: 20%; right: 20%;"
-                                    ></div>
-                                </div>
+                            <div class="w-32 h-2 bg-gray-200 rounded-full mt-1 relative dark:bg-gray-700 overflow-hidden">
+                                <!-- The Bar -->
+                                <div
+                                    class="absolute top-0 bottom-0 bg-blue-400/50 rounded-full dark:bg-blue-500/50"
+                                    style="left: ${leftPercent}%; width: ${widthPercent}%;"
+                                ></div>
+                                <!-- The Mean Marker (optional, helps visualization) -->
+                                <div
+                                    class="absolute top-0 bottom-0 w-0.5 bg-gray-600 dark:bg-white"
+                                    style="left: ${meanPercent}%; transform: translateX(-50%);"
+                                ></div>
                             </div>
-                        </td>
-                        <td class="px-6 py-4 text-right font-mono text-sm text-gray-600">
-                            ${row.num_battles}
-                        </td>
-                    </tr>
-                `;
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-center font-mono text-sm text-gray-600 dark:text-gray-400">
+                        ${row.num_battles}
+                    </td>
+                </tr>
+            `;
         }).join("");
 
         renderSortIcons();
@@ -278,6 +449,7 @@
 
     function switchTab(tabId) {
         activeTab = tabId;
+        updateUrlParam(tabId);
         renderTabs();
         renderTable();
     }
@@ -301,6 +473,13 @@
                     console.warn(`No data found for ${task} at scores/${task}.json`);
                     return;
                 }
+                const lastModified = response.headers.get("Last-Modified");
+                if (lastModified) {
+                    // Convert to local readable string
+                    const date = new Date(lastModified);
+                    taskLastModified[task] = date.toLocaleString();
+                }
+
                 dataSets[task] = await response.json();
             } catch (e) {
                 console.error(`Error loading data for ${task}:`, e);
@@ -317,8 +496,8 @@
     document.querySelectorAll(".sort-header").forEach(header =>
         header.addEventListener("click", () => handleSort(header.getAttribute("data-key"))));
 
-    // --- INIT ---
-    document.getElementById("last-updated").textContent = `Last updated: ${new Date().toLocaleDateString()}`;
+    // --- START ---
+    initApp();
     renderTabs();
     loadInitialData();
 </script>
