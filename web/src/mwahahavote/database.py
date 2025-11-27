@@ -402,8 +402,8 @@ def add_vote(
         )
 
 
-def get_non_skip_votes(task: Task) -> Iterator[Vote]:
-    """Returns all non-skip votes for a given task."""
+def get_votes_for_scoring(task: Task) -> Iterator[Vote]:
+    """Returns the votes for a given task to score the systems."""
     with engine.connect() as connection:
         for (
             prompt_id,
@@ -416,9 +416,39 @@ def get_non_skip_votes(task: Task) -> Iterator[Vote]:
             is_offensive_b,
         ) in connection.execute(
             sqlalchemy.sql.text("""
-                SELECT prompt_id, system_id_a, system_id_b, session_id, vote, date, is_offensive_a, is_offensive_b
-                FROM votes NATURAL JOIN prompts
-                WHERE task = :task AND vote != 'n'
+                WITH votes_and_prompts AS (
+                  SELECT
+                    prompt_id,
+                    system_id_a,
+                    system_id_b,
+                    session_id,
+                    vote,
+                    date,
+                    is_offensive_a,
+                    is_offensive_b
+                  FROM
+                    votes v
+                    NATURAL JOIN prompts
+                  WHERE
+                    task = :task
+                    AND v.vote != 'n'
+                )
+                SELECT
+                  v.prompt_id,
+                  v.system_id_a,
+                  v.system_id_b,
+                  v.session_id,
+                  v.vote,
+                  v.date,
+                  v.is_offensive_a,
+                  v.is_offensive_b
+                FROM
+                  votes_and_prompts v
+                  -- We only want the votes from those systems that appear at least once on each side of the votes.
+                  -- Otherwise, it causes issues in the scoring calculation.
+                  -- And it'd also mean the system has too few votes.
+                  JOIN votes_and_prompts v2 ON (v.system_id_a = v2.system_id_b)
+                  JOIN votes_and_prompts v3 ON (v.system_id_b = v3.system_id_a)
             """),
             {"task": task},
         ):
