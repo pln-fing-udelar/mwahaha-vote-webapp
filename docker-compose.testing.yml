@@ -5,6 +5,8 @@ services:
     environment:
       - FLASK_SECRET_KEY=ze4f2fWLmEY9dADjhwvhym3U
       - DB_PASS=123123
+    volumes:
+      - ./web/scoring/:/app/scoring
     ports:
       - '5000:80'
     networks:

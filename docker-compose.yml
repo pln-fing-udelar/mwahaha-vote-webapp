@@ -7,5 +7,3 @@ services:
       - DB_USER=root
       - DB_PASS
       - DB_NAME=mwahaha
-    volumes:
-      - ./web/scoring/:/usr/src/app/scoring
