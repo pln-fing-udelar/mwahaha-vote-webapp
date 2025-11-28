@@ -124,6 +124,7 @@ function setupEmojiConverter() {
 function getTask() {
     const urlParams = new URLSearchParams(window.location.search);
     task = urlParams.get("task");
+
     if (task === null) {
         if (navigator.language.startsWith("es")) {
             task = "a-es";
@@ -133,8 +134,13 @@ function getTask() {
             task = "a-en";
         }
     }
+
     $task.val(task);
-    changeTask();
+
+    // We set the query param in the URL without refreshing the page:
+    const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname +
+        "?task=" + encodeURIComponent($task.val());
+    window.history.replaceState({}, "", newUrl);
 }
 
 function getRandomBattles() {
@@ -154,11 +160,7 @@ function setUiListeners() {
 }
 
 function changeTask() {
-    if (history.pushState) {
-        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname +
-            "?task=" + encodeURIComponent($task.val());
-        window.history.pushState({path: newUrl}, "", newUrl);
-    }
+    window.location.href = "?task=" + encodeURIComponent($task.val());
 }
 
 function vote(voteOption) {
