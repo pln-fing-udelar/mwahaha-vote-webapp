@@ -50,6 +50,11 @@
     }
   </style>
 
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-40699CQRM6"></script>
   <!--suppress SpellCheckingInspection -->
   <script>
@@ -434,6 +439,12 @@
             // Update URL to reflect default
             updateUrlParam(activeTab);
         }
+
+        dayjs().format();
+
+        dayjs.extend(window.dayjs_plugin_utc);
+        dayjs.extend(window.dayjs_plugin_timezone);
+        dayjs.extend(window.dayjs_plugin_relativeTime);
     }
 
     function updateUrlParam(tabId) {
@@ -504,8 +515,10 @@
     function renderTable() {
         // 1. Get Data
         let data = [...(dataSets[activeTab] || [])];
-        const lastMod = taskLastModified[activeTab] || new Date().toLocaleString();
-        document.getElementById("last-updated").textContent = `Last updated: ${lastMod}`;
+        const lastMod = dayjs(taskLastModified[activeTab]);
+        const lastUpdatedText = document.getElementById("last-updated");
+        lastUpdatedText.textContent = `Last updated: ${lastMod.fromNow()}`;
+        lastUpdatedText.setAttribute("title", lastMod.tz(dayjs.tz.guess()).format());
 
         // 2. Sort Data
         if (sortConfig.key) {
@@ -629,8 +642,7 @@
                 const lastModified = response.headers.get("Last-Modified");
                 if (lastModified) {
                     // Convert to local readable string
-                    const date = new Date(lastModified);
-                    taskLastModified[task] = date.toLocaleString();
+                    taskLastModified[task] = lastModified;
                 }
 
                 dataSets[task] = await response.json();
