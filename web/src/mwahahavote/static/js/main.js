@@ -10,7 +10,6 @@ let $tie;
 let $skip;
 let $voteRight;
 let $isOffensiveRight;
-let $legendVote;
 let emoji;
 
 let task = "a-en";
@@ -54,7 +53,6 @@ function setupElements() {
     $skip = $("#skip");
     $voteRight = $("#vote-right");
     $isOffensiveRight = $("#is-offensive-right");
-    $legendVote = $(".legend-vote");
 }
 
 function showBattle() {
@@ -118,7 +116,8 @@ function setupEmojiConverter() {
     // noinspection JSUnresolvedFunction
     emoji = new EmojiConvertor();
     emoji.img_set = "twitter";
-    emoji.img_sets.twitter.path = "https://raw.githubusercontent.com/iamcal/emoji-data/" + "a97b2d2efa64535d6300660eb2cd15ecb584e79e/img-twitter-64/";
+    emoji.img_sets.twitter.path = "https://raw.githubusercontent.com/iamcal/emoji-data/" +
+        "a97b2d2efa64535d6300660eb2cd15ecb584e79e/img-twitter-64/";
 }
 
 function getTask() {
