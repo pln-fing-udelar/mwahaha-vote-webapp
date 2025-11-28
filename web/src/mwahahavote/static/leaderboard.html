@@ -60,19 +60,6 @@
           <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
         </svg>
       </button>
-
-      <a href="https://pln-fing-udelar.github.io/semeval-2026-humor-gen/" target="_blank"
-         class="hidden lg:flex text-sm text-gray-500 hover:text-blue-600 transition-colors dark:text-gray-400 dark:hover:text-blue-400">
-        More Info
-      </a>
-      <a href="https://thefunnier.com/" target="_blank"
-         class="hidden sm:flex px-3 py-2 bg-pink-600 text-white text-sm font-medium rounded-md hover:bg-pink-700 transition-colors shadow-sm items-center gap-1">
-        <span>Help us Rank!</span>
-      </a>
-      <a href="https://www.codabench.org/competitions/9719/" target="_blank"
-         class="hidden sm:flex px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors shadow-sm dark:bg-blue-600 dark:hover:bg-blue-700">
-        Submit a System
-      </a>
     </div>
   </div>
 </header>
@@ -147,7 +134,7 @@
   </div>
 
   <!-- INFO BOX -->
-  <div
+  <!--<div
       class="bg-blue-50 border border-blue-100 rounded-xl p-6 mt-8 flex items-start gap-4 dark:bg-blue-900/20 dark:border-blue-800">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: none;"
          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -168,8 +155,156 @@
         </span>
       </p>
     </div>
-  </div>
+  </div>-->
 </main>
+
+<footer
+    class="bg-white border-b border-gray-200 sticky top-0 z-30 dark:bg-gray-800 dark:border-gray-700 transition-colors duration-200 flex items-center">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="flex items-center space-x-2 sm:space-x-4 gap-2">
+      <!--suppress HtmlUnknownAttribute -->
+      <button command="show-modal" commandfor="dialog"
+              class="lg:flex text-sm text-gray-500 hover:text-blue-600 transition-colors dark:text-gray-400 dark:hover:text-blue-400 cursor-pointer">
+        More Info
+      </button>
+      <a href="https://thefunnier.com/" target="_blank"
+         class="sm:flex px-3 py-2 bg-pink-600 text-white text-sm font-medium rounded-md hover:bg-pink-700 transition-colors shadow-sm items-center">
+        <span>Help us Rank!</span>
+      </a>
+      <a href="https://www.codabench.org/competitions/9719/" target="_blank"
+         class="hidden sm:flex px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors shadow-sm dark:bg-blue-600 dark:hover:bg-blue-700">
+        Submit a System
+      </a>
+    </div>
+  </div>
+</footer>
+
+<!--suppress HtmlUnknownTag -->
+<el-dialog>
+  <dialog id="dialog" aria-labelledby="dialog-title"
+          class="fixed inset-0 size-auto max-h-none max-w-none overflow-y-auto bg-transparent backdrop:bg-transparent">
+    <!--suppress HtmlUnknownTag -->
+    <el-dialog-backdrop
+        class="fixed inset-0 bg-gray-500/75 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in dark:bg-gray-900/50"></el-dialog-backdrop>
+
+    <div tabindex="0"
+         class="flex min-h-full items-end justify-center p-4 text-center focus:outline-none sm:items-center sm:p-0">
+      <!--suppress HtmlUnknownTag -->
+      <el-dialog-panel
+          class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full sm:max-w-lg data-closed:sm:translate-y-0 data-closed:sm:scale-95 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10">
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-800">
+          <div class="sm:flex sm:items-start">
+            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">Info</h3>
+              <div class="mt-2">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  This web page shows the live arena leaderboard for the evaluation of systems submitted by participants
+                  to the
+                  <a href="https://pln-fing-udelar.github.io/semeval-2026-humor-gen/" target="_blank"
+                     class="underline text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500">
+                    2025-2026 MWAHAHA competition on Humor Generation</a>.
+                  In this competition, participants submit computer program systems that are capable of generating
+                  humorous outputs given some context (e.g., a headline).
+                  This competition consists of two phases in which participants can submit systems:
+                  Evaluation Trial (until Dec 15, 2025) and Evaluation (Jan 10-31, 2026).
+                  We use this web page to show the live evaluation results for both phases,
+                  one at a time (currently for the Evaluation Trial).
+                  The results are non-final (they are partial; running, live, still being computed).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 dark:bg-gray-800">
+          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Frequently Asked Questions (FAQ)</h3>
+            <div class="mt-2">
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                <strong>1. What are these systems?</strong>
+                <br>
+                These are the names of the systems participants submitted to this competition.
+                These systems generate jokes given a prompt (e.g., a headline).
+                The names of the systems are composed of the participant name, a hyphen, and the submission number,
+                obtained from
+                <a href="https://www.codabench.org/competitions/9719/" target="_blank"
+                   class="underline text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500">
+                  our CodaBench competition website</a>.
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                <strong>2. Why do some systems have similar names?</strong>
+                <br>
+                Participants are allowed to make multiple submissions.
+                So the participant name can appear multiple times, with a different submission number.
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                <strong>3. What's <em>baseline-1</em>?</strong>
+                <br>
+                It's the name of a system provided by the competition organizers as a baseline.
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                <strong>4. How are the systems evaluated?</strong>
+                <br>
+                We use
+                <a href="/" target="_blank"
+                   class="underline text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500">
+                  this annotation web page</a>
+                to let anyone on the Internet help us
+                decide what's the funnier system on 1-on-1 arena-style battles,
+                partially inspired by
+                <a href="https://lmarena.ai/" target="_blank"
+                   class="underline text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500">
+                  LMArena</a>.
+                With all the annotations, we compute an Elo-like score to rate the systems.
+                More specifically, we employ a Bradley-Terry model to compute stable ratings,
+                and apply bootstrapping to compute 95% confidence intervals.
+                See
+                <a href="https://lmsys.org/blog/2023-12-07-leaderboard/" target="_blank"
+                   class="underline text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500">
+                  this blog post from LMSYS Org</a>
+                for more info.
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                <strong>5. Can I evaluate systems?</strong>
+                <br>
+                Yes!
+                Everyone is welcome!
+                Visit the
+                <a href="/" target="_blank"
+                   class="underline text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500">
+                  the annotation web page</a>
+                and have fun rating the funnier systems!
+                Note that you can't both submit a system and evaluate systems.
+                In other words, only non-participants can evaluate systems.
+                If you're considering participating in the competition, please refrain from evaluating systems.
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                <strong>6. Can I participate in this competition?</strong>
+                <br>
+                Of course!
+                Everyone is welcome!
+                Visit the
+                <a href="https://pln-fing-udelar.github.io/semeval-2026-humor-gen/" target="_blank"
+                   class="underline text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500">
+                  2025-2026 MWAHAHA competition website</a>
+                for more info.
+                You have time to submit your system's jokes until the Evaluation phase ends (late Jan, 2026).
+                Note that, if you are considering participating, you cannot vote/annotate
+                (i.e., you can't both submit a system and evaluate systems).
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 dark:bg-gray-700/25">
+          <!--suppress HtmlUnknownAttribute -->
+          <button type="button" command="close" commandfor="dialog"
+                  class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+            Got it!
+          </button>
+        </div>
+      </el-dialog-panel>
+    </div>
+  </dialog>
+</el-dialog>
 
 <script>
     // --- STATE & CONFIG ---
