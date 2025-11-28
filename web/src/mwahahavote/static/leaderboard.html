@@ -257,6 +257,8 @@
                 With all the annotations, we compute an Elo-like score to rate the systems.
                 More specifically, we employ a Bradley-Terry model to compute stable ratings,
                 and apply bootstrapping to compute 95% confidence intervals.
+                Note that, in some border cases, there could be differences between the confidence intervals
+                and the final rating values.
                 See
                 <a href="https://lmsys.org/blog/2023-12-07-leaderboard/" target="_blank"
                    class="underline text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500">
@@ -264,7 +266,19 @@
                 for more info.
               </p>
               <p class="text-sm text-gray-500 dark:text-gray-400">
-                <strong>5. Can I evaluate systems?</strong>
+                <strong>5. Why do some systems have the same rank?</strong>
+                <br>
+                Some systems have the same rank because we can't differentiate them in a statistically significant way,
+                even when their ratings are different.
+                Note that ties aren't transitive.
+                For example, we may not be able to tell which of A and B and which of B and C are better,
+                but we may be able to significantly tell that A is better than C.
+                That's why a system may have a lower rank than another one without a statistically significant
+                difference (because there are others systems with the same rank as the latter that can be differentiated
+                from the former).
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                <strong>6. Can I evaluate systems?</strong>
                 <br>
                 Yes!
                 Everyone is welcome!
@@ -278,7 +292,7 @@
                 If you're considering participating in the competition, please refrain from evaluating systems.
               </p>
               <p class="text-sm text-gray-500 dark:text-gray-400">
-                <strong>6. Can I participate in this competition?</strong>
+                <strong>7. Can I participate in this competition?</strong>
                 <br>
                 Of course!
                 Everyone is welcome!
