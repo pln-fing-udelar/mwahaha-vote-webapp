@@ -3,7 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SemEval-2026 Humor Gen Leaderboard</title>
+
+  <meta name="description"
+        content="Leaderboard for the MWAHAHA competition on Humor Generation. We're on a quest to find the funniest computer program!"/>
+  <meta
+      content="Santiago Castro, Luis Chiruzzo, Naihao Deng, Julie-Anne Meaney, Santiago Góngora, Ignacio Sastre, Victoria Amoroso, Guillermo Rey, Salar Rahili, Guillermo Moncecchi, Juan José Prada, Aiala Rosá, Rada Mihalcea"
+      name="author">
+  <link href="img/favicon.avif" rel="apple-touch-icon">
+
+  <meta property="og:type" content="website"/>
+  <meta content="Which Computer Program Output is Funnier?" property="og:site_name"/>
+  <meta content="https://thefunnier.com/img/og-leaderboard.avif" property="og:image"/>
+  <meta property="og:image:height" content="630"/>
+  <meta property="og:image:width" content="1200"/>
+  <meta content="MWAHAHA Humor Gen Comp Leaderboard" property="og:title"/>
+  <meta property="og:description"
+        content="Leaderboard for the MWAHAHA competition on Humor Generation. We're on a quest to find the funniest computer program!"/>
+  <meta content="https://thefunnier.com/leaderboard" property="og:url"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta content="@HumorGen2026" name="twitter:site"/>
+  <meta content="@HumorGen2026" name="twitter:creator"/>
+
+  <title>MWAHAHA Humor Gen Comp Leaderboard</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <!--suppress HtmlDeprecatedAttribute -->
   <style type="text/tailwindcss">
@@ -147,30 +169,6 @@
       </p>
     </div>
   </div>
-
-  <!-- INFO BOX -->
-  <!--<div
-      class="bg-blue-50 border border-blue-100 rounded-xl p-6 mt-8 flex items-start gap-4 dark:bg-blue-900/20 dark:border-blue-800">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: none;"
-         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-         class="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5 dark:text-blue-400">
-      <circle cx="12" cy="12" r="10"></circle>
-      <path d="M12 16v-4"></path>
-      <path d="M12 8h.01"></path>
-    </svg>
-    <div class="space-y-2">
-      <h3 class="font-semibold text-blue-900 dark:text-blue-100">About the Leaderboard</h3>
-      <p class="text-sm text-blue-800 leading-relaxed max-w-4xl dark:text-blue-200">
-        This leaderboard ranks humor generation systems based on 1-on-1 pairwise battles.
-        The rating system is based on Elo (with variance). Confidence intervals (95% CI) are shown to reflect the
-        uncertainty in the rating.
-        <br/>
-        <span class="opacity-80 mt-1 block">
-          Higher Elo rating indicates a system that is more likely to generate outputs perceived as humorous by the judges.
-        </span>
-      </p>
-    </div>
-  </div>-->
 </main>
 
 <footer
@@ -269,7 +267,9 @@
                 <a href="https://lmarena.ai/" target="_blank"
                    class="underline text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-500">
                   LMArena</a>.
-                With all the annotations, we compute an Elo-like score to rate the systems.
+                With all the annotations, we compute an Elo-like rating score to rate the systems.
+                A higher rating indicates a system that is more likely to generate outputs perceived as humorous.
+                This is a system used by LMArena and also by games such as chess.
                 More specifically, we employ a Bradley-Terry model to compute stable ratings,
                 and apply bootstrapping to compute 95% confidence intervals.
                 Note that, in some border cases, there could be differences between the confidence intervals
