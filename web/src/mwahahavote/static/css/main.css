@@ -1,11 +1,17 @@
-body {
-  font-family: "Open Sans", sans-serif;
+html {
   height: 100%;
-  position: relative;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  font-family: "Open Sans", sans-serif;
+  margin: 0;
+  min-height: 100%;
 }
 
 .main-content {
-  min-height: 100vh;
+  flex: 1 0 auto;
   overflow: hidden;
   padding-bottom: 50px;
 }
@@ -158,38 +164,12 @@ button.no-hover:hover {
   vertical-align: top;
 }
 
-#about-us-content {
-  display: none;
-}
-
-footer {
-  bottom: 0;
-  left: 0;
-  position: absolute;
-  right: 0;
+#footer-section {
+  background-color: #ffffff;
+  border-top: 1px solid #ddd;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+  padding: 12px 0;
   text-align: center;
-}
-
-#social-buttons-container {
-  margin-bottom: 6px;
-}
-
-.fb-share-button {
-  margin-bottom: 3px;
-  margin-right: 3px;
-  vertical-align: bottom;
-}
-
-.fb_iframe_widget_fluid {
-  display: inline-block !important;
-}
-
-.twitter-share-button {
-  margin-bottom: 3px;
-  vertical-align: bottom;
-}
-
-.wa_btn {
-  display: none;
-  vertical-align: bottom;
+  width: 100%;
 }
