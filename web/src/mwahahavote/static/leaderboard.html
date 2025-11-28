@@ -139,7 +139,7 @@
           <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group text-center sort-header dark:hover:bg-gray-700"
               data-key="num_battles">
             <div class="flex items-center justify-center">
-              Battles <span class="sort-icon ml-1"></span>
+              Votes <span class="sort-icon ml-1"></span>
             </div>
           </th>
         </tr>
@@ -388,8 +388,8 @@
         if (range === 0) range = 100; // avoid div by zero
 
         leaderboardBody.innerHTML = data.map((row) => {
-            const upper = Math.round(row.rating_q975 - row.rating);
-            const lower = Math.round(row.rating - row.rating_q025);
+            const upper = Math.round(row.rating_q975);
+            const lower = Math.round(row.rating_q025);
             const rating = Math.round(row.rating);
 
             // Calculate CI Bar dimensions
@@ -419,7 +419,7 @@
                     <td class="px-6 py-4 text-center">
                         <div class="flex flex-col items-center justify-center text-xs text-gray-500 dark:text-gray-400">
                             <span class="font-medium text-gray-700 dark:text-gray-300">
-                                +${upper} / -${lower}
+                                [${lower}, ${upper}]
                             </span>
                             <div class="w-32 h-2 bg-gray-200 rounded-full mt-1 relative dark:bg-gray-700 overflow-hidden">
                                 <!-- The Bar -->
