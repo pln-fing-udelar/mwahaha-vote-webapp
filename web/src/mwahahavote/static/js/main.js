@@ -4,6 +4,7 @@ let $task;
 let $prompt;
 let $outputA;
 let $outputB;
+let $answerButtons;
 let $isOffensiveLeft;
 let $voteLeft;
 let $tie;
@@ -47,6 +48,7 @@ function setupElements() {
     $prompt = $("#prompt-text");
     $outputA = $("#output-a-text");
     $outputB = $("#output-b-text");
+    $answerButtons = $("#answers button");
     $isOffensiveLeft = $("#is-offensive-left");
     $voteLeft = $("#vote-left");
     $tie = $("#tie");
@@ -151,11 +153,17 @@ function getRandomBattles() {
 
 function setUiListeners() {
     $task.change(() => changeTask());
+
+    $answerButtons.mouseup(e => {
+        $(e.currentTarget).blur();
+        $(e.currentTarget).addClass("no-hover");
+    });
+    $answerButtons.on("mousemove mousedown", e => $(e.currentTarget).removeClass("no-hover"));
+
     $voteLeft.click(() => vote("a"));
     $tie.click(() => vote("t"));
     $skip.click(() => vote("n"));
     $voteRight.click(() => vote("b"));
-    $("#answers button").mouseup(e => $(e.currentTarget).blur());
 }
 
 function changeTask() {
