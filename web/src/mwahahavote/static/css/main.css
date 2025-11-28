@@ -127,26 +127,6 @@ h1 {
   min-width: 100px;
 }
 
-/*#humor:focus,*/
-/*#humor:hover,*/
-/*#humor:active,*/
-/*#humor.active.focus,*/
-/*#humor.active:focus,*/
-/*#humor.active:hover,*/
-/*#humor:active.focus,*/
-/*#humor:active:focus,*/
-/*#humor:active:hover,*/
-/*.open > .dropdown-toggle#humor.focus,*/
-/*.open > .dropdown-toggle#humor:focus,*/
-/*.open > .dropdown-toggle#humor:hover {*/
-/*  background-color: #fafafa;*/
-/*  border-color: #ddd;*/
-/*  box-shadow: none;*/
-/*  color: #333;*/
-/*  cursor: default;*/
-/*  outline: none;*/
-/*}*/
-
 button.no-hover:hover {
   background-color: #fff;
   border-color: #ccc;
@@ -172,4 +152,22 @@ button.no-hover:hover {
   padding: 12px 0;
   text-align: center;
   width: 100%;
+}
+
+#bottom-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  list-style-type: none;
+  padding: 0;
+}
+
+#help-link {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+#leaderboard-button {
+  margin-left: 10px;
 }
