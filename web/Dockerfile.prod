@@ -4,7 +4,7 @@ COPY --from=ghcr.io/astral-sh/uv /uv /uvx /bin/
 ENV UV_PROJECT_ENVIRONMENT=/usr/local/
 RUN touch README.md
 COPY pyproject.toml uv.lock ./
-COPY src/mwahahavote src/mwahahavote
 RUN uv sync --no-default-groups --no-managed-python --inexact --locked
+COPY src/mwahahavote src/mwahahavote
 COPY uwsgi.ini ./
 COPY uwsgi.conf /etc/nginx/conf.d/
