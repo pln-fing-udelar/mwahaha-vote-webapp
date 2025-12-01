@@ -1,4 +1,5 @@
 """Provides mechanisms to handle the database."""
+
 import datetime
 import os
 from collections.abc import Iterable, Iterator, MutableMapping
@@ -468,6 +469,43 @@ def get_votes_for_scoring(task: Task) -> Iterator[Vote]:
                 is_offensive_a=is_offensive_a,
                 is_offensive_b=is_offensive_b,
             )
+
+
+def get_votes_per_system(task: Task) -> Iterator[tuple[str, int]]:
+    """Returns the non-skip votes per system for a given task."""
+    with engine.connect() as connection:
+        yield from connection.execute(  # type: ignore
+            sqlalchemy.sql.text("""
+                WITH system_ids_with_outputs AS (
+                  SELECT system_id
+                  FROM outputs NATURAL JOIN prompts
+                  WHERE task = :task
+                  GROUP BY system_id
+                ), system_votes AS (
+                  SELECT
+                    system_id_a,
+                    system_id_b
+                  FROM
+                    votes
+                    JOIN system_ids_with_outputs ON (
+                      votes.system_id_a = system_ids_with_outputs.system_id
+                        OR votes.system_id_b = system_ids_with_outputs.system_id
+                    )
+                    NATURAL JOIN prompts
+                  WHERE
+                    task = :task
+                    AND vote != 'n'
+                ), votes_and_prompts_per_system AS (
+                  SELECT system_id_a AS system_id FROM system_votes UNION ALL
+                    SELECT system_id_b AS system_id FROM system_votes
+                )
+                SELECT system_id, COUNT(*) AS count
+                FROM votes_and_prompts_per_system
+                GROUP BY system_id
+                ORDER BY count DESC
+            """),
+            {"task": task},
+        )
 
 
 def session_vote_count_with_skips(session_id: str) -> int:

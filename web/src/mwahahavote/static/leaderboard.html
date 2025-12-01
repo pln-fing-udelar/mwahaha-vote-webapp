@@ -317,7 +317,7 @@
               <p class="text-sm text-gray-500 dark:text-gray-400">
                 <strong>7. When is the leaderboard updated?</strong>
                 <br>
-                We target to update it every one hour, but there may be issues so we can't guarantee it.
+                We try to update it every one hour, but there may be issues so we can't guarantee it.
                 In any case, the last update time appears at the bottom of the tables.
               </p>
               <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -510,10 +510,6 @@
         });
     }
 
-    function getRankIcon(rank) {
-        return `<span class="text-gray-500 font-mono dark:text-gray-400">${rank}</span>`;
-    }
-
     function getRowStyle(rank, systemName) {
         // Baseline special color
         if (systemName === "baseline-1") {
@@ -579,22 +575,55 @@
         if (range === 0) range = 100; // avoid div by zero
 
         leaderboardBody.innerHTML = data.map((row) => {
-            const upper = Math.round(row.rating_q975);
-            const lower = Math.round(row.rating_q025);
-            const rating = Math.round(row.rating);
+            let rating;
+            let bar;
+            let rowClass;
+            let rank;
+            if (row.rating === null) {
+              rating = "TBD";
+              bar = "";
+              rowClass = getRowStyle(999, row.system);
+              rank = "TBD";
+            } else {
+              rating = Math.round(row.rating);
 
-            // Calculate CI Bar dimensions
-            const leftPercent = ((row.rating_q025 - minVal) / range) * 100;
-            const widthPercent = ((row.rating_q975 - row.rating_q025) / range) * 100;
-            const meanPercent = ((row.rating - minVal) / range) * 100;
+              const upper = Math.round(row.rating_q975);
+              const lower = Math.round(row.rating_q025);
 
-            const rowClass = getRowStyle(row.final_ranking, row.system);
+              // Calculate CI Bar dimensions
+              const leftPercent = ((row.rating_q025 - minVal) / range) * 100;
+              const rightPercent = ((row.rating_q975 - row.rating_q025) / range) * 100;
+              const meanPercent = ((row.rating - minVal) / range) * 100;
 
+              bar = `
+                  <div class="flex flex-col items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+                            <span class="font-medium text-gray-700 dark:text-gray-300">
+                                [${lower}, ${upper}]
+                            </span>
+                            <div class="w-32 h-2 bg-gray-200 rounded-full mt-1 relative dark:bg-gray-700 overflow-hidden">
+                                <!-- The Bar -->
+                                <div
+                                    class="absolute top-0 bottom-0 bg-blue-400/50 rounded-full dark:bg-blue-500/50"
+                                    style="left: ${leftPercent}%; width: ${rightPercent}%;"
+                                ></div>
+                                <!-- The Mean Marker (optional, helps visualization) -->
+                                <div
+                                    class="absolute top-0 bottom-0 w-0.5 bg-gray-600 dark:bg-white"
+                                    style="left: ${meanPercent}%; transform: translateX(-50%);"
+                                ></div>
+                            </div>
+                        </div>
+              `
+
+              rowClass = getRowStyle(Math.round(row.final_ranking), row.system);
+
+              rank = row.final_ranking;
+            }
             return `
                 <tr class="${rowClass} transition-colors duration-150 group border-b border-gray-100 dark:border-gray-800">
                     <td class="px-6 py-4 text-center font-medium">
                         <div class="flex justify-center items-center">
-                            ${getRankIcon(row.final_ranking)}
+                            <span class="text-gray-500 font-mono dark:text-gray-400">${rank}</span>
                         </div>
                     </td>
                     <td class="px-6 py-4 text-center">
@@ -608,23 +637,7 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 text-center">
-                        <div class="flex flex-col items-center justify-center text-xs text-gray-500 dark:text-gray-400">
-                            <span class="font-medium text-gray-700 dark:text-gray-300">
-                                [${lower}, ${upper}]
-                            </span>
-                            <div class="w-32 h-2 bg-gray-200 rounded-full mt-1 relative dark:bg-gray-700 overflow-hidden">
-                                <!-- The Bar -->
-                                <div
-                                    class="absolute top-0 bottom-0 bg-blue-400/50 rounded-full dark:bg-blue-500/50"
-                                    style="left: ${leftPercent}%; width: ${widthPercent}%;"
-                                ></div>
-                                <!-- The Mean Marker (optional, helps visualization) -->
-                                <div
-                                    class="absolute top-0 bottom-0 w-0.5 bg-gray-600 dark:bg-white"
-                                    style="left: ${meanPercent}%; transform: translateX(-50%);"
-                                ></div>
-                            </div>
-                        </div>
+                        ${bar}
                     </td>
                     <td class="px-6 py-4 text-center font-mono text-sm text-gray-600 dark:text-gray-400">
                         ${row.num_battles}
