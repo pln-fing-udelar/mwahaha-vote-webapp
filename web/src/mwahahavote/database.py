@@ -191,14 +191,40 @@ WITH
       votes
     WHERE
       session_id = :session_id
-  ),
-  random_least_voted_unseen_outputs_a AS (
+  ), system_ids_with_outputs AS (
+    SELECT system_id
+    FROM outputs NATURAL JOIN prompts
+    WHERE task = :task
+    GROUP BY system_id
+  ), system_votes AS (
+    SELECT
+      system_id_a,
+      system_id_b
+    FROM
+      votes
+      JOIN system_ids_with_outputs ON (
+        votes.system_id_a = system_ids_with_outputs.system_id
+          OR votes.system_id_b = system_ids_with_outputs.system_id
+      )
+      NATURAL JOIN prompts
+    WHERE
+      task = :task
+      AND vote != 'n'
+  ), votes_and_prompts_per_system AS (
+    SELECT system_id_a AS system_id FROM system_votes UNION ALL
+      SELECT system_id_b AS system_id FROM system_votes
+  ), system_unskipped_votes AS (
+    SELECT system_id, COUNT(*) AS count
+    FROM votes_and_prompts_per_system
+    GROUP BY system_id
+  ), random_least_voted_unseen_outputs_from_least_voted_systems_a AS (
     SELECT
       outputs.prompt_id,
       outputs.system_id,
       text
     FROM
       outputs
+      NATURAL JOIN system_unskipped_votes
       LEFT JOIN votes_from_session
       ON (
         votes_from_session.prompt_id = outputs.prompt_id
@@ -222,6 +248,7 @@ WITH
     prompt_id,
     system_id
   ORDER BY
+    system_unskipped_votes.count,
     COUNT(unskipped_votes.prompt_id),
     RAND()
   )
@@ -233,17 +260,17 @@ SELECT
   url,
   prompt,
   @swap := RAND() > 0.5 AS swap,
-  IF(@swap, outputs_b.system_id, random_least_voted_unseen_outputs_a.system_id) AS system_id_a,
-  IF(@swap, outputs_b.text, random_least_voted_unseen_outputs_a.text) AS text_a,
-  IF(@swap, random_least_voted_unseen_outputs_a.system_id, outputs_b.system_id) AS system_id_b,
-  IF(@swap, random_least_voted_unseen_outputs_a.text, outputs_b.text) AS text_b
+  IF(@swap, outputs_b.system_id, random_least_voted_unseen_outputs_from_least_voted_systems_a.system_id) AS system_id_a,
+  IF(@swap, outputs_b.text, random_least_voted_unseen_outputs_from_least_voted_systems_a.text) AS text_a,
+  IF(@swap, random_least_voted_unseen_outputs_from_least_voted_systems_a.system_id, outputs_b.system_id) AS system_id_b,
+  IF(@swap, random_least_voted_unseen_outputs_from_least_voted_systems_a.text, outputs_b.text) AS text_b
 FROM
   prompts
-  NATURAL JOIN random_least_voted_unseen_outputs_a
+  NATURAL JOIN random_least_voted_unseen_outputs_from_least_voted_systems_a
   JOIN outputs AS outputs_b
     ON (
-      outputs_b.prompt_id = random_least_voted_unseen_outputs_a.prompt_id
-      AND outputs_b.system_id != random_least_voted_unseen_outputs_a.system_id
+      outputs_b.prompt_id = random_least_voted_unseen_outputs_from_least_voted_systems_a.prompt_id
+      AND outputs_b.system_id != random_least_voted_unseen_outputs_from_least_voted_systems_a.system_id
     )
   LEFT JOIN votes_from_session AS votes_from_session_b
     ON (
