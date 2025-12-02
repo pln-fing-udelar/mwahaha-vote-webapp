@@ -232,10 +232,11 @@ SELECT
   headline,
   url,
   prompt,
-  random_least_voted_unseen_outputs_a.system_id AS system_id_a,
-  random_least_voted_unseen_outputs_a.text AS text_a,
-  outputs_b.system_id AS system_id_b,
-  outputs_b.text AS text_b
+  @swap := RAND() > 0.5 AS swap,
+  IF(@swap, outputs_b.system_id, random_least_voted_unseen_outputs_a.system_id) AS system_id_a,
+  IF(@swap, outputs_b.text, random_least_voted_unseen_outputs_a.text) AS text_a,
+  IF(@swap, random_least_voted_unseen_outputs_a.system_id, outputs_b.system_id) AS system_id_b,
+  IF(@swap, random_least_voted_unseen_outputs_a.text, outputs_b.text) AS text_b
 FROM
   prompts
   NATURAL JOIN random_least_voted_unseen_outputs_a
@@ -336,6 +337,7 @@ def _battle_rows_to_objects(
         headline,
         url,
         prompt,
+        _swap,
         system_id_a,
         text_a,
         system_id_b,
