@@ -2,7 +2,10 @@
 import json
 from typing import Literal
 
-from mwahahavote.database import TASK_CHOICES, Vote, get_votes_for_scoring
+from mwahahavote.database import TASK_CHOICES, Vote, get_votes_for_scoring, get_votes_per_system
+
+# With few votes, we learned that it destabilizes the score calculation for all the systems.
+MIN_VOTES_PER_SYSTEM = 20
 
 
 def vote_to_fastchat_format(vote: Vote) -> Literal["model_a", "model_b", "tie"]:
@@ -31,6 +34,8 @@ def vote_to_fastchat_language(vote: Vote) -> Literal["Chinese", "English", "Span
 
 def main() -> None:
     for task in sorted(TASK_CHOICES):
+        system_id_to_vote_count = dict(get_votes_per_system(task))
+
         with open(f"scoring/votes-{task}.json", "w") as file:
             json.dump(
                 [
@@ -48,6 +53,10 @@ def main() -> None:
                         "tstamp": round(vote.date.timestamp()),
                     }
                     for vote in get_votes_for_scoring(task)
+                    if (
+                        system_id_to_vote_count[vote.battle.output_a.system.id] >= MIN_VOTES_PER_SYSTEM
+                        and system_id_to_vote_count[vote.battle.output_b.system.id] >= MIN_VOTES_PER_SYSTEM
+                    )
                 ],
                 file,
             )
