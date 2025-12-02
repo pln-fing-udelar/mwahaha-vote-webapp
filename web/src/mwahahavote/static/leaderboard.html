@@ -180,7 +180,10 @@
       </table>
     </div>
 
-    <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+    <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex flex-col gap-1">
+      <p class="text-sm font-semibold text-gray-700 text-center dark:text-gray-300" id="total-votes">
+        <!-- Total Votes injected by JS -->
+      </p>
       <p class="text-xs text-gray-500 text-center dark:text-gray-400" id="last-updated">
         <!-- Date injected by JS -->
       </p>
@@ -538,10 +541,17 @@
         // 1. Get Data
         let data = [...(dataSets[activeTab] || [])];
 
-        // Update the footer text
+        // 2. Calculate Total Votes
+        const totalVotes = data.reduce((sum, row) => sum + (row.num_battles || 0), 0);
+        const totalVotesEl = document.getElementById("total-votes");
+        if (totalVotesEl) {
+            totalVotesEl.textContent = `Total Votes: ${totalVotes.toLocaleString()}`;
+        }
+
+        // Update the footer time
         updateFooterTime();
 
-        // 2. Sort Data
+        // 3. Sort Data
         if (sortConfig.key) {
             data.sort((a, b) => {
                 const valA = a[sortConfig.key];
@@ -552,7 +562,7 @@
             });
         }
 
-        // 3. Render Rows
+        // 4. Render Rows
         if (data.length === 0) {
             leaderboardBody.innerHTML = `
                 <tr>
