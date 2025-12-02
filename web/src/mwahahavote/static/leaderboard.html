@@ -91,8 +91,9 @@
     </div>
     <div class="flex items-center space-x-3 sm:space-x-4">
       <!-- Live Indicator -->
-      <div class="flex items-center gap-2 px-2 py-1 rounded-full bg-green-50 border border-green-100 dark:bg-green-900/20 dark:border-green-800 cursor-help"
-           title="The leaderboard refreshes automatically">
+      <div
+          class="flex items-center gap-2 px-2 py-1 rounded-full bg-green-50 border border-green-100 dark:bg-green-900/20 dark:border-green-800 cursor-help"
+          title="The leaderboard refreshes automatically">
         <span class="relative flex h-2.5 w-2.5">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
@@ -180,7 +181,8 @@
       </table>
     </div>
 
-    <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex flex-col gap-1">
+    <div
+        class="bg-gray-50 px-6 py-4 border-t border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex flex-col gap-1">
       <p class="text-sm font-semibold text-gray-700 text-center dark:text-gray-300" id="total-votes">
         <!-- Total Votes injected by JS -->
       </p>
@@ -542,10 +544,12 @@
         let data = [...(dataSets[activeTab] || [])];
 
         // 2. Calculate Total Votes
-        const totalVotes = data.reduce((sum, row) => sum + (row.num_battles || 0), 0);
+        const totalVotes = data.reduce((sum, row) => sum + (row.num_battles || 0), 0) / 2;
         const totalVotesEl = document.getElementById("total-votes");
         if (totalVotesEl) {
             totalVotesEl.textContent = `Total Votes: ${totalVotes.toLocaleString()}`;
+            totalVotesEl.setAttribute("title", "The total vote count is half of the sum of each system vote count," +
+                " because each vote goes to two systems.");
         }
 
         // Update the footer time
@@ -590,22 +594,22 @@
             let rowClass;
             let rank;
             if (row.rating === null) {
-              rating = "TBD";
-              bar = "";
-              rowClass = getRowStyle(999, row.system);
-              rank = "TBD";
+                rating = "TBD";
+                bar = "";
+                rowClass = getRowStyle(999, row.system);
+                rank = "TBD";
             } else {
-              rating = Math.round(row.rating);
+                rating = Math.round(row.rating);
 
-              const upper = Math.round(row.rating_q975);
-              const lower = Math.round(row.rating_q025);
+                const upper = Math.round(row.rating_q975);
+                const lower = Math.round(row.rating_q025);
 
-              // Calculate CI Bar dimensions
-              const leftPercent = ((row.rating_q025 - minVal) / range) * 100;
-              const rightPercent = ((row.rating_q975 - row.rating_q025) / range) * 100;
-              const meanPercent = ((row.rating - minVal) / range) * 100;
+                // Calculate CI Bar dimensions
+                const leftPercent = ((row.rating_q025 - minVal) / range) * 100;
+                const rightPercent = ((row.rating_q975 - row.rating_q025) / range) * 100;
+                const meanPercent = ((row.rating - minVal) / range) * 100;
 
-              bar = `
+                bar = `
                   <div class="flex flex-col items-center justify-center text-xs text-gray-500 dark:text-gray-400">
                             <span class="font-medium text-gray-700 dark:text-gray-300">
                                 [${lower}, ${upper}]
@@ -625,9 +629,9 @@
                         </div>
               `
 
-              rowClass = getRowStyle(Math.round(row.final_ranking), row.system);
+                rowClass = getRowStyle(Math.round(row.final_ranking), row.system);
 
-              rank = row.final_ranking;
+                rank = row.final_ranking;
             }
             return `
                 <tr class="${rowClass} transition-colors duration-150 group border-b border-gray-100 dark:border-gray-800">
