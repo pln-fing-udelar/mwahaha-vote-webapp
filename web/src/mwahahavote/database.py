@@ -168,6 +168,7 @@ class Vote:
     is_offensive_b: bool
 
 
+# noinspection SqlAggregates
 STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES = sqlalchemy.sql.text("""
 WITH
   unskipped_votes AS (
@@ -284,6 +285,7 @@ WHERE
   task = :task
   AND votes_from_session_b.prompt_id IS NULL
   AND FIND_IN_SET(CONCAT(outputs_b.prompt_id, outputs_b.system_id), :ignored_output_ids) = 0
+HAVING text_a != text_b
 ORDER BY
   RAND()
 LIMIT :limit
