@@ -661,7 +661,7 @@ wheels = [
 [[package]]
 name = "fschat"
 version = "0.2.36"
-source = { git = "https://github.com/pln-fing-udelar/FastChat?rev=498521d#498521d70b97d5c22cca6df50e3a729709ebb5bd" }
+source = { git = "https://github.com/pln-fing-udelar/FastChat?rev=431f847#431f8479fd088643588cfd4cfd61b649e50df0b9" }
 dependencies = [
     { name = "aiohttp" },
     { name = "fastapi" },
@@ -1244,7 +1244,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "flask", specifier = "<4" },
-    { name = "fschat", extras = ["webui"], git = "https://github.com/pln-fing-udelar/FastChat?rev=498521d" },
+    { name = "fschat", extras = ["webui"], git = "https://github.com/pln-fing-udelar/FastChat?rev=431f847" },
     { name = "fsspec", extras = ["http"], specifier = "<=2026" },
     { name = "huggingface-hub", specifier = ">=0.34.0,<1.0" },
     { name = "pandas", specifier = "<3" },

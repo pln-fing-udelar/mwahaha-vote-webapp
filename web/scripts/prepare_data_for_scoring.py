@@ -1,8 +1,15 @@
 #!/usr/bin/env python
+import itertools
 import json
 from typing import Literal
 
-from mwahahavote.database import TASK_CHOICES, Vote, get_votes_for_scoring, get_votes_per_system
+from mwahahavote.database import (
+    TASK_CHOICES,
+    Vote,
+    get_votes_for_battles_with_the_same_text,
+    get_votes_for_scoring,
+    get_votes_per_system,
+)
 
 # With few votes, we learned that it destabilizes the score calculation for all the systems.
 MIN_VOTES_PER_SYSTEM = 20
@@ -36,6 +43,10 @@ def main() -> None:
     for task in sorted(TASK_CHOICES):
         system_id_to_vote_count = dict(get_votes_per_system(task))
 
+        for vote in get_votes_for_battles_with_the_same_text(task):
+            system_id_to_vote_count[vote.battle.output_a.system.id] += 1
+            system_id_to_vote_count[vote.battle.output_b.system.id] += 1
+
         with open(f"scoring/votes-{task}.json", "w") as file:
             json.dump(
                 [
@@ -52,7 +63,9 @@ def main() -> None:
                         "language": vote_to_fastchat_language(vote),
                         "tstamp": round(vote.date.timestamp()),
                     }
-                    for vote in get_votes_for_scoring(task)
+                    for vote in itertools.chain(
+                        get_votes_for_scoring(task), get_votes_for_battles_with_the_same_text(task)
+                    )
                     if (
                         system_id_to_vote_count[vote.battle.output_a.system.id] >= MIN_VOTES_PER_SYSTEM
                         and system_id_to_vote_count[vote.battle.output_b.system.id] >= MIN_VOTES_PER_SYSTEM

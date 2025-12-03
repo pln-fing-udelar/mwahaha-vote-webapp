@@ -299,6 +299,7 @@ SELECT
   headline,
   url,
   prompt,
+  'placeholder',
   outputs_a.system_id AS system_id_a,
   outputs_a.text AS text_a,
   outputs_b.system_id AS system_id_b,
@@ -406,6 +407,54 @@ def random_battles(task: Task, batch_size: int) -> Iterator[Battle]:
     with engine.connect() as connection:
         yield from _battle_rows_to_objects(
             connection.execute(STATEMENT_RANDOM_BATTLES, {"task": task, "limit": batch_size})
+        )
+
+
+def battles_with_same_text(task: Task) -> Iterator[Battle]:
+    """Returns an iterator with the battles with the same text."""
+    with engine.connect() as connection:
+        yield from _battle_rows_to_objects(
+            connection.execute(
+                sqlalchemy.sql.text("""
+                    SELECT
+                      prompts.prompt_id,
+                      word1,
+                      word2,
+                      headline,
+                      url,
+                      prompt,
+                      'placeholder',
+                      outputs_a.system_id AS system_id_a,
+                      outputs_a.text AS text_a,
+                      outputs_b.system_id AS system_id_b,
+                      outputs_b.text AS text_b
+                    FROM
+                      prompts
+                      NATURAL JOIN outputs AS outputs_a
+                      JOIN outputs AS outputs_b
+                        ON (
+                          outputs_b.prompt_id = outputs_a.prompt_id
+                          AND outputs_b.system_id != outputs_a.system_id
+                        )
+                    WHERE
+                      task = :task
+                      AND outputs_a.text = outputs_b.text
+                """),
+                {"task": task},
+            )
+        )
+
+
+def get_votes_for_battles_with_the_same_text(task: Task) -> Iterator[Vote]:
+    """Return tie votes for any possible battle with the same text."""
+    for battle in battles_with_same_text(task):
+        yield Vote(
+            battle,
+            session_id="<placeholder>",
+            vote="t",
+            date=datetime.datetime(2025, 1, 1),
+            is_offensive_a=False,
+            is_offensive_b=False,
         )
 
 
