@@ -222,7 +222,9 @@ WITH
     SELECT
       outputs.prompt_id,
       outputs.system_id,
-      text
+      text,
+      system_unskipped_votes.count AS system_count,
+      COUNT(unskipped_votes.prompt_id) prompt_count
     FROM
       outputs
       NATURAL JOIN system_unskipped_votes
@@ -248,10 +250,6 @@ WITH
   GROUP BY
     prompt_id,
     system_id
-  ORDER BY
-    system_unskipped_votes.count,
-    COUNT(unskipped_votes.prompt_id),
-    RAND()
   )
 SELECT
   prompts.prompt_id,
@@ -287,6 +285,8 @@ WHERE
   AND FIND_IN_SET(CONCAT(outputs_b.prompt_id, outputs_b.system_id), :ignored_output_ids) = 0
 HAVING text_a != text_b
 ORDER BY
+  system_count,
+  prompt_count,
   RAND()
 LIMIT :limit
 """)
