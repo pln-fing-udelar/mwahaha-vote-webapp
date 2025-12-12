@@ -552,7 +552,8 @@ def get_votes_for_scoring(task: Task) -> Iterator[Vote]:
 
 
 def get_votes_per_system(task: Task) -> Iterator[tuple[str, int]]:
-    """Returns the non-skip votes per system for a given task."""
+    """Returns the non-skip votes per system for a given task. If a system has no votes, it may not be part of the
+    output."""
     with engine.connect() as connection:
         yield from connection.execute(  # type: ignore
             sqlalchemy.sql.text("""
