@@ -434,7 +434,7 @@ def battles_with_same_text(task: Task) -> Iterator[Battle]:
                       JOIN outputs AS outputs_b
                         ON (
                           outputs_b.prompt_id = outputs_a.prompt_id
-                          AND outputs_b.system_id != outputs_a.system_id
+                          AND outputs_b.system_id > outputs_a.system_id  -- We avoid repeated battles.
                         )
                     WHERE
                       task = :task
