@@ -551,9 +551,22 @@ def get_votes_for_scoring(task: Task) -> Iterator[Vote]:
             )
 
 
-def get_votes_per_system(task: Task) -> Iterator[tuple[str, int]]:
+def get_systems(task: Task) -> Iterator[str]:
+    """Returns all the systems for a given task."""
+    with engine.connect() as connection:
+        for (system_id,) in connection.execute(
+            sqlalchemy.sql.text(
+                "SELECT system_id FROM outputs NATURAL JOIN prompts WHERE task = :task GROUP BY system_id"
+            ),
+            {"task": task},
+        ):
+            yield system_id
+
+
+def _get_votes_per_system(task: Task) -> Iterator[tuple[str, int]]:
     """Returns the non-skip votes per system for a given task. If a system has no votes, it may not be part of the
-    output."""
+    output.
+    """
     with engine.connect() as connection:
         yield from connection.execute(  # type: ignore
             sqlalchemy.sql.text("""
@@ -587,6 +600,17 @@ def get_votes_per_system(task: Task) -> Iterator[tuple[str, int]]:
             """),
             {"task": task},
         )
+
+
+def get_votes_per_system(task: Task) -> dict[str, int]:
+    """Returns the non-skip votes per system for a given task."""
+    system_id_to_vote_count = dict(_get_votes_per_system(task))
+
+    # Some systems may not be part of the output as there are no votes for them:
+    for system_id in get_systems(task):
+        system_id_to_vote_count.setdefault(system_id, 0)
+
+    return system_id_to_vote_count
 
 
 def session_vote_count_with_skips(session_id: str) -> int:

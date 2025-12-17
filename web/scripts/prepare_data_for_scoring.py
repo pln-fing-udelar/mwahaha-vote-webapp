@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import itertools
 import json
-from collections import defaultdict
 from typing import Literal
 
 from mwahahavote.database import (
@@ -42,8 +41,7 @@ def vote_to_fastchat_language(vote: Vote) -> Literal["Chinese", "English", "Span
 
 def main() -> None:
     for task in sorted(TASK_CHOICES):
-        # Some systems may not be part of the output as there are no votes for them, so we use a `defaultdict`:
-        system_id_to_vote_count = defaultdict(int, get_votes_per_system(task))
+        system_id_to_vote_count = dict(get_votes_per_system(task))
 
         for vote in get_votes_for_battles_with_the_same_text(task):
             system_id_to_vote_count[vote.battle.output_a.system.id] += 1
