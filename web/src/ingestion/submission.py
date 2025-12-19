@@ -1,6 +1,5 @@
 import logging
 import os
-import shutil
 import tempfile
 import zipfile
 from collections.abc import Iterable
@@ -90,7 +89,6 @@ def _mysql_insert_on_conflict_update(
 def _read_submission_file(path: str) -> pd.DataFrame:
     df = pd.read_csv(path, delimiter="\t", index_col="id")  # type: ignore
     df.index.rename("prompt_id", inplace=True)
-    df.rename(columns={"joke": "text"}, inplace=True)  # Some submissions misname the column.
     return df
 
 
@@ -107,7 +105,7 @@ def ingest_submission(
                 sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"),
                 {"system_id": submission.system_id},
             )
-        except sqlalchemy.exc.IntegrityError:
+        except sqlalchemy.exc.IntegrityError:  # type: ignore[possibly-missing-attribute]
             if system_exists_ok:
                 logging.info("The system already exists in the table `systems`. Not adding a row.")
             else:
@@ -116,16 +114,9 @@ def ingest_submission(
         with zipfile.ZipFile(file) as zip_file:  # type: ignore
             zip_file.extractall(dir_)
 
-        # Move any file in any direct subdir to accommodate some submissions.
-        for path in os.listdir(dir_):
-            subdir = os.path.join(dir_, path)
-            if os.path.isdir(subdir):
-                for filename in os.listdir(subdir):
-                    file_path = os.path.join(subdir, filename)
-                    if os.path.isfile(file_path):
-                        shutil.move(file_path, dir_)
-
         affected_rows = 0
+
+        assert submission.tasks
 
         for task in submission.tasks:
             path = os.path.join(dir_, f"task-{task}.tsv")
