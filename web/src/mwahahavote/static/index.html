@@ -43,209 +43,211 @@
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-40699CQRM6"></script>
   <!--suppress SpellCheckingInspection -->
   <script>
-      if (document.location.hostname !== "localhost") {
-          window.dataLayer = window.dataLayer || [];
+    if (document.location.hostname !== "localhost") {
+        window.dataLayer = window.dataLayer || [];
 
-          function gtag() {
-              dataLayer.push(arguments);
-          }
+        function gtag() {
+            dataLayer.push(arguments);
+        }
 
-          gtag('js', new Date());
-          gtag('config', 'G-40699CQRM6');
-      }
+        gtag('js', new Date());
+        gtag('config', 'G-40699CQRM6');
+    }
   </script>
 </head>
 
 <body>
 
-<div class="main-content">
-  <div class="container">
-    <div id="home-content" class="content">
-      <h1>Which Computer Program Output is Funnier?</h1>
+<!--<div class="main-content">-->
+<!--  <div class="container">-->
+<!--    <div id="home-content" class="content">-->
+<!--      <h1>Which Computer Program Output is Funnier?</h1>-->
 
-      <div id="task-container">
-        <label for="task" id="task-label">Task:</label>
-        <select class="form-control" id="task">
-          <option value="a-en">Task A: Joke in English</option>
-          <option value="a-es">Task A: Joke in Spanish</option>
-          <option value="a-zh">Task A: Joke in Chinese</option>
-          <option value="b1">Task B1: Caption the GIF</option>
-          <option value="b2">Task B2: Fill in the GIF Caption</option>
-        </select>
-      </div>
+<!--      <div id="task-container">-->
+<!--        <label for="task" id="task-label">Task:</label>-->
+<!--        <select class="form-control" id="task">-->
+<!--          <option value="a-en">Task A: Joke in English</option>-->
+<!--          <option value="a-es">Task A: Joke in Spanish</option>-->
+<!--          <option value="a-zh">Task A: Joke in Chinese</option>-->
+<!--          <option value="b1">Task B1: Caption the GIF</option>-->
+<!--          <option value="b2">Task B2: Fill in the GIF Caption</option>-->
+<!--        </select>-->
+<!--      </div>-->
 
-      <div id="prompt" class="row">
-        <div class="col-xs-12">
-          <p class="prompt-label">Prompt:</p>
-          <p id="prompt-text"></p>
-        </div>
-      </div>
+<!--      <div id="prompt" class="row">-->
+<!--        <div class="col-xs-12">-->
+<!--          <p class="prompt-label">Prompt:</p>-->
+<!--          <p id="prompt-text"></p>-->
+<!--        </div>-->
+<!--      </div>-->
 
-      <div class="row" id="outputs">
-        <div class="output-container col-md-6">
-          <div class="output" id="output-a">
-            <p class="output-label">A's output:</p>
-            <p class="output-text" id="output-a-text"></p>
-          </div>
-        </div>
-        <div class="output-container col-md-6">
-          <div class="output" id="output-b">
-            <p class="output-label">B's output:</p>
-            <p class="output-text" id="output-b-text"></p>
-          </div>
-        </div>
-      </div>
+<!--      <div class="row" id="outputs">-->
+<!--        <div class="output-container col-md-6">-->
+<!--          <div class="output" id="output-a">-->
+<!--            <p class="output-label">A's output:</p>-->
+<!--            <p class="output-text" id="output-a-text"></p>-->
+<!--          </div>-->
+<!--        </div>-->
+<!--        <div class="output-container col-md-6">-->
+<!--          <div class="output" id="output-b">-->
+<!--            <p class="output-label">B's output:</p>-->
+<!--            <p class="output-text" id="output-b-text"></p>-->
+<!--          </div>-->
+<!--        </div>-->
+<!--      </div>-->
 
-      <div id="form-container">
-        <ul id="answers">
-          <li class="answer">
-            <label class="is-offensive-label" for="is-offensive-left">
-              <input id="is-offensive-left" class="is-offensive" type="checkbox"/>
-              <span class="hidden-md hidden-lg">A is offensive</span>
-              <span class="hidden-xs hidden-sm">Left is offensive</span>
-            </label>
-          </li>
+<!--      <div id="form-container">-->
+<!--        <ul id="answers">-->
+<!--          <li class="answer">-->
+<!--            <label class="is-offensive-label" for="is-offensive-left">-->
+<!--              <input id="is-offensive-left" class="is-offensive" type="checkbox"/>-->
+<!--              <span class="hidden-md hidden-lg">A is offensive</span>-->
+<!--              <span class="hidden-xs hidden-sm">Left is offensive</span>-->
+<!--            </label>-->
+<!--          </li>-->
 
-          <li id="left-answer" class="answer">
-            <button class="btn btn-lg btn-default btn-answer" id="vote-left" type="button">
-              <span class="hidden-md hidden-lg">A is funnier</span>
-              <span class="hidden-xs hidden-sm">⬅️ Left is funnier</span>
-            </button>
-          </li>
+<!--          <li id="left-answer" class="answer">-->
+<!--            <button class="btn btn-lg btn-default btn-answer" id="vote-left" type="button">-->
+<!--              <span class="hidden-md hidden-lg">A is funnier</span>-->
+<!--              <span class="hidden-xs hidden-sm">⬅️ Left is funnier</span>-->
+<!--            </button>-->
+<!--          </li>-->
 
-          <li id="tie-answer" class="answer">
-            <button id="tie" type="button" class="btn btn-lg btn-default btn-answer">It's a tie 🤝</button>
-          </li>
+<!--          <li id="tie-answer" class="answer">-->
+<!--            <button id="tie" type="button" class="btn btn-lg btn-default btn-answer">It's a tie 🤝</button>-->
+<!--          </li>-->
 
-          <li id="skip-answer" class="answer">
-            <button id="skip" type="button" class="btn btn-lg btn-default btn-answer">Skip 🚫</button>
-          </li>
+<!--          <li id="skip-answer" class="answer">-->
+<!--            <button id="skip" type="button" class="btn btn-lg btn-default btn-answer">Skip 🚫</button>-->
+<!--          </li>-->
 
-          <li id="right-answer" class="answer">
-            <button class="btn btn-lg btn-default btn-answer" id="vote-right" type="button">
-              <span class="hidden-md hidden-lg">B is funnier</span>
-              <span class="hidden-xs hidden-sm">Right is funnier ➡️</span>
-            </button>
-          </li>
+<!--          <li id="right-answer" class="answer">-->
+<!--            <button class="btn btn-lg btn-default btn-answer" id="vote-right" type="button">-->
+<!--              <span class="hidden-md hidden-lg">B is funnier</span>-->
+<!--              <span class="hidden-xs hidden-sm">Right is funnier ➡️</span>-->
+<!--            </button>-->
+<!--          </li>-->
 
-          <li class="answer">
-            <label class="is-offensive-label" for="is-offensive-right">
-              <input id="is-offensive-right" class="is-offensive" type="checkbox"/>
-              <span class="hidden-md hidden-lg">B is offensive</span>
-              <span class="hidden-xs hidden-sm">Right is offensive</span>
-            </label>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</div>
+<!--          <li class="answer">-->
+<!--            <label class="is-offensive-label" for="is-offensive-right">-->
+<!--              <input id="is-offensive-right" class="is-offensive" type="checkbox"/>-->
+<!--              <span class="hidden-md hidden-lg">B is offensive</span>-->
+<!--              <span class="hidden-xs hidden-sm">Right is offensive</span>-->
+<!--            </label>-->
+<!--          </li>-->
+<!--        </ul>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </div>-->
+<!--</div>-->
 
-<!-- Sticky Footer Link -->
-<div id="footer-section">
-  <div class="container">
-    <div id="bottom-links">
-      <a id="help-link" href="#" data-toggle="modal" data-target="#helpModal"
-         style="color: #666; text-decoration: underline;">
-        Info & FAQ
-      </a>
-      <!--suppress HtmlUnknownTarget -->
-      <a id="leaderboard-button" href="leaderboard" target="_blank" class="btn btn-primary" role="button">
-        View the Live Leaderboard
-      </a>
-    </div>
-  </div>
-</div>
+<!--&lt;!&ndash; Sticky Footer Link &ndash;&gt;-->
+<!--<div id="footer-section">-->
+<!--  <div class="container">-->
+<!--    <div id="bottom-links">-->
+<!--      <a id="help-link" href="#" data-toggle="modal" data-target="#helpModal"-->
+<!--         style="color: #666; text-decoration: underline;">-->
+<!--        Info & FAQ-->
+<!--      </a>-->
+<!--      &lt;!&ndash;suppress HtmlUnknownTarget &ndash;&gt;-->
+<!--      <a id="leaderboard-button" href="leaderboard" target="_blank" class="btn btn-primary" role="button">-->
+<!--        View the Live Leaderboard-->
+<!--      </a>-->
+<!--    </div>-->
+<!--  </div>-->
+<!--</div>-->
 
-<div class="modal fade" id="helpModal" tabindex="-1" role="dialog" aria-labelledby="helpModalLabel">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
-            aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title" id="helpModalLabel">Info & FAQ</h4>
-      </div>
-      <div class="modal-body" style="font-family: 'Open Sans', sans-serif;">
-        <h4>Info</h4>
-        <p>
-          This web page helps evaluate systems submitted by participants to the
-          <a href="https://pln-fing-udelar.github.io/semeval-2026-humor-gen/" target="_blank">
-            2025-2026 MWAHAHA competition on Humor Generation</a>.
-          In this competition, participants submit computer program systems that are capable of generating humorous
-          outputs given some context (e.g., a headline).
-          This competition consists of two phases in which participants can submit systems:
-          Evaluation Trial (until Dec 15, 2025) and Evaluation (Jan 10-31, 2026).
-          We use this web page to evaluate the systems for both of these phases,
-          one at a time (currently for the Evaluation Trial).
-        </p>
-        <hr>
+<!--<div class="modal fade" id="helpModal" tabindex="-1" role="dialog" aria-labelledby="helpModalLabel">-->
+<!--  <div class="modal-dialog" role="document">-->
+<!--    <div class="modal-content">-->
+<!--      <div class="modal-header">-->
+<!--        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span-->
+<!--            aria-hidden="true">&times;</span></button>-->
+<!--        <h4 class="modal-title" id="helpModalLabel">Info & FAQ</h4>-->
+<!--      </div>-->
+<!--      <div class="modal-body" style="font-family: 'Open Sans', sans-serif;">-->
+<!--        <h4>Info</h4>-->
+<!--        <p>-->
+<!--          This web page helps evaluate systems submitted by participants to the-->
+<!--          <a href="https://pln-fing-udelar.github.io/semeval-2026-humor-gen/" target="_blank">-->
+<!--            2025-2026 MWAHAHA competition on Humor Generation</a>.-->
+<!--          In this competition, participants submit computer program systems that are capable of generating humorous-->
+<!--          outputs given some context (e.g., a headline).-->
+<!--          This competition consists of two phases in which participants can submit systems:-->
+<!--          Evaluation Trial (until Dec 15, 2025) and Evaluation (Jan 10-31, 2026).-->
+<!--          We use this web page to evaluate the systems for both of these phases,-->
+<!--          one at a time (currently for the Evaluation Trial).-->
+<!--        </p>-->
+<!--        <hr>-->
 
-        <h4>Frequently Asked Questions (FAQ)</h4>
+<!--        <h4>Frequently Asked Questions (FAQ)</h4>-->
 
-        <p><strong>1. Am I allowed to vote/annotate?</strong><br>
-          Yes! Everybody's welcome!
-        </p>
+<!--        <p><strong>1. Am I allowed to vote/annotate?</strong><br>-->
+<!--          Yes! Everybody's welcome!-->
+<!--        </p>-->
 
-        <p><strong>2. Why would I vote/annotate these jokes?</strong><br>
-          To help us evaluate these systems, and to have fun on the way (hopefully)!
-        </p>
+<!--        <p><strong>2. Why would I vote/annotate these jokes?</strong><br>-->
+<!--          To help us evaluate these systems, and to have fun on the way (hopefully)!-->
+<!--        </p>-->
 
-        <p><strong>3. What if neither option is funny?</strong><br>
-          If both jokes fail to make you laugh or are equally bad, please select <em>"It's a tie 🤝"</em>.
-        </p>
+<!--        <p><strong>3. What if neither option is funny?</strong><br>-->
+<!--          If both jokes fail to make you laugh or are equally bad, please select <em>"It's a tie 🤝"</em>.-->
+<!--        </p>-->
 
-        <p><strong>4. What if both are equally funny?</strong><br>
-          If both are genuinely funny, and you cannot decide which is better, you should also select
-          <em>"It's a tie 🤝"</em>.
-        </p>
+<!--        <p><strong>4. What if both are equally funny?</strong><br>-->
+<!--          If both are genuinely funny, and you cannot decide which is better, you should also select-->
+<!--          <em>"It's a tie 🤝"</em>.-->
+<!--        </p>-->
 
-        <p><strong>5. I don't understand the prompt/headline.</strong><br>
-          If you don't understand the prompt or headline, please click <em>"Skip 🚫"</em>
-          so we don't collect noisy data.
-        </p>
+<!--        <p><strong>5. I don't understand the prompt/headline.</strong><br>-->
+<!--          If you don't understand the prompt or headline, please click <em>"Skip 🚫"</em>-->
+<!--          so we don't collect noisy data.-->
+<!--        </p>-->
 
-        <p><strong>6. I don't understand a joke.</strong><br>
-          There's either a missing cultural context or the system's output joke is nonsensical or gibberish.
-          In the former case, it should be skipped (please, click <em>"Skip 🚫"</em>).
-          In the latter case, it should be considered as a failed joke attempt when deciding which vote to cast.
-          In case of doubt, the safest is to skip to reduce the noise.
-          Use your best judgement.
-        </p>
+<!--        <p><strong>6. I don't understand a joke.</strong><br>-->
+<!--          There's either a missing cultural context or the system's output joke is nonsensical or gibberish.-->
+<!--          In the former case, it should be skipped (please, click <em>"Skip 🚫"</em>).-->
+<!--          In the latter case, it should be considered as a failed joke attempt when deciding which vote to cast.-->
+<!--          In case of doubt, the safest is to skip to reduce the noise.-->
+<!--          Use your best judgement.-->
+<!--        </p>-->
 
-        <p><strong>7. Why are some jokes very similar to each other?</strong><br>
-          We let the participants submit new versions of their systems.
-          Different versions of the same system compete with each other, seamlessly with the rest of the systems.
-          Chances are that they generate similar jokes.
-        </p>
+<!--        <p><strong>7. Why are some jokes very similar to each other?</strong><br>-->
+<!--          We let the participants submit new versions of their systems.-->
+<!--          Different versions of the same system compete with each other, seamlessly with the rest of the systems.-->
+<!--          Chances are that they generate similar jokes.-->
+<!--        </p>-->
 
-        <p><strong>8. Can I participate in this competition?</strong><br>
-          Of course!
-          Everyone is welcome!
-          Visit the
-          <a href="https://pln-fing-udelar.github.io/semeval-2026-humor-gen/" target="_blank">
-            2025-2026 MWAHAHA competition website
-          </a>
-          for more info.
-          You have time to submit your system's jokes until the Evaluation phase ends (late Jan, 2026).
-          Note that, if you are considering participating, you cannot vote/annotate in this web page.
-        </p>
+<!--        <p><strong>8. Can I participate in this competition?</strong><br>-->
+<!--          Of course!-->
+<!--          Everyone is welcome!-->
+<!--          Visit the-->
+<!--          <a href="https://pln-fing-udelar.github.io/semeval-2026-humor-gen/" target="_blank">-->
+<!--            2025-2026 MWAHAHA competition website-->
+<!--          </a>-->
+<!--          for more info.-->
+<!--          You have time to submit your system's jokes until the Evaluation phase ends (late Jan, 2026).-->
+<!--          Note that, if you are considering participating, you cannot vote/annotate in this web page.-->
+<!--        </p>-->
 
-        <p>
-          <strong>9. How long does it take for a system to appear here after it was submitted to CodaBench?</strong><br>
-          We have a script that ingests all submissions every hour.
-          However, there may be issues so we can't guarantee this timeline.
-          In any case, we try to ingest them as soon as possible.
-          <!--suppress HtmlUnknownTarget -->
-          You can check out <a href="leaderboard" target="_blank"> the leaderboard</a> to see the list of voted systems
-          (also updated every hour).
-        </p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-dismiss="modal">Got it!</button>
-      </div>
-    </div>
-  </div>
-</div>
+<!--        <p>-->
+<!--          <strong>9. How long does it take for a system to appear here after it was submitted to CodaBench?</strong><br>-->
+<!--          We have a script that ingests all submissions every hour.-->
+<!--          However, there may be issues so we can't guarantee this timeline.-->
+<!--          In any case, we try to ingest them as soon as possible.-->
+<!--          &lt;!&ndash;suppress HtmlUnknownTarget &ndash;&gt;-->
+<!--          You can check out <a href="leaderboard" target="_blank"> the leaderboard</a> to see the list of voted systems-->
+<!--          (also updated every hour).-->
+<!--        </p>-->
+<!--      </div>-->
+<!--      <div class="modal-footer">-->
+<!--        <button type="button" class="btn btn-primary" data-dismiss="modal">Got it!</button>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </div>-->
+<!--</div>-->
+
+The annotation for the Eval Trial phase is closed. It will reopen on Feb 1st, 2026 for the Eval phase.
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"
         integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
