@@ -8,11 +8,10 @@ from typing import Any, cast
 import sentry_sdk
 from flask import Flask, Response, jsonify, render_template, request, send_from_directory
 
-from ingestion.codabench import EVALUATION_PHASE_ID
 from mwahahavote import database
 from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString, prompt_id_to_task
 
-PHASE_ID = EVALUATION_PHASE_ID
+PHASE_ID = 15785
 
 REQUEST_BATTLE_BATCH_SIZE = 3
 

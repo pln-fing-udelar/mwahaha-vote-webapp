@@ -13,7 +13,7 @@ def main() -> None:
             id=1,
             date=datetime.datetime.now(),
             tasks=list(TASK_CHOICES),
-            tests_passed=[True, True, True, True, True],
+            tests_passed=[True] * len(TASK_CHOICES),
         ),
         file="baselines/baseline.zip",
         phase_id=EVALUATION_PHASE_ID,
