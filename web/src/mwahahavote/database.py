@@ -195,7 +195,10 @@ WITH
   ), system_ids_with_outputs AS (
     SELECT system_id
     FROM outputs NATURAL JOIN prompts
-    WHERE task = :task
+    WHERE
+      task = :task
+      AND phase_id = :phase_id
+      AND phase_id = :phase_id
     GROUP BY system_id
   ), system_votes AS (
     SELECT
@@ -210,6 +213,7 @@ WITH
       NATURAL JOIN prompts
     WHERE
       task = :task
+      AND phase_id = :phase_id
       AND vote != 'n'
   ), votes_and_prompts_per_system AS (
     SELECT system_id_a AS system_id FROM system_votes UNION ALL
@@ -281,6 +285,7 @@ FROM
     )
 WHERE
   task = :task
+  AND phase_id = :phase_id
   AND votes_from_session_b.prompt_id IS NULL
   AND FIND_IN_SET(CONCAT(outputs_b.prompt_id, outputs_b.system_id), :ignored_output_ids) = 0
 HAVING text_a != text_b
@@ -314,6 +319,7 @@ FROM
     )
 WHERE
   task = :task
+  AND phase_id = :phase_id
 ORDER BY
   RAND()
 LIMIT :limit
@@ -380,7 +386,7 @@ def _battle_rows_to_objects(
 
 
 def random_least_voted_unseen_battles(
-    session_id: str, task: Task, batch_size: int, ignored_output_ids: Iterable[tuple[str, str]] = ()
+    phase_id: int, session_id: str, task: Task, batch_size: int, ignored_output_ids: Iterable[tuple[str, str]] = ()
 ) -> Iterator[Battle]:
     """Returns an iterator with a random subsample of the top `batch_size` least-voted unseen outputs (by the session),
     each paired in a battle with a random other unseen output for the same prompt.
@@ -391,6 +397,7 @@ def random_least_voted_unseen_battles(
             connection.execute(
                 STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES,
                 {
+                    "phase_id": phase_id,
                     "session_id": session_id,
                     "task": task,
                     "limit": batch_size,
@@ -402,15 +409,15 @@ def random_least_voted_unseen_battles(
         )
 
 
-def random_battles(task: Task, batch_size: int) -> Iterator[Battle]:
+def random_battles(phase_id: int, task: Task, batch_size: int) -> Iterator[Battle]:
     """Returns an iterator with `batch_size` random battles."""
     with engine.connect() as connection:
         yield from _battle_rows_to_objects(
-            connection.execute(STATEMENT_RANDOM_BATTLES, {"task": task, "limit": batch_size})
+            connection.execute(STATEMENT_RANDOM_BATTLES, {"task": task, "phase_id": phase_id, "limit": batch_size})
         )
 
 
-def battles_with_same_text(task: Task) -> Iterator[Battle]:
+def battles_with_same_text(phase_id: int, task: Task) -> Iterator[Battle]:
     """Returns an iterator with the battles with the same text."""
     with engine.connect() as connection:
         yield from _battle_rows_to_objects(
@@ -438,16 +445,17 @@ def battles_with_same_text(task: Task) -> Iterator[Battle]:
                         )
                     WHERE
                       task = :task
+                      AND phase_id = :phase_id
                       AND outputs_a.text = outputs_b.text
                 """),
-                {"task": task},
+                {"task": task, "phase_id": phase_id},
             )
         )
 
 
-def get_votes_for_battles_with_the_same_text(task: Task) -> Iterator[Vote]:
+def get_votes_for_battles_with_the_same_text(phase_id: int, task: Task) -> Iterator[Vote]:
     """Return tie votes for any possible battle with the same text."""
-    for battle in battles_with_same_text(task):
+    for battle in battles_with_same_text(phase_id, task):
         yield Vote(
             battle,
             session_id="<placeholder>",
@@ -483,8 +491,8 @@ def add_vote(
         )
 
 
-def get_votes_for_scoring(task: Task) -> Iterator[Vote]:
-    """Returns the votes for a given task to score the systems."""
+def get_votes_for_scoring(phase_id: int, task: Task) -> Iterator[Vote]:
+    """Returns the votes for a given phase ID and task to score the systems."""
     with engine.connect() as connection:
         for (
             prompt_id,
@@ -512,6 +520,7 @@ def get_votes_for_scoring(task: Task) -> Iterator[Vote]:
                     NATURAL JOIN prompts
                   WHERE
                     task = :task
+                    AND phase_id = :phase_id
                     AND v.vote != 'n'
                 ), systems_a AS (
                   SELECT system_id_a FROM votes_and_prompts GROUP BY system_id_a
@@ -535,7 +544,7 @@ def get_votes_for_scoring(task: Task) -> Iterator[Vote]:
                   JOIN systems_b ON (v.system_id_a = systems_b.system_id_b)
                   JOIN systems_a ON (v.system_id_b = systems_a.system_id_a)
             """),
-            {"task": task},
+            {"task": task, "phase_id": phase_id},
         ):
             prompt = Prompt(id=prompt_id, headline="<placeholder>")
             yield Vote(
@@ -551,21 +560,22 @@ def get_votes_for_scoring(task: Task) -> Iterator[Vote]:
             )
 
 
-def get_systems(task: Task) -> Iterator[str]:
-    """Returns all the systems for a given task."""
+def get_systems(phase_id: int, task: Task) -> Iterator[str]:
+    """Returns all the systems for a given phase ID and task."""
     with engine.connect() as connection:
         for (system_id,) in connection.execute(
             sqlalchemy.sql.text(
-                "SELECT system_id FROM outputs NATURAL JOIN prompts WHERE task = :task GROUP BY system_id"
+                "SELECT system_id FROM outputs NATURAL JOIN prompts"
+                " WHERE task = :task AND phase_id = :phase_id GROUP BY system_id"
             ),
-            {"task": task},
+            {"task": task, "phase_id": phase_id},
         ):
             yield system_id
 
 
-def _get_votes_per_system(task: Task) -> Iterator[tuple[str, int]]:
-    """Returns the non-skip votes per system for a given task. If a system has no votes, it may not be part of the
-    output.
+def _get_votes_per_system(phase_id: int, task: Task) -> Iterator[tuple[str, int]]:
+    """Returns the non-skip votes per system for a given phase ID and task. If a system has no votes, it may not be part
+    of the output.
     """
     with engine.connect() as connection:
         yield from connection.execute(  # type: ignore
@@ -573,7 +583,9 @@ def _get_votes_per_system(task: Task) -> Iterator[tuple[str, int]]:
                 WITH system_ids_with_outputs AS (
                   SELECT system_id
                   FROM outputs NATURAL JOIN prompts
-                  WHERE task = :task
+                  WHERE
+                    task = :task
+                    AND phase_id = :phase_id
                   GROUP BY system_id
                 ), system_votes AS (
                   SELECT
@@ -588,6 +600,7 @@ def _get_votes_per_system(task: Task) -> Iterator[tuple[str, int]]:
                     NATURAL JOIN prompts
                   WHERE
                     task = :task
+                    AND phase_id = :phase_id
                     AND vote != 'n'
                 ), votes_and_prompts_per_system AS (
                   SELECT system_id_a AS system_id FROM system_votes UNION ALL
@@ -598,23 +611,23 @@ def _get_votes_per_system(task: Task) -> Iterator[tuple[str, int]]:
                 GROUP BY system_id
                 ORDER BY count DESC
             """),
-            {"task": task},
+            {"task": task, "phase_id": phase_id},
         )
 
 
-def get_votes_per_system(task: Task) -> dict[str, int]:
-    """Returns the non-skip votes per system for a given task."""
-    system_id_to_vote_count = dict(_get_votes_per_system(task))
+def get_votes_per_system(phase_id: int, task: Task) -> dict[str, int]:
+    """Returns the non-skip votes per system for a given phase ID and task."""
+    system_id_to_vote_count = dict(_get_votes_per_system(phase_id, task))
 
     # Some systems may not be part of the output as there are no votes for them:
-    for system_id in get_systems(task):
+    for system_id in get_systems(phase_id, task):
         system_id_to_vote_count.setdefault(system_id, 0)
 
     return system_id_to_vote_count
 
 
 def session_vote_count_with_skips(session_id: str) -> int:
-    """Returns the vote count for a given session ID, including skips."""
+    """Returns the vote count for a given session ID for any phase, including skips."""
     with engine.connect() as connection:
         return connection.execute(  # type: ignore
             STATEMENT_SESSION_VOTE_COUNT, {"session_id": session_id, "without_skips": False}
@@ -622,13 +635,16 @@ def session_vote_count_with_skips(session_id: str) -> int:
 
 
 def vote_count_without_skips() -> int:
-    """Returns the vote count, not including skips."""
+    """Returns the vote count for any phase, not including skips."""
     with engine.connect() as connection:
         return connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True}).fetchone()[0]  # type: ignore
 
 
 def stats() -> MutableMapping[str, Any]:
-    """Returns the vote count, vote count without skips, vote count histogram and votes per category."""
+    """Returns the vote count, vote count without skips, vote count histogram, and votes per category.
+
+    The results consider all phases.
+    """
     with engine.connect() as connection:
         result: dict[str, Any] = {
             "votes": connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": False}).fetchone()[0],  # type: ignore

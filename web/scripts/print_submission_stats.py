@@ -4,7 +4,7 @@ from ingestion.submission import print_stats
 
 
 def main() -> None:
-    # We sort them so they are ingested in order,
+    # We sort them so they are ingested in order
     # so that the latest submission per user per task is the one that remains.
 
     print("Obtaining the list of all submissions so far… ", end="")

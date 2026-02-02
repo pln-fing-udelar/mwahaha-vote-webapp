@@ -9,7 +9,7 @@ requires-python = ">=3.12"
 dependencies = [
     "flask<4",
     # We better pin the version to ensure the reproducibility of the scoring.
-    # We don't use the latest stable version because it has some dependency issues and this fork has a bugfix.
+    # We don't use the latest stable version because it has some dependency issues, and this fork has a bugfix.
     # We don't use the one from upstream because it obliges us to install `torch`.
     "fschat[webui] @ git+https://github.com/pln-fing-udelar/FastChat@431f847",
     "fsspec[http]<=2026",

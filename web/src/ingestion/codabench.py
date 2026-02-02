@@ -34,7 +34,7 @@ def is_session_id_valid(session_id: str) -> bool:
     # noinspection SpellCheckingInspection
     response = requests.get("https://www.codabench.org/", cookies={"sessionid": session_id})
     response.raise_for_status()
-    return "user_dropdown" in response.text  # If it's logged-in fine, the user dropdown will appear.
+    return "user_dropdown" in response.text  # If it's logged in fine, the user dropdown will appear.
 
 
 def task_id_to_task(task_id: int) -> Task:
@@ -68,7 +68,7 @@ class Submission:
 
     @property
     def system_id(self) -> str:
-        return f"{self.user}-{self.id}"
+        return self.user  # For the dev phase, it was: f"{self.user}-{self.id}"
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -81,7 +81,7 @@ class Submission:
 
 
 def _list_submission_dicts(
-    competition_id: int | None = COMPETITION_ID, phase_id: int | None = None, session_id: str | None = None
+    competition_id: int | None = COMPETITION_ID, phase_id: int | None = EVALUATION_PHASE_ID, session_id: str | None = None
 ) -> list[dict[str, Any]]:
     """List all submission dicts for a competition or phase."""
     session_id = session_id or get_environ_session_id()
@@ -104,19 +104,19 @@ def _list_submission_dicts(
 
 
 def list_submissions(
-    competition_id: int | None = COMPETITION_ID, phase_id: int | None = None, session_id: str | None = None
+    competition_id: int | None = COMPETITION_ID, phase_id: int | None = EVALUATION_PHASE_ID, session_id: str | None = None
 ) -> Iterable[Submission]:
     """List all "parent" or single-task submissions for a competition."""
 
     submission_dicts = _list_submission_dicts(competition_id=competition_id, phase_id=phase_id, session_id=session_id)
 
     # There's a concept of "parent" and "children" submissions.
-    # It seems that, if a submission is for multiple tasks,
-    # it's a parent one and there's one child submission per task, which actually point to the same file.
-    # If a submission is for a single task then it's neither parent nor child -- just a single node.
+    # It seems that if a submission is for multiple tasks,
+    # it's a parent one and there's one child submission per task, which actually points to the same file.
+    # If a submission is for a single task, then it's neither parent nor child -- just a single node.
 
     # We need both the parents and the children.
-    # The parents are used to obtain the parent submission ID, which we use to define the system ID.
+    # The parents are used to get the parent submission ID, which we use to define the system ID.
     # The children are used to check which tasks were submitted and passed the submission test.
 
     parentless_submissions: dict[int, Submission] = {}

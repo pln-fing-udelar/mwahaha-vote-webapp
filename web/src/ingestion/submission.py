@@ -95,6 +95,7 @@ def _read_submission_file(path: str) -> pd.DataFrame:
 def ingest_submission(
     submission: Submission,
     file: str | os.PathLike | Reader[bytes],  # type: ignore
+    phase_id: int,
     system_exists_ok: bool = False,
     accept_null_texts: bool = True,
 ) -> int:
@@ -130,8 +131,10 @@ def ingest_submission(
             submission_df = _read_submission_file(path)
 
             cursor = connection.execute(
-                sqlalchemy.sql.text("SELECT prompt_id FROM prompts WHERE prompt_id LIKE :prompt_id_like"),
-                {"prompt_id_like": task_to_prompt_id_sql_like_expression(task)},
+                sqlalchemy.sql.text(
+                    "SELECT prompt_id FROM prompts WHERE phase_id = :phase_id AND prompt_id LIKE :prompt_id_like"
+                ),
+                {"phase_id": phase_id, "prompt_id_like": task_to_prompt_id_sql_like_expression(task)},
             )
             reference_prompt_ids = frozenset(row[0] for row in cursor)
             submitted_prompt_ids = frozenset(submission_df.index)

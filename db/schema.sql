@@ -9,8 +9,9 @@ CREATE TABLE prompts
   word2     VARCHAR(50),
   headline  VARCHAR(2048),
   url       VARCHAR(2048),
-  prompt    VARCHAR(256),
-  task      VARCHAR(5)  NOT NULL,
+  prompt   VARCHAR(256),
+  task     VARCHAR(5) NOT NULL,
+  phase_id INT        NOT NULL,
   PRIMARY KEY (prompt_id)
 ) ENGINE InnoDB;
 

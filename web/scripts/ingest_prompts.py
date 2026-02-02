@@ -5,6 +5,7 @@ import os
 import pandas as pd
 
 import mwahahavote.database
+from ingestion.codabench import EVALUATION_PHASE_ID
 
 
 def read_prompt_file(path: str) -> pd.DataFrame:
@@ -13,6 +14,7 @@ def read_prompt_file(path: str) -> pd.DataFrame:
 
     task = os.path.splitext(os.path.basename(path))[0]
     df["task"] = task.removeprefix("task-")
+    df["phase_id"] = EVALUATION_PHASE_ID
 
     return df
 

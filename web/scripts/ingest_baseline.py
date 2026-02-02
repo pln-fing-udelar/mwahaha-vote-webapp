@@ -1,8 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env -S uv run --script --env-file ../.env
 import datetime
 
-from ingestion.codabench import Submission
+from ingestion.codabench import EVALUATION_PHASE_ID, Submission
 from ingestion.submission import ingest_submission
+from mwahahavote.database import TASK_CHOICES
 
 
 def main() -> None:
@@ -11,10 +12,11 @@ def main() -> None:
             user="baseline",
             id=1,
             date=datetime.datetime.now(),
-            tasks=["a-en", "a-es", "a-zh", "b1", "b2"],
+            tasks=list(TASK_CHOICES),
             tests_passed=[True, True, True, True, True],
         ),
         file="baselines/baseline.zip",
+        phase_id=EVALUATION_PHASE_ID,
         system_exists_ok=True,
     )
 
