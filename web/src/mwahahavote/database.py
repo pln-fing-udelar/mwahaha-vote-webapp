@@ -578,7 +578,7 @@ def _get_votes_per_system(phase_id: int, task: Task) -> Iterator[tuple[str, int]
     of the output.
     """
     with engine.connect() as connection:
-        yield from connection.execute(  # type: ignore
+        yield from connection.execute(
             sqlalchemy.sql.text("""
                 WITH system_ids_with_outputs AS (
                   SELECT system_id
@@ -658,6 +658,6 @@ def stats() -> MutableMapping[str, Any]:
         }
 
     for category in VOTE_CHOICES:
-        result["votes-per-category"].setdefault(category, 0)  # type: ignore
+        result["votes-per-category"].setdefault(category, 0)
 
     return result

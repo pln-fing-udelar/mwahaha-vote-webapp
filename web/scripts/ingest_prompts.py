@@ -9,7 +9,7 @@ from ingestion.codabench import EVALUATION_PHASE_ID
 
 
 def read_prompt_file(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path, delimiter="\t", quoting=csv.QUOTE_NONE, index_col="id", na_values="-")  # type: ignore
+    df = pd.read_csv(path, delimiter="\t", quoting=csv.QUOTE_NONE, index_col="id", na_values="-")
     df.index.rename("prompt_id", inplace=True)
 
     task = os.path.splitext(os.path.basename(path))[0]

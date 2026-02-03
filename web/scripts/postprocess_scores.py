@@ -5,12 +5,15 @@ import pickle
 
 import pandas as pd
 
+from ingestion.codabench import EVALUATION_PHASE_ID
 from mwahahavote.database import TASK_CHOICES, get_votes_per_system
+
+PHASE_ID = EVALUATION_PHASE_ID
 
 
 def main() -> None:
     for task in sorted(TASK_CHOICES):
-        system_id_to_vote_count = dict(get_votes_per_system(task))
+        system_id_to_vote_count = dict(get_votes_per_system(PHASE_ID, task))
 
         output_path = f"src/mwahahavote/static/scores/{task}.json"
         if os.path.exists(input_path := f"scoring/elo_results_{task}.pkl"):

@@ -9,7 +9,7 @@ import pandas as pd
 import sqlalchemy
 import sqlalchemy.dialects.mysql
 from pandas.io.sql import SQLTable
-from typing_extensions import Reader  # type: ignore
+from typing_extensions import Reader
 
 from ingestion.codabench import Submission
 from mwahahavote.database import TASK_CHOICES, engine, task_to_prompt_id_sql_like_expression
@@ -87,14 +87,14 @@ def _mysql_insert_on_conflict_update(
 
 
 def _read_submission_file(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path, delimiter="\t", index_col="id")  # type: ignore
+    df = pd.read_csv(path, delimiter="\t", index_col="id")
     df.index.rename("prompt_id", inplace=True)
     return df
 
 
 def ingest_submission(
     submission: Submission,
-    file: str | os.PathLike | Reader[bytes],  # type: ignore
+    file: str | os.PathLike | Reader[bytes],
     phase_id: int,
     system_exists_ok: bool = False,
     accept_null_texts: bool = True,
