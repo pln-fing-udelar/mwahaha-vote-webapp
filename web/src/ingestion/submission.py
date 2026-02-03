@@ -5,11 +5,11 @@ import zipfile
 from collections.abc import Iterable
 from typing import Any
 
+import fsspec
 import pandas as pd
 import sqlalchemy
 import sqlalchemy.dialects.mysql
 from pandas.io.sql import SQLTable
-from typing_extensions import Reader
 
 from ingestion.codabench import Submission
 from mwahahavote.database import TASK_CHOICES, engine, task_to_prompt_id_sql_like_expression
@@ -93,11 +93,7 @@ def _read_submission_file(path: str) -> pd.DataFrame:
 
 
 def ingest_submission(
-    submission: Submission,
-    file: str | os.PathLike | Reader[bytes],
-    phase_id: int,
-    system_exists_ok: bool = False,
-    accept_null_texts: bool = True,
+    phase_id: int, submission: Submission, system_exists_ok: bool = False, accept_null_texts: bool = True
 ) -> int:
     """Ingest a submission into the database. Returns the number of affected rows."""
     with engine.begin() as connection, tempfile.TemporaryDirectory() as dir_:
@@ -112,7 +108,7 @@ def ingest_submission(
             else:
                 raise
 
-        with zipfile.ZipFile(file) as zip_file:  # type: ignore
+        with fsspec.open(submission.compute_path_or_url()) as file, zipfile.ZipFile(file) as zip_file:
             zip_file.extractall(dir_)
 
         affected_rows = 0

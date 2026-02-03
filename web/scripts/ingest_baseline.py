@@ -8,15 +8,15 @@ from mwahahavote.database import TASK_CHOICES
 
 def main() -> None:
     ingest_submission(
+        EVALUATION_PHASE_ID,
         Submission(
             user="baseline",
             id=1,
             date=datetime.datetime.now(),
             tasks=list(TASK_CHOICES),
             tests_passed=[True] * len(TASK_CHOICES),
+            path_or_url="baselines/baseline.zip",
         ),
-        file="baselines/baseline.zip",
-        phase_id=EVALUATION_PHASE_ID,
         system_exists_ok=True,
     )
 

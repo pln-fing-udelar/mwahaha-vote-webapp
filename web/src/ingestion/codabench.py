@@ -54,6 +54,15 @@ def task_id_to_task(task_id: int) -> Task:
             raise ValueError(f"Unknown task ID: {task_id}")
 
 
+def get_submission_url(submission_id: int, session_id: str | None = None) -> str:
+    """Returns the URL to download a submission."""
+    session_id = session_id or get_environ_session_id()
+    # noinspection SpellCheckingInspection
+    response = requests.get(BASE_URL + f"submissions/{submission_id}/get_details", cookies={"sessionid": session_id})
+    response.raise_for_status()
+    return response.json()["data_file"]
+
+
 @functools.total_ordering
 @dataclass(frozen=True)
 class Submission:
@@ -65,6 +74,7 @@ class Submission:
     tasks: list[Task] = dataclasses.field(default_factory=list)
     tests_passed: list[bool] = dataclasses.field(default_factory=list)
     is_deleted: bool = False
+    path_or_url: str | None = None
 
     @property
     def system_id(self) -> str:
@@ -79,9 +89,14 @@ class Submission:
     def __lt__(self, other: Any) -> bool:
         return self.id < other.id
 
+    def compute_path_or_url(self, session_id: str | None = None) -> str:
+        """Computes the path or URL to the submission file."""
+        return self.path_or_url or get_submission_url(self.id, session_id=session_id)
 
 def _list_submission_dicts(
-    competition_id: int | None = COMPETITION_ID, phase_id: int | None = EVALUATION_PHASE_ID, session_id: str | None = None
+    competition_id: int | None = COMPETITION_ID,
+    phase_id: int | None = EVALUATION_PHASE_ID,
+    session_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """List all submission dicts for a competition or phase."""
     session_id = session_id or get_environ_session_id()
@@ -104,7 +119,9 @@ def _list_submission_dicts(
 
 
 def list_submissions(
-    competition_id: int | None = COMPETITION_ID, phase_id: int | None = EVALUATION_PHASE_ID, session_id: str | None = None
+    competition_id: int | None = COMPETITION_ID,
+    phase_id: int | None = EVALUATION_PHASE_ID,
+    session_id: str | None = None,
 ) -> Iterable[Submission]:
     """List all "parent" or single-task submissions for a competition."""
 
@@ -157,15 +174,3 @@ def list_submissions(
     )
 
     return parentless_submissions.values()
-
-
-def get_submission_url(submission_id: int, session_id: str | None = None) -> str:
-    """Returns the URL to download a submission."""
-    session_id = session_id or get_environ_session_id()
-    # noinspection SpellCheckingInspection
-    response = requests.get(
-        BASE_URL + f"submissions/{submission_id}/get_details",
-        cookies={"sessionid": session_id},
-    )
-    response.raise_for_status()
-    return response.json()["data_file"]

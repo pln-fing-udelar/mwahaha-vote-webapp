@@ -11,10 +11,9 @@ import tempfile
 import zipfile
 from collections.abc import Iterator
 
-import fsspec
 from tqdm.auto import tqdm
 
-from ingestion.codabench import EVALUATION_PHASE_ID, Submission, get_submission_url, list_submissions
+from ingestion.codabench import EVALUATION_PHASE_ID, Submission, list_submissions
 from ingestion.submission import ingest_submission, list_ingested_system_ids, print_stats
 from mwahahavote.database import TASK_CHOICES, Task
 
@@ -56,7 +55,15 @@ def main() -> None:  # noqa: C901
     # Note we leave the manual submissions at the end to override any previous one.
 
     manual_submissions = sorted(
-        submission for submission in all_submissions if os.path.exists(f"submissions/{submission.system_id}.zip")
+        dataclasses.replace(
+            submission,
+            tasks=(tasks := list(available_tasks_in_file(path))),
+            tests_passed=[True] * len(tasks),
+            is_deleted=False,
+            path_or_url=path,
+        )
+        for submission in all_submissions
+        if os.path.exists(path := f"submissions/{submission.system_id}.zip")
     )
     valid_submissions.extend(manual_submissions)
     print(f"Added {len(manual_submissions)} manual submissions placed under `submissions/`.")
@@ -80,26 +87,12 @@ def main() -> None:  # noqa: C901
         if submission.system_id in already_ingested_system_ids:
             skipped.add(submission)
         else:
-            context_manager = None
             # noinspection PyBroadException
             try:
-                # Note we don't check the list of tasks the person submitted for but the actual files.
-                if os.path.exists(path := f"submissions/{submission.system_id}.zip"):
-                    submission = dataclasses.replace(submission, tasks=list(available_tasks_in_file(path)))
-                    path_or_file = path
-                else:
-                    # Note we don't check the list of tasks the person submitted for but the actual files.
-                    url = get_submission_url(submission.id)
-                    context_manager = fsspec.open(url)
-                    path_or_file = context_manager.__enter__()
-
-                affected_rows += ingest_submission(submission, path_or_file, phase_id=EVALUATION_PHASE_ID)
+                affected_rows += ingest_submission(EVALUATION_PHASE_ID, submission)
                 successful.add(submission)
             except Exception:
                 logging.exception(f"Failed to ingest the submission '{submission}'. See below.")
-            finally:
-                if context_manager is not None:
-                    context_manager.__exit__(None, None, None)
 
     if skipped:
         print()
