@@ -84,12 +84,17 @@ def main() -> None:  # noqa: C901
     skipped: set[Submission] = set()
 
     for submission in tqdm(submissions_to_ingest, desc="Ingesting submissions", unit="submission"):
-        if submission.system_id in already_ingested_system_ids:
-            skipped.add(submission)
-        else:
-            # noinspection PyBroadException
+        # if submission.system_id in already_ingested_system_ids:
+        #     skipped.add(submission)
+        # else:
+        # noinspection PyBroadException
+        if submission.system_id in ["soyliz30", "lamiaatasnim"]:
+            if submission.system_id == "soyliz30":
+                submission = dataclasses.replace(submission, tasks=["a-es"])
+            else:
+                submission = dataclasses.replace(submission, tasks=["a-en"])
             try:
-                affected_rows += ingest_submission(EVALUATION_PHASE_ID, submission)
+                affected_rows += ingest_submission(EVALUATION_PHASE_ID, submission, system_exists_ok=True)
                 successful.add(submission)
             except Exception:
                 logging.exception(f"Failed to ingest the submission '{submission}'. See below.")
