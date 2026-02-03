@@ -96,7 +96,7 @@ def main() -> None:  # noqa: C901
                 affected_rows += ingest_submission(submission, path_or_file, phase_id=EVALUATION_PHASE_ID)
                 successful.add(submission)
             except Exception:
-                logging.exception(f"Failed to ingest the submission {submission}'. See below.")
+                logging.exception(f"Failed to ingest the submission '{submission}'. See below.")
             finally:
                 if context_manager is not None:
                     context_manager.__exit__(None, None, None)
