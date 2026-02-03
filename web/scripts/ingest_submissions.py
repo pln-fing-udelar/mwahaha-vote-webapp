@@ -11,6 +11,7 @@ import tempfile
 import zipfile
 from collections.abc import Iterator
 
+import pandas as pd
 from tqdm.auto import tqdm
 
 from ingestion.codabench import EVALUATION_PHASE_ID, Submission, list_submissions
@@ -66,7 +67,8 @@ def main() -> None:  # noqa: C901
         if os.path.exists(path := f"submissions/{submission.system_id}.zip")
     )
     valid_submissions.extend(manual_submissions)
-    print(f"Added {len(manual_submissions)} manual submissions placed under `submissions/`.")
+    print(f"Obtained {len(manual_submissions)} manual submissions placed under `submissions/`.")
+    print()
 
     # We only leave the last submission from each user:
 
@@ -94,17 +96,18 @@ def main() -> None:  # noqa: C901
             except Exception:
                 logging.exception(f"Failed to ingest the submission '{submission}'. See below.")
 
+    print()
+
     if skipped:
-        print()
         print(
             f"{len(skipped)}/{len(submissions_to_ingest)} submissions were skipped because there were already ingested"
             " before."
         )
+        print()
 
     attempted = set(submissions_to_ingest) - skipped
 
     if successful:
-        print()
         print(f"The following {len(successful)}/{len(attempted)} new submissions ingested successfully:")
         for submission in sorted(successful):
             print(f"- {submission}")
@@ -114,10 +117,21 @@ def main() -> None:  # noqa: C901
         print()
 
     if failed := attempted - successful:
-        print()
         print(f"The following {len(failed)}/{len(attempted)} new submissions failed to be ingested:")
         for submission in sorted(failed):
             print(f"- {submission}")
+        print()
+
+    print("Final stats after ingestion:")
+
+    print_stats(submissions_to_ingest)
+
+    print(
+        pd.DataFrame(
+            {"user": submission.user, **{task: (task in submission.tasks) for task in sorted(TASK_CHOICES)}}
+            for submission in sorted(submissions_to_ingest, key=lambda submission: submission.user)
+        )
+    )
 
 
 if __name__ == "__main__":
