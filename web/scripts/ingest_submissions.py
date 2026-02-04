@@ -33,7 +33,7 @@ def main() -> None:  # noqa: C901
     # We sort them so they are ingested in order
     # so that the latest submission per user per task is the one that remains.
 
-    print("Obtaining the list of all submissions so far… ", end="")
+    print("Obtaining the list of all CodaBench submissions so far… ", end="")
     all_submissions = sorted(list_submissions())
     print("✅")
 
@@ -86,12 +86,18 @@ def main() -> None:  # noqa: C901
     skipped: set[Submission] = set()
 
     for submission in tqdm(submissions_to_ingest, desc="Ingesting submissions", unit="submission"):
-        if submission.system_id in already_ingested_system_ids:
-            skipped.add(submission)
-        else:
+        # if submission.system_id in already_ingested_system_ids:
+        #     skipped.add(submission)
+        # else:
+        if submission.system_id in {"j10official", "stefanoprea", "SLPG_FJWU_Insa"}:
+            if submission.system_id == "j10official":
+                submission = dataclasses.replace(submission, tasks=["a-es", "b1"])
+            elif submission.system_id == "stefanoprea":
+                submission = dataclasses.replace(submission, tasks=["a-en", "a-es", "a-zh", "b1"])
+
             # noinspection PyBroadException
             try:
-                affected_rows += ingest_submission(EVALUATION_PHASE_ID, submission)
+                affected_rows += ingest_submission(EVALUATION_PHASE_ID, submission, system_exists_ok=True)
                 successful.add(submission)
             except Exception:
                 logging.exception(f"Failed to ingest the submission '{submission}'. See below.")
@@ -128,8 +134,8 @@ def main() -> None:  # noqa: C901
 
     print(
         pd.DataFrame(
-            {"user": submission.user, **{task: (task in submission.tasks) for task in sorted(TASK_CHOICES)}}
-            for submission in sorted(submissions_to_ingest, key=lambda submission: submission.user)
+            {"system": submission.system_id, **{task: (task in submission.tasks) for task in sorted(TASK_CHOICES)}}
+            for submission in sorted(submissions_to_ingest, key=lambda submission: submission.system_id.lower())
         )
     )
 
