@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uv run --script --env-file ../.env
-"""A script that ingests all submissions from CodaBench and any submissions manually set under `submissions/`.
+"""A script that ingests all submissions from CodaBench and any submission manually set under `submissions/`.
 
 The submissions that were already ingested are skipped.
 """

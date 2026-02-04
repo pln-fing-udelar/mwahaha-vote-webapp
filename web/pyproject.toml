@@ -13,7 +13,7 @@ dependencies = [
     # We don't use the one from upstream because it obliges us to install `torch`.
     "fschat[webui] @ git+https://github.com/pln-fing-udelar/FastChat@431f847",
     "fsspec[http]<2027",
-    "huggingface-hub>=0.34.0,<1.0", # For `fschat`.
+    "huggingface-hub>=0.34.0,<2", # For `fschat`.
     "pandas<4",
     "requests<3",
     "sentry-sdk[flask]<3",

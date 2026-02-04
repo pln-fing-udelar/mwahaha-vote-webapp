@@ -49,3 +49,22 @@ Then, run:
 ```bash
 ./scripts/ingest_baseline.py
 ```
+
+## TODO: explain:
+
+`screen`
+
+In production:
+
+```bash
+while true; do
+  DB_HOST=$(docker container inspect clasificahumor-database-1 | jq -r '.[0].NetworkSettings.Networks."clasificahumor_net".IPAddress') ./scripts/compute_scores.sh
+  sleep 3600
+done
+
+# May need to empty `submissions/` first.
+while true; do
+  CODABENCH_SESSION_ID=<...> DB_HOST=$(docker container inspect clasificahumor-database-1 | jq -r '.[0].NetworkSettings.Networks."clasificahumor_net".IPAddress') ./scripts/ingest_submissions.py
+  sleep 3600
+done
+```

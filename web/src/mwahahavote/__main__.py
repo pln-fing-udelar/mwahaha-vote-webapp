@@ -132,9 +132,9 @@ def vote_and_get_new_battle_route() -> Response:
     return jsonify(battle)
 
 
-# @app.route("/leaderboard")
-# def leaderboard_route() -> Response:
-#     return send_from_directory("static", "leaderboard.html")
+@app.route("/l")
+def leaderboard_route() -> Response:
+    return send_from_directory("static", "leaderboard.html")
 
 
 @app.route("/session-vote-count")
