@@ -272,7 +272,7 @@
                 So the participant name can appear multiple times, with a different submission number.
               </p>
               <p class="text-sm text-gray-500 dark:text-gray-400">
-                <strong>3. What's <em>baseline-1</em>?</strong>
+                <strong>3. What's <em>baseline</em>?</strong>
                 <br>
                 It's the name of a system provided by the competition organizers as a baseline.
               </p>
@@ -520,7 +520,7 @@
 
     function getRowStyle(rank, systemName) {
         // Baseline special color
-        if (systemName === "baseline-1") {
+        if (systemName === "baseline-1" || systemName === "baseline") {
             return "bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/20 dark:hover:bg-purple-900/30";
         }
         // Top 3 colors
