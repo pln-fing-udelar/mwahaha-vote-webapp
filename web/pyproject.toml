@@ -43,7 +43,7 @@ requires = ["uv_build>=0.9.2,<0.10.0"]
 build-backend = "uv_build"
 
 [tool.ruff]
-include = ["pyproject.toml", "mwahahavote/**/*.py"]
+include = ["pyproject.toml", "scripts/**/*.py", "src/**/*.py"]
 line-length = 120
 
 [tool.ruff.lint]
@@ -54,7 +54,7 @@ select = ["B", "C", "C90", "E", "F", "I", "N", "RUF", "UP", "W"]
 "__init__.py" = ["F403"]  # Allow: `from X import *`.
 
 [tool.ty.src]
-include = ["pyproject.toml", "mwahahavote/**/*.py"]
+include = ["scripts/**/*.py", "src/**/*.py"]
 
 [tool.ty.terminal]
 error-on-warning = true
