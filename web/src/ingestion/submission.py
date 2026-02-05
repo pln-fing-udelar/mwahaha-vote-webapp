@@ -60,7 +60,8 @@ def print_stats(submissions: list[Submission]) -> None:
 
     print(f"{len(frozenset(submission.user for submission in submissions)):>3} users submitted at least once.")
     users_with_valid_submissions = sorted(
-        frozenset(submission.user for submission in non_deleted_submissions_that_passed_a_test)
+        frozenset(submission.user for submission in non_deleted_submissions_that_passed_a_test),
+        key=lambda user: user.lower(),
     )
     print(
         f"{len(users_with_valid_submissions):>3} users that submitted at least one valid submission:"
