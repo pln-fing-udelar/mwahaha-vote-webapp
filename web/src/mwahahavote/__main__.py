@@ -1,3 +1,4 @@
+import http
 import itertools
 import os
 import random
@@ -6,7 +7,8 @@ from datetime import timedelta
 from typing import Any, cast
 
 import sentry_sdk
-from flask import Flask, Response, jsonify, render_template, request, send_from_directory
+import werkzeug
+from flask import Flask, Response, jsonify, redirect, render_template, request, send_from_directory
 
 from mwahahavote import database
 from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString, prompt_id_to_task
@@ -37,7 +39,10 @@ def _generate_id() -> str:  # From https://stackoverflow.com/a/2257449/1165181
 
 
 def _get_session_id() -> str:
-    return request.cookies.get("id") or _generate_id()
+    if prolific_id := request.args.get("PROLIFIC_PID"):
+        return f"prolific-id-{prolific_id}"
+    else:
+        return request.cookies.get("id") or _generate_id()
 
 
 def _simplify_battle_object(battle: Battle) -> dict[str, Any]:
@@ -139,12 +144,24 @@ def leaderboard_route() -> Response:
 
 @app.route("/session-vote-count")
 def session_vote_count_route() -> Response:
-    return jsonify(database.session_vote_count_with_skips(_get_session_id()))
+    return jsonify(database.session_vote_count_without_skips(_get_session_id()))
 
 
 @app.route("/vote-count")
 def vote_count_route() -> Response:
     return jsonify(database.vote_count_without_skips())
+
+
+@app.route("/prolific-consent", methods=["POST"])
+def prolific_consent_route() -> tuple[str, int]:
+    database.prolific_consent(_get_session_id())
+    return "", http.HTTPStatus.NO_CONTENT
+
+
+@app.route("/prolific-finish", methods=["POST"])
+def prolific_finish_route() -> werkzeug.wrappers.Response:
+    database.prolific_finish(_get_session_id(), request.form.get("comments", ""))
+    return redirect("https://app.prolific.co/submissions/complete?cc=C1M73MXW")
 
 
 @app.route("/stats")

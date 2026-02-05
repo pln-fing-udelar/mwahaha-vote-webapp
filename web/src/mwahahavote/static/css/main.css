@@ -144,6 +144,12 @@ button.no-hover:hover {
   vertical-align: top;
 }
 
+#prolific-vote-count {
+  display: none;
+  margin-top: 20px;
+  text-align: center;
+}
+
 #footer-section {
   background-color: #ffffff;
   border-top: 1px solid #ddd;
@@ -170,4 +176,8 @@ button.no-hover:hover {
 
 #leaderboard-button {
   margin-left: 10px;
+}
+
+.modal {
+  overflow: auto;
 }

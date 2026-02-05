@@ -334,6 +334,12 @@ STATEMENT_SESSION_VOTE_COUNT = sqlalchemy.sql.text(
     "SELECT COUNT(*) FROM votes v WHERE session_id = :session_id AND (NOT :without_skips OR vote != 'n')"
 )
 STATEMENT_VOTE_COUNT = sqlalchemy.sql.text("SELECT COUNT(*) FROM votes WHERE NOT :without_skips OR vote != 'n'")
+STATEMENT_PROLIFIC_CONSENT = sqlalchemy.sql.text(
+    "INSERT INTO prolific (session_id) VALUES (:session_id) ON DUPLICATE KEY UPDATE session_id = session_id"
+)
+STATEMENT_PROLIFIC_FINISH = sqlalchemy.sql.text(
+    "UPDATE prolific SET finish_date = :finish_date, comments = :comments WHERE session_id = :session_id"
+)
 STATEMENT_SESSION_COUNT = sqlalchemy.sql.text(
     "SELECT COUNT(DISTINCT v.session_id) FROM votes v WHERE NOT :without_skips OR vote != 'n'"
 )
@@ -626,11 +632,11 @@ def get_votes_per_system(phase_id: int, task: Task) -> dict[str, int]:
     return system_id_to_vote_count
 
 
-def session_vote_count_with_skips(session_id: str) -> int:
+def session_vote_count_without_skips(session_id: str) -> int:
     """Returns the vote count for a given session ID for any phase, including skips."""
     with engine.connect() as connection:
         return connection.execute(  # type: ignore
-            STATEMENT_SESSION_VOTE_COUNT, {"session_id": session_id, "without_skips": False}
+            STATEMENT_SESSION_VOTE_COUNT, {"session_id": session_id, "without_skips": True}
         ).fetchone()[0]
 
 
@@ -638,6 +644,21 @@ def vote_count_without_skips() -> int:
     """Returns the vote count for any phase, not including skips."""
     with engine.connect() as connection:
         return connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True}).fetchone()[0]  # type: ignore
+
+
+def prolific_consent(session_id: str) -> None:
+    """Sets the current time as the consent date for the prolific session ID."""
+    with engine.begin() as connection:
+        connection.execute(STATEMENT_PROLIFIC_CONSENT, {"session_id": session_id})
+
+
+def prolific_finish(session_id: str, comments: str) -> None:
+    """Sets the current time as the finish date and the given comments for the prolific session ID."""
+    with engine.begin() as connection:
+        connection.execute(
+            STATEMENT_PROLIFIC_FINISH,
+            {"session_id": session_id, "finish_date": datetime.datetime.now(), "comments": comments},
+        )
 
 
 def stats() -> MutableMapping[str, Any]:

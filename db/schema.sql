@@ -54,3 +54,14 @@ CREATE TABLE votes
   FOREIGN KEY (prompt_id, system_id_a) REFERENCES outputs (prompt_id, system_id),
   FOREIGN KEY (prompt_id, system_id_b) REFERENCES outputs (prompt_id, system_id)
 ) ENGINE InnoDB;
+
+# No foreign key between `votes` and `prolific` for `session_id` because there could be no votes,
+# and also the ID may have not consented yet.
+CREATE TABLE prolific
+(
+  session_id   CHAR(100) NOT NULL,
+  consent_date TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+  finish_date  TIMESTAMP NULL,
+  comments     VARCHAR(300) DEFAULT NULL,
+  PRIMARY KEY (session_id)
+) ENGINE InnoDB;

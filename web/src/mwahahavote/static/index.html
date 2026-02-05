@@ -139,6 +139,8 @@
       </div>
     </div>
   </div>
+
+  <p id="prolific-vote-count"></p>
 </div>
 
 <!-- Sticky Footer Link -->
@@ -228,16 +230,6 @@
           Note that, if participated in this competition (by submitting a system),
           you cannot vote/annotate on this web page.
         </p>
-
-        <p>
-          <strong>9. How long does it take for a system to appear here after it was submitted to CodaBench?</strong><br>
-          We have a script that ingests all submissions every hour.
-          However, there may be issues, so we can't guarantee this timeline.
-          In any case, we try to ingest them as soon as possible.
-          <!--suppress HtmlUnknownTarget -->
-          <!--          You can check out <a href="leaderboard" target="_blank"> the leaderboard</a> to see the list of voted systems-->
-          <!--          (also updated every hour).-->
-        </p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-primary" data-dismiss="modal" type="button">Got it!</button>
@@ -245,6 +237,154 @@
     </div>
   </div>
 </div>
+
+<!-- Prolific modals section: -->
+
+<div aria-labelledby="prolificConsentModalLabel" class="modal fade" data-backdrop="static" data-keyboard="false"
+     id="prolific-consent" role="dialog" tabindex="-1">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="modal-prolific-consent">Information and Consent Form</h4>
+      </div>
+      <div class="modal-body">
+        <p>
+          Please read the following information carefully. We recommend that you save a screenshot of this page.
+        </p>
+
+        <h4>Who are the researchers?</h4>
+
+        <p>
+          The researchers behind this work are Santiago Castro, Luis Chiruzzo, Naihao Deng, Julie-Anne Meaney,
+          Santiago Góngora, Ignacio Sastre, Victoria Amoroso, Guillermo Rey, Salar Rahili, Guillermo Moncecchi,
+          Juan José Prada, Aiala Rosá, and Rada Mihalcea.
+        </p>
+
+        <h4>What is the purpose of this study?</h4>
+
+        <p>
+          The purpose of this annotation process is to determine which texts are considered funnier by people.
+        </p>
+
+        <h4>Why have I been asked to be part of this study?</h4>
+
+        <p>This research is looking for annotators who are native speakers of the language from the texts.</p>
+
+        <h4>Am I required to participate?</h4>
+
+        <p>
+          No. Participation in this study is entirely voluntary. You may withdraw from the study at any
+          time, without giving any explanation. Your rights will not be affected. If you wish to withdraw from the
+          study, please contact us at <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>.
+          We will not use your data in any publications or presentations if you have withdrawn from the study.
+          However, we will keep a copy of the original consent form and your request to withdraw.
+        </p>
+
+        <h4>Is there any risk associated with being part of this study?</h4>
+
+        <p>
+          There are no significant risks associated with participation. However, some texts may be offensive.
+          If at any time you wish to withdraw, please do not hesitate to do so.
+        </p>
+
+        <h4>Is there any benefit associated with being part of this study?</h4>
+
+        <p>
+          There are no significant benefits associated with being part of the study, but you might find some texts
+          funny.
+        </p>
+
+        <h4>How can I contact you?</h4>
+
+        <p>
+          If you have further questions about the study or wish to make a complaint about it, please contact
+          <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. When contacting us, please indicate the title
+          of the study and the nature of your complaint.
+        </p>
+
+        <hr>
+
+        <form>
+          <div class="checkbox">
+            <label>
+              <input required type="checkbox"/>
+              I confirm that I have read and understood the information indicated above, that I have had the opportunity
+              to ask questions, and that the questions I have had have been answered satisfactorily.
+            </label>
+          </div>
+
+          <div class="checkbox">
+            <label>
+              <input required type="checkbox"/>
+              I understand that my participation is voluntary, and that I can withdraw at any time without giving a
+              reason. Withdrawing will not affect my rights.
+            </label>
+          </div>
+
+          <div class="checkbox">
+            <label>
+              <input required type="checkbox"/>
+              I give my consent for my anonymized data to be used in academic publications and presentations.
+            </label>
+          </div>
+
+          <div class="checkbox">
+            <label>
+              <input required type="checkbox"/>
+              I understand that my anonymized data may be stored for at least 2 years.
+            </label>
+          </div>
+
+          <div class="checkbox">
+            <label>
+              <input required type="checkbox"/>
+              I allow my data to be used ethically in future research.
+            </label>
+          </div>
+
+          <div class="checkbox">
+            <label>
+              <input required type="checkbox"/>
+              I agree to be part of this study.
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label for="prolific-id">Prolific ID</label>
+            <input class="form-control" id="prolific-id" readonly type="text"/>
+          </div>
+
+          <button class="btn btn-primary" id="prolific-consent-continue" type="submit">Continue</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div aria-labelledby="prolificFinishedModalLabel" class="modal fade" data-backdrop="static" data-keyboard="false"
+     id="prolific-finished" role="dialog" tabindex="-1">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="prolific-finished-label">You finished annotating!</h4>
+      </div>
+      <div class="modal-body">
+        <p>Do you have any suggestion, comment, or complaint?</p>
+
+        <!--suppress HtmlUnknownTarget -->
+        <form action="prolific-finish" method="post">
+          <div class="form-group">
+            <label class="control-label" for="comments">Comments</label>
+            <textarea class="form-control" id="comments" maxlength="300" name="comments" rows="3"></textarea>
+          </div>
+          <button class="btn btn-primary" id="prolific-finish" type="submit">Finish</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- End of the Prolific modals section. -->
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"
         integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
