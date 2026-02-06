@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import sentry_sdk
 import werkzeug
-from flask import Flask, Response, jsonify, redirect, render_template, request, send_from_directory
+from flask import Flask, Response, jsonify, make_response, redirect, render_template, request, send_from_directory
 
 from mwahahavote import database
 from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString, prompt_id_to_task
@@ -155,6 +155,11 @@ def vote_count_route() -> Response:
 @app.route("/votes-per-session")
 def get_votes_per_session_route() -> Response:
     return jsonify(database.get_votes_per_session(PHASE_ID))
+
+
+@app.route("/votes.csv")
+def get_votes() -> Response:
+    return make_response(database.get_votes(PHASE_ID).to_csv(index=False))
 
 
 @app.route("/prolific-consent", methods=["POST"])

@@ -6,6 +6,7 @@ from collections.abc import Iterable, Iterator, MutableMapping
 from dataclasses import dataclass
 from typing import Any, Literal, get_args
 
+import pandas as pd
 import sqlalchemy
 import sqlalchemy.sql
 from sqlalchemy import CursorResult
@@ -663,6 +664,32 @@ def vote_count_without_skips() -> int:
     """Returns the vote count for any phase, not including skips."""
     with engine.connect() as connection:
         return connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True}).fetchone()[0]  # type: ignore
+
+
+def get_votes(phase_id: int) -> pd.DataFrame:
+    """Returns the non-skip votes with all the associated information."""
+    with engine.connect() as connection:
+        return pd.DataFrame(
+            iter(
+                connection.execute(
+                    sqlalchemy.sql.text("""
+                        SELECT
+                          *
+                        FROM
+                          votes
+                          NATURAL JOIN prompts
+                          JOIN outputs o_a ON (votes.prompt_id = o_a.prompt_id AND votes.system_id_a = o_a.system_id)
+                          JOIN outputs o_b ON (votes.prompt_id = o_b.prompt_id AND votes.system_id_b = o_b.system_id)
+                        WHERE
+                          phase_id = :phase_id
+                        ORDER BY
+                          session_id,
+                          date
+                    """),
+                    {"phase_id": phase_id},
+                )
+            )
+        )
 
 
 def prolific_consent(session_id: str) -> None:
