@@ -5,6 +5,7 @@ The submissions that were already ingested are skipped.
 """
 
 import dataclasses
+import datetime
 import logging
 import os
 import tempfile
@@ -33,7 +34,7 @@ def main() -> None:  # noqa: C901
     # We sort them so they are ingested in order
     # so that the latest submission per user per task is the one that remains.
 
-    print("Obtaining the list of all submissions so far… ", end="")
+    print("Obtaining the list of all CodaBench submissions so far… ", end="")
     all_submissions = sorted(list_submissions())
     print("✅")
 
@@ -55,17 +56,19 @@ def main() -> None:  # noqa: C901
     # Now process any submission that was set manually placed under `submissions/`.
     # Note we leave the manual submissions at the end to override any previous one.
 
-    manual_submissions = sorted(
-        dataclasses.replace(
-            submission,
-            tasks=(tasks := list(available_tasks_in_file(path))),
+    manual_submissions = [
+        Submission(
+            id=i,
+            user=os.path.splitext(filename)[0],
+            date=datetime.datetime.now(datetime.UTC),
+            tasks=(tasks := list(available_tasks_in_file(path))),  # type: ignore[invalid-argument-type]
             tests_passed=[True] * len(tasks),
             is_deleted=False,
             path_or_url=path,
         )
-        for submission in all_submissions
-        if os.path.exists(path := f"submissions/{submission.system_id}.zip")
-    )
+        for i, filename in enumerate(os.listdir("submissions"))
+        if filename.endswith(".zip") and os.path.isfile(path := os.path.join("submissions", filename))
+    ]
     valid_submissions.extend(manual_submissions)
     print(f"Obtained {len(manual_submissions)} manual submissions placed under `submissions/`.")
     print()
@@ -78,6 +81,12 @@ def main() -> None:  # noqa: C901
         if submission.user not in users:
             users.add(submission.user)
             submissions_to_ingest.append(submission)
+
+    print(
+        "Left only the latest submission from each user,"
+        f" resulting in {len(submissions_to_ingest)} submissions to ingest."
+    )
+    print()
 
     already_ingested_system_ids = frozenset(list_ingested_system_ids())
 
