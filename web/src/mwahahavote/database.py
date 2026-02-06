@@ -639,12 +639,12 @@ def get_votes_per_session(phase_id: int) -> dict[str, int]:
             iter(
                 connection.execute(
                     sqlalchemy.sql.text("""
-                SELECT session_id, COUNT(*) AS count
-                FROM votes NATURAL JOIN prompts
-                WHERE phase_id = :phase_id AND vote != 'n'
-                GROUP BY session_id
-                ORDER BY count DESC
-            """),
+                        SELECT session_id, COUNT(*) AS count
+                        FROM votes NATURAL JOIN prompts
+                        WHERE phase_id = :phase_id AND vote != 'n'
+                        GROUP BY session_id
+                        ORDER BY count DESC
+                    """),
                     {"phase_id": phase_id},
                 )
             )
