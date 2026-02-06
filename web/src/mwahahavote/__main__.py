@@ -161,7 +161,7 @@ def prolific_consent_route() -> tuple[str, int]:
 @app.route("/prolific-finish", methods=["POST"])
 def prolific_finish_route() -> werkzeug.wrappers.Response:
     database.prolific_finish(_get_session_id(), request.form.get("comments", ""))
-    return redirect("https://app.prolific.co/submissions/complete?cc=C1M73MXW")
+    return redirect("https://app.prolific.co/submissions/complete?cc=CC4WY7K5")
 
 
 @app.route("/stats")
