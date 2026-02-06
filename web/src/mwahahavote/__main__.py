@@ -152,6 +152,11 @@ def vote_count_route() -> Response:
     return jsonify(database.vote_count_without_skips())
 
 
+@app.route("/votes-per-session")
+def get_votes_per_session_route() -> Response:
+    return jsonify(database.get_votes_per_session(PHASE_ID))
+
+
 @app.route("/prolific-consent", methods=["POST"])
 def prolific_consent_route() -> tuple[str, int]:
     database.prolific_consent(_get_session_id())

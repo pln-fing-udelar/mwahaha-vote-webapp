@@ -632,6 +632,24 @@ def get_votes_per_system(phase_id: int, task: Task) -> dict[str, int]:
     return system_id_to_vote_count
 
 
+def get_votes_per_session(phase_id: int) -> dict[str, int]:
+    """Returns the non-skip votes per session for a given phase ID."""
+    with engine.connect() as connection:
+        return {  # For some reaason, we can't just pass the output directly to `dict` constructor.
+            session_id: count
+            for session_id, count in connection.execute(
+                sqlalchemy.sql.text("""
+                SELECT session_id, COUNT(*) AS count
+                FROM votes NATURAL JOIN prompts
+                WHERE phase_id = :phase_id AND vote != 'n'
+                GROUP BY session_id
+                ORDER BY count DESC
+            """),
+                {"phase_id": phase_id},
+            )
+        }
+
+
 def session_vote_count_without_skips(session_id: str) -> int:
     """Returns the vote count for a given session ID for any phase, including skips."""
     with engine.connect() as connection:
