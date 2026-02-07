@@ -159,7 +159,10 @@ def get_votes_per_session_route() -> Response:
 
 @app.route("/votes.csv")
 def get_votes() -> Response:
-    return make_response(database.get_votes(PHASE_ID).to_csv(index=False))
+    response = make_response(database.get_votes(PHASE_ID).to_csv(index=False))
+    response.headers["Content-Disposition"] = "attachment; filename=votes.csv"
+    response.headers["Content-type"] = "text/csv"
+    return response
 
 
 @app.route("/prolific-consent", methods=["POST"])
