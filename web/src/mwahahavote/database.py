@@ -398,7 +398,6 @@ def random_least_voted_unseen_battles(
     """Returns an iterator with a random subsample of the top `batch_size` least-voted unseen outputs (by the session),
     each paired in a battle with a random other unseen output for the same prompt.
     """
-
     with engine.connect() as connection:
         yield from _battle_rows_to_objects(
             connection.execute(
