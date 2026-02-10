@@ -1,21 +1,19 @@
 services:
   web:
+    command: 'uv run uvicorn mwahahavote.__main__:app --host :: --port 80 --reload'
     environment:
-      - FLASK_APP=src/mwahahavote/__main__.py
-      - FLASK_DEBUG=1
-      - FLASK_SECRET_KEY=ze4f2fWLmEY9dADjhwvhym3U
       - DB_PASS=123123
     ports:
-      - '5000:5000'
+      - '5000:80'
     volumes:
-      - ./web/src/:/usr/src/app/src
+      - ./web/src/:/app/src
     networks:
       - net
   database:
     build: db
     volumes:
       - data:/var/lib/mysql
-      - ./web/scoring/:/usr/src/app/scoring
+      - ./web/scoring/:/app/scoring
     networks:
       - net
     environment:

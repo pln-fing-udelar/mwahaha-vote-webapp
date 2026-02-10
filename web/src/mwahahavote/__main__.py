@@ -1,14 +1,15 @@
-import http
 import itertools
-import os
 import random
 import string
 from datetime import timedelta
-from typing import Any, cast
+from typing import Any, cast, override
 
 import sentry_sdk
-import werkzeug
-from flask import Flask, Response, jsonify, make_response, redirect, render_template, request, send_from_directory
+from fastapi import FastAPI, Query, Request, Response, status
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from mwahahavote import database
 from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString, prompt_id_to_task
@@ -19,30 +20,40 @@ REQUEST_BATTLE_BATCH_SIZE = 3
 
 SESSION_ID_MAX_AGE = int(timedelta(weeks=1000).total_seconds())
 
-
-def _create_app() -> Flask:
-    app_ = Flask(__name__)
-
-    app_.secret_key = os.environ["FLASK_SECRET_KEY"]
-    app_.config["SESSION_TYPE"] = "filesystem"
-
-    return app_
-
-
 sentry_sdk.init(send_default_pii=True, traces_sample_rate=1.0)
 
-app = _create_app()
+app = FastAPI()
+
+templates = Jinja2Templates(directory="src/mwahahavote/templates")
 
 
 def _generate_id() -> str:  # From https://stackoverflow.com/a/2257449/1165181
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=100))
 
 
-def _get_session_id() -> str:
-    if (prolific_id := request.args.get("PROLIFIC_PID")) and (session_id := request.args.get("SESSION_ID")):
+def _get_session_id(request: Request) -> str:
+    if (prolific_id := request.query_params.get("PROLIFIC_PID")) and (
+        session_id := request.query_params.get("SESSION_ID")
+    ):
         return f"prolific-id-{prolific_id}-{session_id}"
     else:
         return request.cookies.get("id") or _generate_id()
+
+
+class CacheControlMiddleware(BaseHTTPMiddleware):
+    @override
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        response = await call_next(request)
+
+        response.headers["Cache-Control"] = "max-age=0, no-cache"
+
+        session_id = _get_session_id(request)
+        response.set_cookie(key="id", value=session_id, max_age=SESSION_ID_MAX_AGE)
+
+        return response
+
+
+app.add_middleware(CacheControlMiddleware)  # type: ignore[arg-type]
 
 
 def _simplify_battle_object(battle: Battle) -> dict[str, Any]:
@@ -58,21 +69,10 @@ def _simplify_battle_object(battle: Battle) -> dict[str, Any]:
     }
 
 
-@app.after_request
-def add_header(response: Response) -> Response:
-    response.cache_control.max_age = 0
-    response.cache_control.no_cache = True
+@app.get("/battles")
+def battles_route(request: Request, task: str = Query("a-en")) -> list[dict[str, Any]]:
+    session_id = _get_session_id(request)
 
-    response.set_cookie("id", _get_session_id(), max_age=SESSION_ID_MAX_AGE)
-
-    return response
-
-
-@app.route("/battles")
-def battles_route() -> Response:
-    session_id = _get_session_id()
-
-    task = request.args.get("task", "a-en")
     if task not in TASK_CHOICES:
         task = "a-en"
     task = cast(Task, task)
@@ -88,40 +88,42 @@ def battles_route() -> Response:
             for battle in database.random_battles(PHASE_ID, task, REQUEST_BATTLE_BATCH_SIZE - len(battles))
         )
 
-    return jsonify(battles)
+    return battles
 
 
-@app.route("/vote", methods=["POST"])
-def vote_and_get_new_battle_route() -> Response:
-    session_id = _get_session_id()
+@app.post("/vote")
+async def vote_and_get_new_battle_route(request: Request) -> dict[str, Any]:
+    session_id = _get_session_id(request)
+
+    form_data = await request.form()
 
     if all(
-        key in request.form
+        key in form_data
         for key in ("prompt_id", "system_id_a", "system_id_b", "vote", "is_offensive_a", "is_offensive_b")
     ):
-        vote = request.form["vote"]
-        if vote not in VOTE_CHOICES:
-            raise ValueError(f"Invalid vote: {vote}")
-        vote = cast(VoteString, vote)
+        vote_str = str(form_data["vote"])
+        if vote_str not in VOTE_CHOICES:
+            raise ValueError(f"Invalid vote: {vote_str}")
+        vote = cast(VoteString, vote_str)
 
         database.add_vote(
             session_id,
-            request.form["prompt_id"],
-            request.form["system_id_a"],
-            request.form["system_id_b"],
+            str(form_data["prompt_id"]),
+            str(form_data["system_id_a"]),
+            str(form_data["system_id_b"]),
             vote,
-            is_offensive_a=request.form["is_offensive_a"].lower() == "true",
-            is_offensive_b=request.form["is_offensive_b"].lower() == "true",
+            is_offensive_a=str(form_data["is_offensive_a"]).lower() == "true",
+            is_offensive_b=str(form_data["is_offensive_b"]).lower() == "true",
         )
 
     task: Task = "a-en"
-    if "prompt_id" in request.form:
+    if "prompt_id" in form_data:
         try:
-            task = prompt_id_to_task(request.form["prompt_id"])
+            task = prompt_id_to_task(str(form_data["prompt_id"]))
         except ValueError:
             pass
 
-    ignored_output_id_strs = request.form.getlist("ignored_output_ids[]", type=str)
+    ignored_output_id_strs = form_data.getlist("ignored_output_ids[]")
     ignored_output_ids: list[tuple[str, str]] = [tuple(str_.split("-", maxsplit=1)) for str_ in ignored_output_id_strs]  # type: ignore
 
     battles = (
@@ -134,58 +136,59 @@ def vote_and_get_new_battle_route() -> Response:
 
     battle = next(iter(battles), {})
 
-    return jsonify(battle)
+    return battle
 
 
-@app.route("/l")
+@app.get("/l")
 def leaderboard_route() -> Response:
-    return send_from_directory("static", "leaderboard.html")
+    return FileResponse("src/mwahahavote/static/leaderboard.html")
 
 
-@app.route("/session-vote-count")
-def session_vote_count_route() -> Response:
-    return jsonify(database.session_vote_count_without_skips(_get_session_id()))
+@app.get("/session-vote-count")
+def session_vote_count_route(request: Request) -> int:
+    return database.session_vote_count_without_skips(_get_session_id(request))
 
 
-@app.route("/vote-count")
-def vote_count_route() -> Response:
-    return jsonify(database.vote_count_without_skips())
+@app.get("/vote-count")
+def vote_count_route() -> int:
+    return database.vote_count_without_skips()
 
 
-@app.route("/votes-per-session")
-def get_votes_per_session_route() -> Response:
-    return jsonify(database.get_votes_per_session(PHASE_ID))
+@app.get("/votes-per-session")
+def get_votes_per_session_route() -> dict[str, int]:
+    return database.get_votes_per_session(PHASE_ID)
 
 
-@app.route("/votes.csv")
+@app.get("/votes.csv")
 def get_votes() -> Response:
-    response = make_response(database.get_votes(PHASE_ID).to_csv(index=False))
-    response.headers["Content-Disposition"] = "attachment; filename=votes.csv"
-    response.headers["Content-type"] = "text/csv"
-    return response
+    csv_content = database.get_votes(PHASE_ID).to_csv(index=False)
+    return Response(
+        content=csv_content, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=votes.csv"}
+    )
 
 
-@app.route("/prolific-consent", methods=["POST"])
-def prolific_consent_route() -> tuple[str, int]:
-    database.prolific_consent(_get_session_id())
-    return "", http.HTTPStatus.NO_CONTENT
+@app.post("/prolific-consent")
+def prolific_consent_route(request: Request) -> Response:
+    database.prolific_consent(_get_session_id(request))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.route("/prolific-finish", methods=["POST"])
-def prolific_finish_route() -> werkzeug.wrappers.Response:
-    database.prolific_finish(_get_session_id(), request.form.get("comments", ""))
-    return redirect("https://app.prolific.co/submissions/complete?cc=CC4WY7K5")
+@app.post("/prolific-finish")
+async def prolific_finish_route(request: Request) -> Response:
+    form_data = await request.form()
+    comments = str(form_data.get("comments", ""))
+    database.prolific_finish(_get_session_id(request), comments)
+    return RedirectResponse(
+        url="https://app.prolific.co/submissions/complete?cc=CC4WY7K5", status_code=status.HTTP_303_SEE_OTHER
+    )
 
 
-@app.route("/stats")
-def stats_route() -> str:
+@app.get("/stats")
+def stats_route(request: Request) -> Response:
     stats = database.stats()
     stats["histogram"] = [["Vote count", "Prompt count"]] + [[str(a), b] for a, b in stats["histogram"].items()]
     stats["votes-per-category"] = [["Vote", "Prompt count"], *list(stats["votes-per-category"].items())]
-    return render_template("stats.html", stats=stats)
+    return templates.TemplateResponse("stats.html", {"request": request, "stats": stats})
 
 
-@app.route("/", defaults={"path": "index.html"})
-@app.route("/<path:path>")
-def static_files_route(path: str) -> Response:
-    return send_from_directory("static", path)
+app.mount("/", StaticFiles(directory="src/mwahahavote/static", html=True), name="static")

@@ -1,7 +1,5 @@
 services:
   web:
-    build:
-      dockerfile: Dockerfile.prod
     environment:
       - SENTRY_DSN
       - VIRTUAL_HOST=thefunnier.com,www.thefunnier.com
