@@ -139,15 +139,15 @@ def battles_route(request: Request, task: str = Query("a-en")) -> list[dict[str,
 
 
 @app.post("/vote")
-async def vote_and_get_new_battle_route(request: Request) -> dict[str, Any]:
+# Can't set the return type because it'd be like `dict[str, Any] | HTTPException` but that'd raise a `FastAPIError`:
+async def vote_and_get_new_battle_route(request: Request):
     session_id = _get_session_id(request)
 
     form_data = await request.form()
 
     turnstile_token = str(form_data.get("turnstile_token", ""))
     if not await _passes_turnstile(turnstile_token):
-        # Can't add `HTTPException` to the return type of this function because it'd raise a `FastAPIError`.
-        return HTTPException(status_code=403, detail="Turnstile verification failed")  # type: ignore[invalid-return-type]
+        return HTTPException(status_code=403, detail="Turnstile verification failed")
 
     if all(
         key in form_data
