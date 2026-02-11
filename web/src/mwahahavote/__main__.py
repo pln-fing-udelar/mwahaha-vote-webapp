@@ -1,4 +1,5 @@
 import itertools
+import os
 import random
 import string
 from datetime import timedelta
@@ -6,6 +7,7 @@ from typing import Any, cast, override
 
 import sentry_sdk
 from fastapi import FastAPI, Query, Request, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -23,6 +25,18 @@ SESSION_ID_MAX_AGE = int(timedelta(weeks=1000).total_seconds())
 sentry_sdk.init(send_default_pii=True, traces_sample_rate=1.0)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,  # type: ignore[arg-type]
+    allow_origins=[
+        "http://localhost:5000",
+        *(f"https://{host.strip()}" for host in os.environ.get("VIRTUAL_HOST", "").split(",") if host.strip()),
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+    max_age=600,
+)
 
 templates = Jinja2Templates(directory="src/mwahahavote/templates")
 
@@ -44,12 +58,8 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
     @override
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
-
         response.headers["Cache-Control"] = "max-age=0, no-cache"
-
-        session_id = _get_session_id(request)
-        response.set_cookie(key="id", value=session_id, max_age=SESSION_ID_MAX_AGE)
-
+        response.set_cookie(key="id", value=_get_session_id(request), max_age=SESSION_ID_MAX_AGE)
         return response
 
 
