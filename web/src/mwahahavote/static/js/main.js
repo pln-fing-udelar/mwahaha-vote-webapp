@@ -135,46 +135,46 @@ const translations = {
       finish: "Finalizar"
     }
   }, zh: {
-    voteLeft: "左边更有趣。谢谢！",
-    voteRight: "右边更有趣。谢谢！",
-    voteTie: "平局。谢谢！",
-    voteSkip: "跳过此轮。谢谢！",
-    error: "抱歉，发生错误！请稍后再试。",
+    voteLeft: "左边更有趣。",
+    voteRight: "右边更有趣。",
+    voteTie: "平局。",
+    voteSkip: "跳过此轮。",
+    error: "抱歉，发生错误, 请稍后再试。",
     progress: "进度",
     consent: {
-      title: "信息与知情同意书",
-      intro: "请仔细阅读以下信息。我们建议您保存此页面的截图。",
+      title: "信息说明与知情同意书",
+      intro: "请仔细阅读以下信息。建议您保存或截图本页面以备参考。",
       researchers: {
-        title: "谁是研究人员？",
+        title: "研究人员",
         text: "本研究的研究人员包括：Santiago Castro、Luis Chiruzzo、Naihao Deng、Julie-Anne Meaney、Santiago Góngora、Ignacio Sastre、Victoria Amoroso、Guillermo Rey、Salar Rahili、Guillermo Moncecchi、Juan José Prada、Aiala Rosá 和 Rada Mihalcea。"
       },
       purpose: {
-        title: "本研究的目的是什么？", text: "本标注过程的目的是确定人们认为哪些文本更有趣。"
+        title: "本研究的目的是什么？", text: "本次标注旨在确定人们认为哪些文本更具幽默性。"
       },
       why: {
-        title: "为什么邀请我参加本研究？", text: "本研究正在寻找文本语言的母语者作为标注员。"
+        title: "为什么邀请我参加本研究？", text: "本研究正在招募母语者参与文本标注。"
       },
       required: {
         title: "我必须参加吗？",
-        text: '不必须。参与本研究完全自愿。您可以在任何时候退出研究，无需给出任何解释。您的权利不会受到影响。如果您希望退出研究，请通过 <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a> 联系我们。如果您已退出研究，我们将不会在任何出版物或演示中使用您的数据。但是，我们将保留原始同意书的副本和您的退出请求。'
+        text: '不必须。参与本研究完全出于自愿。您可以在任何时候退出研究，无需说明理由，且不会对您的权利产生任何影响。如您希望退出，请通过 <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a> 与我们联系。如果您退出研究，我们将不会在任何出版物或展示中使用您的数据。但我们将保留原始同意书及您的退出请求记录。'
       },
       risk: {
         title: "参与本研究是否存在任何风险？",
-        text: "参与研究没有重大风险。但是，某些文本可能具有冒犯性。您也可以使用标注表单中的复选框将任何文本标记为冒犯性内容。如果您在任何时候希望退出，请不要犹豫。"
+        text: "参与本研究不存在重大风险。但部分文本可能包含冒犯性内容。您可以通过标注表单中的复选框将相关文本标记为冒犯性内容。如感到不适，您可随时退出研究。"
       },
       benefit: {
-        title: "参与本研究是否有任何好处？", text: "参与本研究没有重大好处，但您可能会觉得某些文本很有趣。"
+        title: "参与本研究是否有任何益处？", text: "参与本研究不会带来直接的个人收益，但部分文本内容可能具有一定的趣味性。"
       },
       contact: {
-        title: "如何联系您？",
-        text: '如果您对本研究有更多问题或希望提出投诉，请联系 <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>。联系我们时，请说明研究标题和您投诉的性质。'
+        title: "如何联系我们？",
+        text: '如您对本研究有任何疑问或希望提出投诉，请联系 <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>。联系时请注明研究标题及问题或投诉的具体内容。'
       },
-      checkbox1: "我确认我已阅读并理解上述信息，我有机会提问，并且我的问题得到了满意的回答。",
-      checkbox2: "我确认我不是本次竞赛的参与者（即我没有向2025-2026年MWAHAHA幽默生成竞赛提交系统）。参赛者不能参与标注过程。",
-      checkbox3: "我理解我的参与是自愿的，我可以在任何时候退出而无需给出理由。退出不会影响我的权利。",
-      checkbox4: "我同意将我的匿名数据用于学术出版物和演示。",
+      checkbox1: "我确认已阅读并理解上述信息，并有机会提出问题（如有疑问），且已获得满意的答复。",
+      checkbox2: "我确认我不是本次竞赛的参与者（即未参与 2025–2026 年 MWAHAHA 幽默生成竞赛）。参赛者不得参与本次标注。",
+      checkbox3: "我理解我的参与是自愿的，并且可以在任何时候退出而无需说明理由，且不会影响我的权利。",
+      checkbox4: "我同意将我的匿名数据用于学术出版和展示。",
       checkbox5: "我理解我的匿名数据可能至少保存2年。",
-      checkbox6: "我允许将我的数据按照伦理规范用于未来的研究。",
+      checkbox6: "我同意在符合伦理规范的前提下，将我的数据用于未来的相关研究。",
       checkbox7: "我同意参加本研究。",
       continue: "继续"
     },
