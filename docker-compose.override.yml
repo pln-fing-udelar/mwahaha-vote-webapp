@@ -3,6 +3,7 @@ services:
     command: 'uv run uvicorn mwahahavote.__main__:app --host :: --port 80 --reload'
     environment:
       - DB_PASS=123123
+      - TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
     ports:
       - '5000:80'
     volumes:

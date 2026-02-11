@@ -12,10 +12,10 @@ dependencies = [
     "fschat[webui] @ git+https://github.com/pln-fing-udelar/FastChat@431f847",
     "fsspec[http]<2027",
     "huggingface-hub>=0.34.0,<2", # For `fschat`.
+    "httpx>=0.27.0,<1",
     "jinja2<4",
     "pandas<4",
     "python-multipart<1",
-    "requests<3",
     "sentry-sdk<3",
     "sqlalchemy[mysql]<3",
     "starlette",
@@ -35,7 +35,6 @@ dev = [
     "pandas-stubs",
     "ruff>=0.3,<1",
     "ty<1",
-    "types-requests",
     "types-tqdm",
 ]
 
@@ -48,11 +47,7 @@ include = ["pyproject.toml", "scripts/**/*.py", "src/**/*.py"]
 line-length = 120
 
 [tool.ruff.lint]
-ignore = ["N803", "N806", "N812"]  # Allow uppercase in variable names, arg names, and import aliases. E.g., `X`.
 select = ["B", "C", "C90", "E", "F", "I", "N", "RUF", "UP", "W"]
-
-[tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F403"]  # Allow: `from X import *`.
 
 [tool.ty.src]
 include = ["scripts/**/*.py", "src/**/*.py"]

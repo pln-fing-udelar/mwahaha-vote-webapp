@@ -16,6 +16,7 @@ let emoji;
 let task = "a-en";
 let battles = [];
 let index = 0;
+let turnstileToken = null;
 
 const PROLIFIC_MAX_BATTLES = 100;
 
@@ -80,8 +81,7 @@ const translations = {
       commentsLabel: "Comments",
       finish: "Finish"
     }
-  },
-  es: {
+  }, es: {
     voteLeft: "El de la izquierda es más gracioso. ¡Gracias!",
     voteRight: "El de la derecha es más gracioso. ¡Gracias!",
     voteTie: "Es un empate. ¡Gracias!",
@@ -134,8 +134,7 @@ const translations = {
       commentsLabel: "Comentarios",
       finish: "Finalizar"
     }
-  },
-  zh: {
+  }, zh: {
     voteLeft: "左边更有趣。谢谢！",
     voteRight: "右边更有趣。谢谢！",
     voteTie: "平局。谢谢！",
@@ -150,12 +149,10 @@ const translations = {
         text: "本研究的研究人员包括：Santiago Castro、Luis Chiruzzo、Naihao Deng、Julie-Anne Meaney、Santiago Góngora、Ignacio Sastre、Victoria Amoroso、Guillermo Rey、Salar Rahili、Guillermo Moncecchi、Juan José Prada、Aiala Rosá 和 Rada Mihalcea。"
       },
       purpose: {
-        title: "本研究的目的是什么？",
-        text: "本标注过程的目的是确定人们认为哪些文本更有趣。"
+        title: "本研究的目的是什么？", text: "本标注过程的目的是确定人们认为哪些文本更有趣。"
       },
       why: {
-        title: "为什么邀请我参加本研究？",
-        text: "本研究正在寻找文本语言的母语者作为标注员。"
+        title: "为什么邀请我参加本研究？", text: "本研究正在寻找文本语言的母语者作为标注员。"
       },
       required: {
         title: "我必须参加吗？",
@@ -166,8 +163,7 @@ const translations = {
         text: "参与研究没有重大风险。但是，某些文本可能具有冒犯性。您也可以使用标注表单中的复选框将任何文本标记为冒犯性内容。如果您在任何时候希望退出，请不要犹豫。"
       },
       benefit: {
-        title: "参与本研究是否有任何好处？",
-        text: "参与本研究没有重大好处，但您可能会觉得某些文本很有趣。"
+        title: "参与本研究是否有任何好处？", text: "参与本研究没有重大好处，但您可能会觉得某些文本很有趣。"
       },
       contact: {
         title: "如何联系您？",
@@ -183,15 +179,17 @@ const translations = {
       continue: "继续"
     },
     finished: {
-      title: "您已完成标注！",
-      prompt: "您有任何建议、评论或投诉吗？",
-      commentsLabel: "评论",
-      finish: "完成"
+      title: "您已完成标注！", prompt: "您有任何建议、评论或投诉吗？", commentsLabel: "评论", finish: "完成"
     }
   }
 };
 
 $(document).ready(main);
+
+// noinspection JSUnusedGlobalSymbols
+function onTurnstileSuccess(token) {
+  turnstileToken = token;
+}
 
 function main() {
   setupSentry();
@@ -347,6 +345,11 @@ function changeTask() {
 }
 
 function vote(voteOption) {
+  if (!turnstileToken) {
+    $.mdtoast("Please complete the verification challenge (CAPTCHA)", {duration: 3000});
+    return;
+  }
+
   const oldIndex = index;
   index = (index + 1) % battles.length;
 
@@ -360,9 +363,22 @@ function vote(voteOption) {
     ignore_output_ids: [battles[index].prompt_id + "-" + battles[index].system_id_a, battles[index].prompt_id + "-" + battles[index].system_id_b, battles[otherIndex].prompt_id + "-" + battles[otherIndex].system_id_a, battles[otherIndex].prompt_id + "-" + battles[otherIndex].system_id_b,],
     is_offensive_a: $isOffensiveLeft.prop("checked"),
     is_offensive_b: $isOffensiveRight.prop("checked"),
-  }, battle => battles[oldIndex] = battle, "json").fail(() => {
+    turnstile_token: turnstileToken,
+  }, battle => {
+    battles[oldIndex] = battle;
+
+    if (typeof turnstile !== 'undefined') {
+      turnstile.reset();
+    }
+    turnstileToken = null;
+  }, "json").fail(() => {
     const lang = getLanguageFromTask();
     $.mdtoast(translations[lang].error, {duration: 3000});
+
+    if (typeof turnstile !== 'undefined') {
+      turnstile.reset();
+    }
+    turnstileToken = null;
   });
 
   showBattle();

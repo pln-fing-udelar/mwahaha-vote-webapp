@@ -108,6 +108,12 @@ h1 {
   text-align: left;
 }
 
+#turnstile-widget {
+  display: flex;
+  justify-content: center;
+  margin: 20px auto;
+}
+
 #answers {
   display: flex;
   flex-wrap: wrap;

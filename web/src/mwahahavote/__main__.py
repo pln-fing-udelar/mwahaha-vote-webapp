@@ -1,28 +1,40 @@
 import itertools
+import logging
 import os
 import random
 import string
 from datetime import timedelta
 from typing import Any, cast, override
 
+import httpx
 import sentry_sdk
-from fastapi import FastAPI, Query, Request, Response, status
+from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sentry_sdk.integrations.logging import LoggingIntegration
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from mwahahavote import database
 from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString, prompt_id_to_task
 
+logger = logging.getLogger(__name__)
+
 PHASE_ID = 15785
+
+TURNSTILE_SECRET_KEY = os.environ["TURNSTILE_SECRET_KEY"]
+IS_LOCAL_DEVELOPMENT = "VIRTUAL_HOST" not in os.environ
 
 REQUEST_BATTLE_BATCH_SIZE = 3
 
 SESSION_ID_MAX_AGE = int(timedelta(weeks=1000).total_seconds())
 
-sentry_sdk.init(send_default_pii=True, traces_sample_rate=1.0)
+sentry_sdk.init(
+    send_default_pii=True,
+    traces_sample_rate=1.0,
+    integrations=[LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)],
+)
 
 app = FastAPI()
 
@@ -66,6 +78,31 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
 app.add_middleware(CacheControlMiddleware)  # type: ignore[arg-type]
 
 
+async def _passes_turnstile(token: str) -> bool:
+    if IS_LOCAL_DEVELOPMENT:
+        return True
+
+    if not TURNSTILE_SECRET_KEY:
+        return False
+
+    async with httpx.AsyncClient() as client:
+        try:
+            return (
+                (
+                    await client.post(
+                        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+                        json={"secret": TURNSTILE_SECRET_KEY, "response": token},
+                        timeout=5.0,
+                    )
+                )
+                .json()
+                .get("success", False)
+            )
+        except Exception:
+            logger.exception("Turnstile verification error.")
+            return True
+
+
 def _simplify_battle_object(battle: Battle) -> dict[str, Any]:
     """Removes redundant fields and simplifies the battle representation for JSON serialization."""
     return {
@@ -106,6 +143,11 @@ async def vote_and_get_new_battle_route(request: Request) -> dict[str, Any]:
     session_id = _get_session_id(request)
 
     form_data = await request.form()
+
+    turnstile_token = str(form_data.get("turnstile_token", ""))
+    if not await _passes_turnstile(turnstile_token):
+        # Can't add `HTTPException` to the return type of this function because it'd raise a `FastAPIError`.
+        return HTTPException(status_code=403, detail="Turnstile verification failed")  # type: ignore[invalid-return-type]
 
     if all(
         key in form_data
