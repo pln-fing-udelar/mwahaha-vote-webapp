@@ -26,6 +26,171 @@ let prolificVoteCount = 0;
 let $prolificConsent;
 let $prolificVoteCount;
 
+const translations = {
+  en: {
+    voteLeft: "Left is funnier. Thanks!",
+    voteRight: "Right is funnier. Thanks!",
+    voteTie: "It's a tie. Thanks!",
+    voteSkip: "Battle skipped. Thanks!",
+    error: "Sorry, an error occurred! Please try again later.",
+    progress: "Progress",
+    consent: {
+      title: "Information and Consent Form",
+      intro: "Please read the following information carefully. We recommend that you save a screenshot of this page.",
+      researchers: {
+        title: "Who are the researchers?",
+        text: "The researchers behind this work are Santiago Castro, Luis Chiruzzo, Naihao Deng, Julie-Anne Meaney, Santiago Góngora, Ignacio Sastre, Victoria Amoroso, Guillermo Rey, Salar Rahili, Guillermo Moncecchi, Juan José Prada, Aiala Rosá, and Rada Mihalcea."
+      },
+      purpose: {
+        title: "What is the purpose of this study?",
+        text: "The purpose of this annotation process is to determine which texts are considered funnier by people."
+      },
+      why: {
+        title: "Why have I been asked to be part of this study?",
+        text: "This research is looking for annotators who are native speakers of the language from the texts."
+      },
+      required: {
+        title: "Am I required to participate?",
+        text: 'No. Participation in this study is entirely voluntary. You may withdraw from the study at any time, without giving any explanation. Your rights will not be affected. If you wish to withdraw from the study, please contact us at <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. We will not use your data in any publications or presentations if you have withdrawn from the study. However, we will keep a copy of the original consent form and your request to withdraw.'
+      },
+      risk: {
+        title: "Is there any risk associated with being part of this study?",
+        text: "There are no significant risks associated with participation. However, some texts may be offensive. You are also welcome to flag any text as offensive using the checkboxes in the annotation form. If at any time you wish to withdraw, please do not hesitate to do so."
+      },
+      benefit: {
+        title: "Is there any benefit associated with being part of this study?",
+        text: "There are no significant benefits associated with being part of the study, but you might find some texts funny."
+      },
+      contact: {
+        title: "How can I contact you?",
+        text: 'If you have further questions about the study or wish to make a complaint about it, please contact <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. When contacting us, please indicate the title of the study and the nature of your complaint.'
+      },
+      checkbox1: "I confirm that I have read and understood the information indicated above, that I have had the opportunity to ask questions, and that the questions I have had have been answered satisfactorily.",
+      checkbox2: "I confirm that I am not a participant of this competition (i.e., I have not submitted a system to the 2025-2026 MWAHAHA competition on Humor Generation). Participants can't participate in the annotation process.",
+      checkbox3: "I understand that my participation is voluntary, and that I can withdraw at any time without giving a reason. Withdrawing will not affect my rights.",
+      checkbox4: "I give my consent for my anonymized data to be used in academic publications and presentations.",
+      checkbox5: "I understand that my anonymized data may be stored for at least 2 years.",
+      checkbox6: "I allow my data to be used ethically in future research.",
+      checkbox7: "I agree to be part of this study.",
+      continue: "Continue"
+    },
+    finished: {
+      title: "You finished annotating!",
+      prompt: "Do you have any suggestion, comment, or complaint?",
+      commentsLabel: "Comments",
+      finish: "Finish"
+    }
+  },
+  es: {
+    voteLeft: "El de la izquierda es más gracioso. ¡Gracias!",
+    voteRight: "El de la derecha es más gracioso. ¡Gracias!",
+    voteTie: "Es un empate. ¡Gracias!",
+    voteSkip: "Batalla omitida. ¡Gracias!",
+    error: "¡Lo sentimos, ocurrió un error! Por favor, inténtalo de nuevo más tarde.",
+    progress: "Progreso",
+    consent: {
+      title: "Formulario de Información y Consentimiento",
+      intro: "Por favor, lea la siguiente información cuidadosamente. Le recomendamos guardar una captura de pantalla de esta página.",
+      researchers: {
+        title: "¿Quiénes son los investigadores?",
+        text: "Los investigadores detrás de este trabajo son Santiago Castro, Luis Chiruzzo, Naihao Deng, Julie-Anne Meaney, Santiago Góngora, Ignacio Sastre, Victoria Amoroso, Guillermo Rey, Salar Rahili, Guillermo Moncecchi, Juan José Prada, Aiala Rosá y Rada Mihalcea."
+      },
+      purpose: {
+        title: "¿Cuál es el propósito de este estudio?",
+        text: "El propósito de este proceso de anotación es determinar qué textos se consideran más graciosos por las personas."
+      },
+      why: {
+        title: "¿Por qué me han pedido que participe en este estudio?",
+        text: "Esta investigación busca anotadores que sean hablantes nativos del idioma de los textos."
+      },
+      required: {
+        title: "¿Estoy obligado a participar?",
+        text: 'No. La participación en este estudio es completamente voluntaria. Usted puede retirarse del estudio en cualquier momento, sin dar ninguna explicación. Sus derechos no se verán afectados. Si desea retirarse del estudio, por favor contáctenos en <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. No usaremos sus datos en ninguna publicación o presentación si se ha retirado del estudio. Sin embargo, conservaremos una copia del formulario de consentimiento original y su solicitud de retiro.'
+      },
+      risk: {
+        title: "¿Hay algún riesgo asociado con formar parte de este estudio?",
+        text: "No hay riesgos significativos asociados con la participación. Sin embargo, algunos textos pueden ser ofensivos. También puede marcar cualquier texto como ofensivo usando las casillas de verificación en el formulario de anotación. Si en algún momento desea retirarse, no dude en hacerlo."
+      },
+      benefit: {
+        title: "¿Hay algún beneficio asociado con formar parte de este estudio?",
+        text: "No hay beneficios significativos asociados con formar parte del estudio, pero puede encontrar algunos textos graciosos."
+      },
+      contact: {
+        title: "¿Cómo puedo contactarlos?",
+        text: 'Si tiene más preguntas sobre el estudio o desea presentar una queja, por favor contacte a <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. Al contactarnos, por favor indique el título del estudio y la naturaleza de su queja.'
+      },
+      checkbox1: "Confirmo que he leído y comprendido la información indicada anteriormente, que he tenido la oportunidad de hacer preguntas, y que las preguntas que he tenido han sido respondidas satisfactoriamente.",
+      checkbox2: "Confirmo que no soy participante de esta competencia (es decir, no he enviado un sistema a la competencia MWAHAHA 2025-2026 sobre Generación de Humor). Los participantes no pueden participar en el proceso de anotación.",
+      checkbox3: "Entiendo que mi participación es voluntaria, y que puedo retirarme en cualquier momento sin dar una razón. Retirarme no afectará mis derechos.",
+      checkbox4: "Doy mi consentimiento para que mis datos anonimizados sean utilizados en publicaciones y presentaciones académicas.",
+      checkbox5: "Entiendo que mis datos anonimizados pueden ser almacenados durante al menos 2 años.",
+      checkbox6: "Permito que mis datos sean utilizados éticamente en futuras investigaciones.",
+      checkbox7: "Acepto formar parte de este estudio.",
+      continue: "Continuar"
+    },
+    finished: {
+      title: "¡Terminaste de anotar!",
+      prompt: "¿Tienes alguna sugerencia, comentario o queja?",
+      commentsLabel: "Comentarios",
+      finish: "Finalizar"
+    }
+  },
+  zh: {
+    voteLeft: "左边更有趣。谢谢！",
+    voteRight: "右边更有趣。谢谢！",
+    voteTie: "平局。谢谢！",
+    voteSkip: "跳过此轮。谢谢！",
+    error: "抱歉，发生错误！请稍后再试。",
+    progress: "进度",
+    consent: {
+      title: "信息与知情同意书",
+      intro: "请仔细阅读以下信息。我们建议您保存此页面的截图。",
+      researchers: {
+        title: "谁是研究人员？",
+        text: "本研究的研究人员包括：Santiago Castro、Luis Chiruzzo、Naihao Deng、Julie-Anne Meaney、Santiago Góngora、Ignacio Sastre、Victoria Amoroso、Guillermo Rey、Salar Rahili、Guillermo Moncecchi、Juan José Prada、Aiala Rosá 和 Rada Mihalcea。"
+      },
+      purpose: {
+        title: "本研究的目的是什么？",
+        text: "本标注过程的目的是确定人们认为哪些文本更有趣。"
+      },
+      why: {
+        title: "为什么邀请我参加本研究？",
+        text: "本研究正在寻找文本语言的母语者作为标注员。"
+      },
+      required: {
+        title: "我必须参加吗？",
+        text: '不必须。参与本研究完全自愿。您可以在任何时候退出研究，无需给出任何解释。您的权利不会受到影响。如果您希望退出研究，请通过 <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a> 联系我们。如果您已退出研究，我们将不会在任何出版物或演示中使用您的数据。但是，我们将保留原始同意书的副本和您的退出请求。'
+      },
+      risk: {
+        title: "参与本研究是否存在任何风险？",
+        text: "参与研究没有重大风险。但是，某些文本可能具有冒犯性。您也可以使用标注表单中的复选框将任何文本标记为冒犯性内容。如果您在任何时候希望退出，请不要犹豫。"
+      },
+      benefit: {
+        title: "参与本研究是否有任何好处？",
+        text: "参与本研究没有重大好处，但您可能会觉得某些文本很有趣。"
+      },
+      contact: {
+        title: "如何联系您？",
+        text: '如果您对本研究有更多问题或希望提出投诉，请联系 <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>。联系我们时，请说明研究标题和您投诉的性质。'
+      },
+      checkbox1: "我确认我已阅读并理解上述信息，我有机会提问，并且我的问题得到了满意的回答。",
+      checkbox2: "我确认我不是本次竞赛的参与者（即我没有向2025-2026年MWAHAHA幽默生成竞赛提交系统）。参赛者不能参与标注过程。",
+      checkbox3: "我理解我的参与是自愿的，我可以在任何时候退出而无需给出理由。退出不会影响我的权利。",
+      checkbox4: "我同意将我的匿名数据用于学术出版物和演示。",
+      checkbox5: "我理解我的匿名数据可能至少保存2年。",
+      checkbox6: "我允许将我的数据按照伦理规范用于未来的研究。",
+      checkbox7: "我同意参加本研究。",
+      continue: "继续"
+    },
+    finished: {
+      title: "您已完成标注！",
+      prompt: "您有任何建议、评论或投诉吗？",
+      commentsLabel: "评论",
+      finish: "完成"
+    }
+  }
+};
+
 $(document).ready(main);
 
 function main() {
@@ -195,7 +360,10 @@ function vote(voteOption) {
     ignore_output_ids: [battles[index].prompt_id + "-" + battles[index].system_id_a, battles[index].prompt_id + "-" + battles[index].system_id_b, battles[otherIndex].prompt_id + "-" + battles[otherIndex].system_id_a, battles[otherIndex].prompt_id + "-" + battles[otherIndex].system_id_b,],
     is_offensive_a: $isOffensiveLeft.prop("checked"),
     is_offensive_b: $isOffensiveRight.prop("checked"),
-  }, battle => battles[oldIndex] = battle, "json").fail(() => $.mdtoast("Sorry, an error occurred! Please try again later.", {duration: 3000}));
+  }, battle => battles[oldIndex] = battle, "json").fail(() => {
+    const lang = getLanguageFromTask();
+    $.mdtoast(translations[lang].error, {duration: 3000});
+  });
 
   showBattle();
 
@@ -210,15 +378,45 @@ function vote(voteOption) {
   }
 }
 
+function getLanguageFromTask() {
+  return task.startsWith("a-") ? task.split("-")[1] : "en";
+}
+
+function translateModal(lang) {
+  $("[data-i18n]").each(function () {
+    const key = $(this).data("i18n");
+    const keys = key.split(".");
+    let value = translations[lang];
+    for (let i = 0; i < keys.length; i++) {
+      value = value[keys[i]];
+    }
+    $(this).text(value);
+  });
+
+  $("[data-i18n-html]").each(function () {
+    const key = $(this).data("i18n-html");
+    const keys = key.split(".");
+    let value = translations[lang];
+    for (let i = 0; i < keys.length; i++) {
+      value = value[keys[i]];
+    }
+    $(this).html(value);
+  });
+}
+
 function toastText(voteOption) {
-  if (voteOption === "a") {
-    return "Left is funnier. Thanks!";
-  } else if (voteOption === "b") {
-    return "Right is funnier. Thanks!";
-  } else if (voteOption === "t") {
-    return "It's a tie. Thanks!";
-  } else {
-    return "Battle skipped. Thanks!";
+  const lang = getLanguageFromTask();
+  const t = translations[lang];
+
+  switch (voteOption) {
+    case "a":
+      return t.voteLeft;
+    case "b":
+      return t.voteRight;
+    case "t":
+      return t.voteTie;
+    default:
+      return t.voteSkip;
   }
 }
 
@@ -230,13 +428,19 @@ function updateProlificVoteCount() {
     $("#prolific-finished").modal("show");
   } else {
     prolificVoteCount %= PROLIFIC_MAX_BATTLES;
-    $prolificVoteCount.text(`Progress: ${prolificVoteCount}/${PROLIFIC_MAX_BATTLES}`);
+    const lang = getLanguageFromTask();
+    const t = translations[lang];
+    $prolificVoteCount.text(`${t.progress}: ${prolificVoteCount}/${PROLIFIC_MAX_BATTLES}`);
   }
 }
 
 function setupProlificSessionIfNeeded() {
   if (isAProlificSession) {
-    $("#prolific-consent form").submit(e => {
+    const lang = getLanguageFromTask();
+
+    translateModal(lang);
+
+    $prolificConsent.find("form").submit(e => {
       localStorage.setItem(`consent-prolific-id-${prolificId}`, "done");
       $prolificConsent.modal("hide");
 
@@ -246,8 +450,6 @@ function setupProlificSessionIfNeeded() {
       e.stopPropagation();
     });
 
-    // $skip.parent().css("display", "none");
-    // $("#skip-instructions").css("display", "none");
     $task.prop("disabled", "disabled");
 
     if (localStorage.getItem(`consent-prolific-id-${prolificId}`) !== "done") {
