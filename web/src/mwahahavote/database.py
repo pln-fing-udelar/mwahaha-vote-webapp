@@ -497,8 +497,12 @@ def add_vote(
         )
 
 
-def get_votes_for_scoring(phase_id: int, task: Task) -> Iterator[Vote]:
+def get_votes_for_scoring(
+    phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ("__PLACEHOLDER__",)
+) -> Iterator[Vote]:
     """Returns the votes for a given phase ID and task to score the systems."""
+    excluded_session_ids = tuple(excluded_session_ids)
+
     with engine.connect() as connection:
         for (
             prompt_id,
@@ -528,6 +532,7 @@ def get_votes_for_scoring(phase_id: int, task: Task) -> Iterator[Vote]:
                     task = :task
                     AND phase_id = :phase_id
                     AND v.vote != 'n'
+                    AND session_id NOT IN :excluded_session_ids
                 ), systems_a AS (
                   SELECT system_id_a FROM votes_and_prompts GROUP BY system_id_a
                 ), systems_b AS (
@@ -550,7 +555,7 @@ def get_votes_for_scoring(phase_id: int, task: Task) -> Iterator[Vote]:
                   JOIN systems_b ON (v.system_id_a = systems_b.system_id_b)
                   JOIN systems_a ON (v.system_id_b = systems_a.system_id_a)
             """),
-            {"task": task, "phase_id": phase_id},
+            {"task": task, "phase_id": phase_id, "excluded_session_ids": excluded_session_ids},
         ):
             prompt = Prompt(id=prompt_id, headline="<placeholder>")
             yield Vote(
@@ -579,10 +584,14 @@ def get_systems(phase_id: int, task: Task) -> Iterator[str]:
             yield system_id
 
 
-def _get_votes_per_system(phase_id: int, task: Task) -> Iterator[tuple[str, int]]:
+def _get_votes_per_system(
+    phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ("__PLACEHOLDER__",)
+) -> Iterator[tuple[str, int]]:
     """Returns the non-skip votes per system for a given phase ID and task. If a system has no votes, it may not be part
     of the output.
     """
+    excluded_session_ids = tuple(excluded_session_ids)
+
     with engine.connect() as connection:
         yield from connection.execute(
             sqlalchemy.sql.text("""
@@ -608,6 +617,7 @@ def _get_votes_per_system(phase_id: int, task: Task) -> Iterator[tuple[str, int]
                     task = :task
                     AND phase_id = :phase_id
                     AND vote != 'n'
+                    AND session_id NOT IN :excluded_session_ids
                 ), votes_and_prompts_per_system AS (
                   SELECT system_id_a AS system_id FROM system_votes UNION ALL
                     SELECT system_id_b AS system_id FROM system_votes
@@ -617,13 +627,15 @@ def _get_votes_per_system(phase_id: int, task: Task) -> Iterator[tuple[str, int]
                 GROUP BY system_id
                 ORDER BY count DESC
             """),
-            {"task": task, "phase_id": phase_id},
+            {"task": task, "phase_id": phase_id, "excluded_session_ids": excluded_session_ids},
         )
 
 
-def get_votes_per_system(phase_id: int, task: Task) -> dict[str, int]:
+def get_votes_per_system(
+    phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ("__PLACEHOLDER__",)
+) -> dict[str, int]:
     """Returns the non-skip votes per system for a given phase ID and task."""
-    system_id_to_vote_count = dict(_get_votes_per_system(phase_id, task))
+    system_id_to_vote_count = dict(_get_votes_per_system(phase_id, task, excluded_session_ids))
 
     # Some systems may not be part of the output as there are no votes for them:
     for system_id in get_systems(phase_id, task):
