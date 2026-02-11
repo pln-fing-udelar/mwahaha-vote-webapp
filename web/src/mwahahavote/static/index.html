@@ -52,8 +52,8 @@
         dataLayer.push(arguments);
       }
 
-      gtag('js', new Date());
-      gtag('config', 'G-40699CQRM6');
+      gtag("js", new Date());
+      gtag("config", "G-40699CQRM6");
     }
   </script>
 </head>
@@ -381,6 +381,7 @@
 <script type="text/javascript" src="js/emoji.min.js"></script>
 <script type="text/javascript" src="js/main.js"></script>
 <script>
+  // I think this should be loaded here to ensure it's set before the Turnstile script is loaded.
   (() => {
     const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
     const siteKey = isLocalhost ? '1x00000000000000000000AA' : '0x4AAAAAACYSiX3bHYbHdVL-';
