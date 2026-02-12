@@ -63,8 +63,9 @@ while true; do
 done
 
 # May need to empty `submissions/` first.
+export CODABENCH_SESSION_ID=...
 while true; do
-  CODABENCH_SESSION_ID=<...> DB_HOST=$(docker container inspect clasificahumor-database-1 | jq -r '.[0].NetworkSettings.Networks."clasificahumor_net".IPAddress') ./scripts/ingest_submissions.py
+  DB_HOST=$(docker container inspect clasificahumor-database-1 | jq -r '.[0].NetworkSettings.Networks."clasificahumor_net".IPAddress') ./scripts/ingest_submissions.py
   sleep 3600
 done
 ```
