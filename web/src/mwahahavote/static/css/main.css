@@ -176,8 +176,10 @@ button.no-hover:hover {
 
 #help-link {
   align-items: center;
+  color: #666;
   display: flex;
   justify-content: center;
+  text-decoration: underline;
 }
 
 #leaderboard-button {
@@ -186,4 +188,163 @@ button.no-hover:hover {
 
 .modal {
   overflow: auto;
+}
+
+/* Cookie Consent Banner Styles */
+
+#cookie-settings-link {
+  color: #666;
+  margin-left: 15px;
+  text-decoration: underline;
+}
+
+#cookie-consent-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #ddd;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  z-index: 1000;
+  transform: translateY(100%);
+  transition: transform 0.3s ease-in-out;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+#cookie-consent-banner.show {
+  transform: translateY(0);
+}
+
+#cookie-consent-banner .cookie-banner-content {
+  max-width: 1170px;
+  margin: 0 auto;
+}
+
+#cookie-consent-banner h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+#cookie-consent-banner p {
+  margin: 0 0 15px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #666;
+}
+
+#cookie-consent-banner .cookie-banner-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#cookie-consent-banner button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+#cookie-consent-banner #cookie-accept-all {
+  background-color: #337ab7;
+  color: white;
+}
+
+#cookie-consent-banner #cookie-accept-all:hover {
+  background-color: #286090;
+}
+
+#cookie-consent-banner #cookie-essential-only {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+#cookie-consent-banner #cookie-essential-only:hover {
+  background-color: #e6e6e6;
+  border-color: #adadad;
+}
+
+/* Responsive layout for desktop */
+@media (min-width: 768px) {
+  #cookie-consent-banner .cookie-banner-row {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+  }
+
+  #cookie-consent-banner .cookie-banner-text {
+    flex: 1;
+  }
+
+  #cookie-consent-banner .cookie-banner-buttons {
+    min-width: 200px;
+  }
+
+  #cookie-consent-banner p {
+    margin-bottom: 0;
+  }
+}
+
+/* Dark mode support (for leaderboard) */
+.dark #cookie-consent-banner {
+  background: #1f2937;
+  border-top-color: #374151;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.dark #cookie-consent-banner h4 {
+  color: #f9fafb;
+}
+
+.dark #cookie-consent-banner p {
+  color: #d1d5db;
+}
+
+.dark #cookie-consent-banner #cookie-accept-all {
+  background-color: #2563eb;
+}
+
+.dark #cookie-consent-banner #cookie-accept-all:hover {
+  background-color: #1d4ed8;
+}
+
+.dark #cookie-consent-banner #cookie-essential-only {
+  background-color: #374151;
+  color: #f9fafb;
+  border-color: #4b5563;
+}
+
+.dark #cookie-consent-banner #cookie-essential-only:hover {
+  background-color: #4b5563;
+  border-color: #6b7280;
+}
+
+/* Mobile optimization */
+@media (max-width: 767px) {
+  #cookie-consent-banner {
+    padding: 15px;
+  }
+
+  #cookie-consent-banner h4 {
+    font-size: 16px;
+  }
+
+  #cookie-consent-banner p {
+    font-size: 13px;
+  }
+
+  #cookie-consent-banner button {
+    font-size: 13px;
+    padding: 8px 16px;
+  }
 }

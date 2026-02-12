@@ -46,14 +46,21 @@
   <!--suppress SpellCheckingInspection -->
   <script>
     if (document.location.hostname !== "localhost") {
-      window.dataLayer = window.dataLayer || [];
+      const consent = localStorage.getItem('cookie-consent-v1');
+      const preferences = consent ? JSON.parse(consent) : null;
 
-      function gtag() {
-        dataLayer.push(arguments);
+      if (preferences && preferences.analytics) {
+        window.dataLayer = window.dataLayer || [];
+
+        function gtag() {
+          dataLayer.push(arguments);
+        }
+
+        gtag("js", new Date());
+        gtag("config", "G-40699CQRM6");
+      } else {
+        window['ga-disable-G-40699CQRM6'] = true;
       }
-
-      gtag("js", new Date());
-      gtag("config", "G-40699CQRM6");
     }
   </script>
 </head>
@@ -153,10 +160,8 @@
 <div id="footer-section">
   <div class="container">
     <div id="bottom-links">
-      <a data-target="#helpModal" data-toggle="modal" href="#" id="help-link"
-         style="color: #666; text-decoration: underline;">
-        Info & FAQ
-      </a>
+      <a data-target="#helpModal" data-toggle="modal" href="#" id="help-link">Info & FAQ</a>
+      <a href="#" id="cookie-settings-link">Cookie Settings</a>
       <!--suppress HtmlUnknownTarget -->
       <!--      <a class="btn btn-primary" href="leaderboard" id="leaderboard-button" role="button" target="_blank">-->
       <!--        View the Live Leaderboard-->

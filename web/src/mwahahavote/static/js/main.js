@@ -225,6 +225,8 @@ function setupElements() {
   $skip = $("#skip");
   $voteRight = $("#vote-right");
   $isOffensiveRight = $("#is-offensive-right");
+  $prolificConsent = $("#prolific-consent")
+  $prolificVoteCount = $("#prolific-vote-count");
 }
 
 function showBattle() {
@@ -336,8 +338,10 @@ function setUiListeners() {
   $skip.click(() => vote("n"));
   $voteRight.click(() => vote("b"));
 
-  $prolificConsent = $("#prolific-consent")
-  $prolificVoteCount = $("#prolific-vote-count");
+  $("#cookie-settings-link").click(() => {
+    window.showCookieSettings();
+    return false;
+  });
 }
 
 function changeTask() {
@@ -481,3 +485,199 @@ function setupProlificSessionIfNeeded() {
     });
   }
 }
+
+/**
+ * Cookie Consent Management.
+ * Handles cookie consent banner display and user preferences.
+ */
+(function () {
+  'use strict';
+
+  const CONSENT_KEY = "cookie-consent-v1";
+  const GA_TRACKING_ID = "G-40699CQRM6";
+
+  /**
+   * Get stored consent preference from localStorage.
+   * @returns {Object|null} Consent object or null if not set
+   */
+  function getConsentPreference() {
+    try {
+      const stored = localStorage.getItem(CONSENT_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      console.error("Error reading consent preference:", e);
+      return null;
+    }
+  }
+
+  /**
+   * Save consent preference to localStorage.
+   * @param {boolean} analytics - Whether user accepts analytics cookies
+   */
+  function saveConsentPreference(analytics) {
+    try {
+      localStorage.setItem(CONSENT_KEY, JSON.stringify({
+        essential: true,
+        analytics: analytics,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      console.error("Error saving consent preference:", e);
+    }
+  }
+
+  /**
+   * Apply the consent preferences (enable/disable analytics).
+   * @param {Object} preferences - Consent preferences object
+   */
+  function applyConsent(preferences) {
+    if (!preferences.analytics) {
+      // Disable Google Analytics
+      window["ga-disable-" + GA_TRACKING_ID] = true;
+
+      // If gtag exists, opt out
+      if (typeof gtag === "function") {
+        gtag("consent", "update", {
+          "analytics_storage": "denied"
+        });
+      }
+    }
+  }
+
+  /**
+   * Create and show the cookie consent banner.
+   */
+  function showBanner() {
+    // Remove the existing banner if present.
+    const existing = document.getElementById("cookie-consent-banner");
+    if (existing) {
+      existing.remove();
+    }
+
+    // Create banner HTML.
+    const banner = document.createElement("div");
+    banner.id = "cookie-consent-banner";
+    banner.className = "cookie-consent-banner";
+    banner.innerHTML = `
+      <div class="cookie-banner-content">
+        <div class="cookie-banner-row">
+          <div class="cookie-banner-text">
+            <h4>We Value Your Privacy</h4>
+            <p>
+              This website uses cookies for essential functionality (annotation session tracking) and optional analytics.
+              You can choose which to accept.
+            </p>
+          </div>
+          <div class="cookie-banner-buttons">
+            <button id="cookie-accept-all">Accept All</button>
+            <button id="cookie-essential-only">Essential Only</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Append to body.
+    document.body.appendChild(banner);
+
+    // Trigger slide-up animation after a brief delay.
+    setTimeout(() => {
+      banner.classList.add("show");
+    }, 100);
+
+    // Attach event listeners.
+    document.getElementById("cookie-accept-all").addEventListener("click", acceptAllCookies);
+    document.getElementById("cookie-essential-only").addEventListener("click", acceptEssentialOnly);
+  }
+
+  /**
+   * Hide and remove the banner with animation.
+   */
+  function hideBanner() {
+    const banner = document.getElementById("cookie-consent-banner");
+    if (banner) {
+      banner.classList.remove("show");
+      setTimeout(() => {
+        banner.remove();
+      }, 300);
+    }
+  }
+
+  /**
+   * Handle the "Accept All" button click.
+   */
+  function acceptAllCookies() {
+    saveConsentPreference(true);
+    applyConsent({analytics: true});
+    hideBanner();
+
+    // Reload analytics if it was previously disabled.
+    reloadAnalyticsIfNeeded();
+  }
+
+  /**
+   * Handle the "Essential Only" button click.
+   */
+  function acceptEssentialOnly() {
+    saveConsentPreference(false);
+    applyConsent({analytics: false});
+    hideBanner();
+  }
+
+  /**
+   * Reload analytics if the user accepts after previously declining.
+   */
+  function reloadAnalyticsIfNeeded() {
+    // Only reload if we're not on localhost and gtag is not yet loaded.
+    if (document.location.hostname === "localhost") {
+      return;
+    }
+
+    // If gtag doesn't exist yet, load it
+    if (typeof gtag === "undefined") {
+      const script = document.createElement("script");
+      script.async = true;
+      script.src = "https://www.googletagmanager.com/gtag/js?id=" + GA_TRACKING_ID;
+      document.head.appendChild(script);
+
+      script.onload = () => {
+        window.dataLayer = window.dataLayer || [];
+
+        function gtag() {
+          dataLayer.push(arguments);
+        }
+
+        gtag("js", new Date());
+        gtag("config", GA_TRACKING_ID);
+      };
+    }
+  }
+
+  /**
+   * Initialize the cookie consent on page load.
+   */
+  function initCookieConsent() {
+    const consent = getConsentPreference();
+
+    if (!consent) {
+      // First visit - show banner after a slight delay
+      setTimeout(showBanner, 500);
+    } else {
+      // Apply stored preferences
+      applyConsent(consent);
+    }
+  }
+
+  /**
+   * Expose the function to show the cookie settings (for the footer link).
+   */
+  window.showCookieSettings = () => {
+    showBanner();
+  };
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCookieConsent);
+  } else {
+    initCookieConsent();
+  }
+})();
