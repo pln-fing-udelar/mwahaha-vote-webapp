@@ -111,7 +111,7 @@ def _list_submission_dicts(
         query_params["phase"] = phase_id
 
     # noinspection SpellCheckingInspection
-    response = httpx.get(BASE_URL + "submissions", params=query_params, cookies={"sessionid": session_id})
+    response = httpx.get(BASE_URL + "submissions/", params=query_params, cookies={"sessionid": session_id})
 
     response.raise_for_status()
 
