@@ -497,11 +497,12 @@ def add_vote(
         )
 
 
-def get_votes_for_scoring(
-    phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ("__PLACEHOLDER__",)
-) -> Iterator[Vote]:
+def get_votes_for_scoring(phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ()) -> Iterator[Vote]:
     """Returns the votes for a given phase ID and task to score the systems."""
     excluded_session_ids = tuple(excluded_session_ids)
+
+    if not excluded_session_ids:  # When empty, the SQL syntax breaks, so we have to put something.
+        excluded_session_ids = ("__PLACEHOLDER__",)
 
     with engine.connect() as connection:
         for (
@@ -585,12 +586,15 @@ def get_systems(phase_id: int, task: Task) -> Iterator[str]:
 
 
 def _get_votes_per_system(
-    phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ("__PLACEHOLDER__",)
+    phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ()
 ) -> Iterator[tuple[str, int]]:
     """Returns the non-skip votes per system for a given phase ID and task. If a system has no votes, it may not be part
     of the output.
     """
     excluded_session_ids = tuple(excluded_session_ids)
+
+    if not excluded_session_ids:  # When empty, the SQL syntax breaks, so we have to put something.
+        excluded_session_ids = ("__PLACEHOLDER__",)
 
     with engine.connect() as connection:
         yield from connection.execute(
@@ -631,9 +635,7 @@ def _get_votes_per_system(
         )
 
 
-def get_votes_per_system(
-    phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ("__PLACEHOLDER__",)
-) -> dict[str, int]:
+def get_votes_per_system(phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ()) -> dict[str, int]:
     """Returns the non-skip votes per system for a given phase ID and task."""
     system_id_to_vote_count = dict(_get_votes_per_system(phase_id, task, excluded_session_ids))
 
