@@ -49,7 +49,12 @@
       const consent = localStorage.getItem('cookie-consent-v1');
       const preferences = consent ? JSON.parse(consent) : null;
 
-      if (preferences && preferences.analytics) {
+      const GA_TRACKING_ID = "G-40699CQRM6";
+
+      const enable = preferences && preferences.analytics;
+      window["ga-disable-" + GA_TRACKING_ID] = !enable;
+
+      if (enable) {
         window.dataLayer = window.dataLayer || [];
 
         function gtag() {
@@ -57,9 +62,7 @@
         }
 
         gtag("js", new Date());
-        gtag("config", "G-40699CQRM6");
-      } else {
-        window['ga-disable-G-40699CQRM6'] = true;
+        gtag("config", GA_TRACKING_ID);
       }
     }
   </script>

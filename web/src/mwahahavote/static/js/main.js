@@ -516,11 +516,7 @@ function setupProlificSessionIfNeeded() {
    */
   function saveConsentPreference(analytics) {
     try {
-      localStorage.setItem(CONSENT_KEY, JSON.stringify({
-        essential: true,
-        analytics: analytics,
-        timestamp: Date.now()
-      }));
+      localStorage.setItem(CONSENT_KEY, JSON.stringify({essential: true, analytics: analytics, timestamp: Date.now()}));
     } catch (e) {
       console.error("Error saving consent preference:", e);
     }
@@ -531,16 +527,9 @@ function setupProlificSessionIfNeeded() {
    * @param {Object} preferences - Consent preferences object
    */
   function applyConsent(preferences) {
-    if (!preferences.analytics) {
-      // Disable Google Analytics
-      window["ga-disable-" + GA_TRACKING_ID] = true;
-
-      // If gtag exists, opt out
-      if (typeof gtag === "function") {
-        gtag("consent", "update", {
-          "analytics_storage": "denied"
-        });
-      }
+    window["ga-disable-" + GA_TRACKING_ID] = !preferences.analytics;
+    if (typeof gtag === "function") {
+      gtag("consent", "update", {"analytics_storage": preferences.analytics ? "granted" : "denied"});
     }
   }
 
@@ -580,9 +569,7 @@ function setupProlificSessionIfNeeded() {
     document.body.appendChild(banner);
 
     // Trigger slide-up animation after a brief delay.
-    setTimeout(() => {
-      banner.classList.add("show");
-    }, 100);
+    setTimeout(() => banner.classList.add("show"), 100);
 
     // Attach event listeners.
     document.getElementById("cookie-accept-all").addEventListener("click", acceptAllCookies);
@@ -596,9 +583,7 @@ function setupProlificSessionIfNeeded() {
     const banner = document.getElementById("cookie-consent-banner");
     if (banner) {
       banner.classList.remove("show");
-      setTimeout(() => {
-        banner.remove();
-      }, 300);
+      setTimeout(() => banner.remove(), 300);
     }
   }
 
@@ -657,26 +642,21 @@ function setupProlificSessionIfNeeded() {
    */
   function initCookieConsent() {
     const consent = getConsentPreference();
-
-    if (!consent) {
-      // First visit - show banner after a slight delay
-      setTimeout(showBanner, 500);
-    } else {
-      // Apply stored preferences
+    if (consent) {
       applyConsent(consent);
+    } else {
+      setTimeout(showBanner, 500);  // First visit - show banner after a slight delay
     }
   }
 
   /**
    * Expose the function to show the cookie settings (for the footer link).
    */
-  window.showCookieSettings = () => {
-    showBanner();
-  };
+  window.showCookieSettings = () => showBanner();
 
   // Initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCookieConsent);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initCookieConsent);
   } else {
     initCookieConsent();
   }
