@@ -490,7 +490,7 @@ function setupProlificSessionIfNeeded() {
  * Cookie Consent Management.
  * Handles cookie consent banner display and user preferences.
  */
-(function () {
+(() => {
   'use strict';
 
   const CONSENT_KEY = "cookie-consent-v1";
