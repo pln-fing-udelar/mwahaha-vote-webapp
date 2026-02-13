@@ -93,6 +93,7 @@ class Submission:
         """Computes the path or URL to the submission file."""
         return self.path_or_url or get_submission_url(self.id, session_id=session_id)
 
+
 def _list_submission_dicts(
     competition_id: int | None = COMPETITION_ID,
     phase_id: int | None = EVALUATION_PHASE_ID,

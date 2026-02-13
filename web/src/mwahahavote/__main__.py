@@ -23,6 +23,14 @@ logger = logging.getLogger(__name__)
 
 PHASE_ID = 15785
 
+PROLIFIC_COMPLETION_CODES: dict[Task, str] = {
+    "a-en": "CC4WY7K5",
+    "a-es": "CC4WY7K5",
+    "a-zh": "CC4WY7K5",
+    "b1": "CC4WY7K5",
+    "b2": "CC4WY7K5",
+}
+
 TURNSTILE_SECRET_KEY = os.environ["TURNSTILE_SECRET_KEY"]
 IS_LOCAL_DEVELOPMENT = "VIRTUAL_HOST" not in os.environ
 
@@ -229,9 +237,15 @@ def prolific_consent_route(request: Request) -> Response:
 async def prolific_finish_route(request: Request) -> Response:
     form_data = await request.form()
     comments = str(form_data.get("comments", ""))
+
+    task_str = str(form_data.get("task", "a-en"))
+    task: Task = cast(Task, task_str if task_str in TASK_CHOICES else "a-en")
+
     database.prolific_finish(_get_session_id(request), comments)
+
+    completion_code = PROLIFIC_COMPLETION_CODES[task]
     return RedirectResponse(
-        url="https://app.prolific.co/submissions/complete?cc=CC4WY7K5", status_code=status.HTTP_303_SEE_OTHER
+        url=f"https://app.prolific.co/submissions/complete?cc={completion_code}", status_code=status.HTTP_303_SEE_OTHER
     )
 
 

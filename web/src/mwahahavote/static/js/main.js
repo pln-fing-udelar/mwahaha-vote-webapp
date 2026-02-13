@@ -445,6 +445,7 @@ function updateProlificVoteCount() {
   // So we should only stop when they reach exactly the max (and not greater than the max).
   // And we should keep a modulo counter until they reach the max.
   if (prolificVoteCount === PROLIFIC_MAX_BATTLES) {
+    $("#prolific-task").val(task);
     $("#prolific-finished").modal("show");
   } else {
     prolificVoteCount %= PROLIFIC_MAX_BATTLES;
