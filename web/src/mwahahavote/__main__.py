@@ -24,11 +24,11 @@ logger = logging.getLogger(__name__)
 PHASE_ID = 15785
 
 PROLIFIC_COMPLETION_CODES: dict[Task, str] = {
-    "a-en": "CC4WY7K5",
-    "a-es": "CC4WY7K5",
-    "a-zh": "CC4WY7K5",
-    "b1": "CC4WY7K5",
-    "b2": "CC4WY7K5",
+    "a-en": "C1O4X1ZA",
+    "a-es": "C5SU1Q6U",
+    "a-zh": "C11V5NNR",
+    "b1": "CCI5PILX",
+    "b2": "C13AY54S",
 }
 
 TURNSTILE_SECRET_KEY = os.environ["TURNSTILE_SECRET_KEY"]
