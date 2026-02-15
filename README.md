@@ -69,3 +69,7 @@ while true; do
   sleep 3600
 done
 ```
+
+```bash
+./load_test.sh
+```
