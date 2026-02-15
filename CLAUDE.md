@@ -108,7 +108,7 @@ uv run ruff format
 uv run ty check
 ```
 
-Configuration in `pyproject.toml`: line length 120, ignores N803/N806/N812 (uppercase variable names).
+Configuration in `pyproject.toml`: line length 120.
 
 ## Important Details
 
