@@ -12,7 +12,8 @@ CREATE TABLE prompts
   prompt   VARCHAR(256),
   task     VARCHAR(5) NOT NULL,
   phase_id INT        NOT NULL,
-  PRIMARY KEY (prompt_id)
+  PRIMARY KEY (prompt_id),
+  INDEX idx_task_phase (task, phase_id)
 ) ENGINE InnoDB;
 
 CREATE TABLE systems
@@ -51,6 +52,7 @@ CREATE TABLE votes
   INDEX (system_id_a),
   INDEX (system_id_b),
   INDEX (session_id),
+  INDEX idx_session_vote (session_id, vote),
   FOREIGN KEY (prompt_id, system_id_a) REFERENCES outputs (prompt_id, system_id),
   FOREIGN KEY (prompt_id, system_id_b) REFERENCES outputs (prompt_id, system_id)
 ) ENGINE InnoDB;
