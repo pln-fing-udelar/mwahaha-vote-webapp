@@ -662,7 +662,7 @@ def get_votes_per_session(phase_id: int) -> dict[str, int]:
                     {"phase_id": phase_id},
                 )
             )
-        )
+        )  # type: ignore[no-matching-overload]
 
 
 def session_vote_count_without_skips(session_id: str) -> int:
