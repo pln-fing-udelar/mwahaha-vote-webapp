@@ -1,8 +1,10 @@
-#!/usr/bin/env python
-import itertools
+#!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
+import asyncio
 import json
 import os
 from typing import Literal
+
+import aioitertools
 
 from ingestion.codabench import EVALUATION_PHASE_ID
 from mwahahavote.database import (
@@ -49,11 +51,11 @@ def vote_to_fastchat_language(vote: Vote) -> Literal["Chinese", "English", "Span
             raise ValueError(f"Unknown language: {vote.battle.prompt.language}")
 
 
-def main() -> None:
+async def async_main() -> None:
     for task in sorted(TASK_CHOICES):
-        system_id_to_vote_count = dict(get_votes_per_system(PHASE_ID, task, EXCLUDED_SESSION_IDS))
+        system_id_to_vote_count = await get_votes_per_system(PHASE_ID, task, EXCLUDED_SESSION_IDS)
 
-        for vote in get_votes_for_battles_with_the_same_text(PHASE_ID, task):
+        async for vote in get_votes_for_battles_with_the_same_text(PHASE_ID, task):
             system_id_to_vote_count[vote.battle.output_a.system.id] += 1
             system_id_to_vote_count[vote.battle.output_b.system.id] += 1
 
@@ -73,7 +75,7 @@ def main() -> None:
                         "language": vote_to_fastchat_language(vote),
                         "tstamp": round(vote.date.timestamp()),
                     }
-                    for vote in itertools.chain(
+                    async for vote in aioitertools.chain(
                         get_votes_for_scoring(PHASE_ID, task, EXCLUDED_SESSION_IDS),
                         get_votes_for_battles_with_the_same_text(PHASE_ID, task),
                     )
@@ -84,6 +86,10 @@ def main() -> None:
                 ],
                 file,
             )
+
+
+def main() -> None:
+    asyncio.run(async_main())
 
 
 if __name__ == "__main__":

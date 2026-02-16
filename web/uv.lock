@@ -77,6 +77,15 @@ wheels = [
 ]
 
 [[package]]
+name = "aioitertools"
+version = "0.13.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fd/3c/53c4a17a05fb9ea2313ee1777ff53f5e001aefd5cc85aa2f4c2d982e1e38/aioitertools-0.13.0.tar.gz", hash = "sha256:620bd241acc0bbb9ec819f1ab215866871b4bbd1f73836a55f799200ee86950c", size = 19322, upload-time = "2025-11-06T22:17:07.609Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/10/a1/510b0a7fadc6f43a6ce50152e69dbd86415240835868bb0bd9b5b88b1e06/aioitertools-0.13.0-py3-none-any.whl", hash = "sha256:0be0292b856f08dfac90e31f4739432f4cb6d7520ab9eb73e143f4f2fa5259be", size = 24182, upload-time = "2025-11-06T22:17:06.502Z" },
+]
+
+[[package]]
 name = "aiosignal"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -985,26 +994,32 @@ source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
     { name = "fastapi" },
-    { name = "fschat", extra = ["webui"] },
-    { name = "fsspec", extra = ["http"] },
     { name = "httptools" },
     { name = "httpx" },
-    { name = "huggingface-hub" },
     { name = "jinja2" },
     { name = "pandas" },
     { name = "python-multipart" },
     { name = "sentry-sdk" },
     { name = "sqlalchemy", extra = ["asyncmy", "mysql"] },
     { name = "starlette" },
-    { name = "tqdm" },
     { name = "uvicorn" },
     { name = "uvloop" },
+]
+
+[package.optional-dependencies]
+scripts = [
+    { name = "aioitertools" },
+    { name = "fschat", extra = ["webui"] },
+    { name = "fsspec", extra = ["http"] },
+    { name = "huggingface-hub" },
+    { name = "tqdm" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "ipython" },
     { name = "jq" },
+    { name = "mwahahavote", extra = ["scripts"] },
     { name = "mycli" },
     { name = "pandas-stubs" },
     { name = "ruff" },
@@ -1014,28 +1029,31 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aioitertools", marker = "extra == 'scripts'", specifier = "<1" },
     { name = "cryptography" },
     { name = "fastapi", specifier = "<1" },
-    { name = "fschat", extras = ["webui"], git = "https://github.com/pln-fing-udelar/FastChat?rev=431f847" },
-    { name = "fsspec", extras = ["http"], specifier = "<2027" },
+    { name = "fschat", extras = ["webui"], marker = "extra == 'scripts'", git = "https://github.com/pln-fing-udelar/FastChat?rev=431f847" },
+    { name = "fsspec", extras = ["http"], marker = "extra == 'scripts'", specifier = "<2027" },
     { name = "httptools" },
     { name = "httpx", specifier = ">=0.27.0,<1" },
-    { name = "huggingface-hub", specifier = ">=0.34.0,<2" },
+    { name = "huggingface-hub", marker = "extra == 'scripts'", specifier = ">=0.34.0,<2" },
     { name = "jinja2", specifier = "<4" },
     { name = "pandas", specifier = "<4" },
     { name = "python-multipart", specifier = "<1" },
     { name = "sentry-sdk", specifier = "<3" },
     { name = "sqlalchemy", extras = ["asyncmy", "mysql"], specifier = "<3" },
     { name = "starlette" },
-    { name = "tqdm", specifier = "<5" },
+    { name = "tqdm", marker = "extra == 'scripts'", specifier = "<5" },
     { name = "uvicorn", specifier = "<1" },
     { name = "uvloop" },
 ]
+provides-extras = ["scripts"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "ipython", specifier = ">=2,<10" },
     { name = "jq", specifier = "<2" },
+    { name = "mwahahavote", extras = ["scripts"] },
     { name = "mycli", specifier = "<2" },
     { name = "pandas-stubs" },
     { name = "ruff", specifier = ">=0.3,<1" },
@@ -2029,7 +2047,7 @@ wheels = [
 
 [[package]]
 name = "typer"
-version = "0.23.2"
+version = "0.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -2037,21 +2055,21 @@ dependencies = [
     { name = "rich" },
     { name = "shellingham" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d3/ae/93d16574e66dfe4c2284ffdaca4b0320ade32858cb2cc586c8dd79f127c5/typer-0.23.2.tar.gz", hash = "sha256:a99706a08e54f1aef8bb6a8611503808188a4092808e86addff1828a208af0de", size = 120162, upload-time = "2026-02-16T18:52:40.354Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/b6/3e681d3b6bb22647509bdbfdd18055d5adc0dce5c5585359fa46ff805fdc/typer-0.24.0.tar.gz", hash = "sha256:f9373dc4eff901350694f519f783c29b6d7a110fc0dcc11b1d7e353b85ca6504", size = 118380, upload-time = "2026-02-16T22:08:48.496Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/2c/dee705c427875402200fe779eb8a3c00ccb349471172c41178336e9599cc/typer-0.23.2-py3-none-any.whl", hash = "sha256:e9c8dc380f82450b3c851a9b9d5a0edf95d1d6456ae70c517d8b06a50c7a9978", size = 56834, upload-time = "2026-02-16T18:52:39.308Z" },
+    { url = "https://files.pythonhosted.org/packages/85/d0/4da85c2a45054bb661993c93524138ace4956cb075a7ae0c9d1deadc331b/typer-0.24.0-py3-none-any.whl", hash = "sha256:5fc435a9c8356f6160ed6e85a6301fdd6e3d8b2851da502050d1f92c5e9eddc8", size = 56441, upload-time = "2026-02-16T22:08:47.535Z" },
 ]
 
 [[package]]
 name = "typer-slim"
-version = "0.23.2"
+version = "0.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cd/f3/d32ffe06e6d737ff0c23086b3170dbd5bad0ce046a9fa728db43d63989fe/typer_slim-0.23.2.tar.gz", hash = "sha256:19714179f4717a891650d8d5d062e990a0a1ed23e8d6e0f502f5a800802b3cdf", size = 4757, upload-time = "2026-02-16T18:52:21.661Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/a7/e6aecc4b4eb59598829a3b5076a93aff291b4fdaa2ded25efc4e1f4d219c/typer_slim-0.24.0.tar.gz", hash = "sha256:f0ed36127183f52ae6ced2ecb2521789995992c521a46083bfcdbb652d22ad34", size = 4776, upload-time = "2026-02-16T22:08:51.2Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e7/e6/4b827c2a73471805aedabfb9b9a473f8cd5d17cbdbeee7c3c788500f5aee/typer_slim-0.23.2-py3-none-any.whl", hash = "sha256:2bc3f67ac58fe40763b414c3c65f6fcc92c6b81393d0d89339663aa69252c688", size = 3398, upload-time = "2026-02-16T18:52:22.399Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/24/5480c20380dfd18cf33d14784096dca45a24eae6102e91d49a718d3b6855/typer_slim-0.24.0-py3-none-any.whl", hash = "sha256:d5d7ee1ee2834d5020c7c616ed5e0d0f29b9a4b1dd283bdebae198ec09778d0e", size = 3394, upload-time = "2026-02-16T22:08:49.92Z" },
 ]
 
 [[package]]

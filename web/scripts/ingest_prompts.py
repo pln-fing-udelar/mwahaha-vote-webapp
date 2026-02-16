@@ -1,4 +1,5 @@
-#!/usr/bin/env -S uv run --script --env-file ../.env
+#!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
+import asyncio
 import csv
 import os
 
@@ -27,11 +28,20 @@ def read_prompt_files(dir_: str) -> pd.DataFrame:
     )
 
 
+async def async_main() -> None:
+    async with mwahahavote.database.async_engine.begin() as connection:
+        print(
+            "Number of rows affected:",
+            await connection.run_sync(
+                lambda sync_connection: read_prompt_files("prompts/").to_sql(
+                    "prompts", sync_connection, if_exists="append"
+                )
+            ),
+        )
+
+
 def main() -> None:
-    print(
-        "Number of rows affected:",
-        read_prompt_files("prompts/").to_sql("prompts", mwahahavote.database.create_engine(), if_exists="append"),
-    )
+    asyncio.run(async_main())
 
 
 if __name__ == "__main__":

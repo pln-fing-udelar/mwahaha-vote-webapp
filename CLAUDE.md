@@ -115,7 +115,7 @@ Configuration in `pyproject.toml`: line length 120.
 - **Database name**: `mwahaha` (not `pghumor` from parent project)
 - **Container prefix**: `mwahaha-vote-webapp-` (not `clasificahumor-`)
 - **Python tool**: `uv` for dependency management
-- **All scripts** use shebang: `#!/usr/bin/env -S uv run --script --env-file ../.env`
+- **All scripts** use shebang: `#!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env`
 - **Related repo**: Based on [pgHumor-clasificahumor](https://github.com/pln-fing-udelar/pghumor-clasificahumor)
 
 ## Production Setup

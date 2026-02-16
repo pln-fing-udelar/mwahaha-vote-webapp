@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run --script --env-file ../.env
+#!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
 from ingestion.codabench import list_submissions
 from ingestion.submission import print_stats
 

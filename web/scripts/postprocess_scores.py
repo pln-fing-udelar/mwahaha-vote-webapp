@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
+import asyncio
 import json
 import os
 import pickle
@@ -11,9 +12,9 @@ from mwahahavote.database import TASK_CHOICES, get_votes_per_system
 PHASE_ID = EVALUATION_PHASE_ID
 
 
-def main() -> None:
+async def async_main() -> None:
     for task in sorted(TASK_CHOICES):
-        system_id_to_vote_count = dict(get_votes_per_system(PHASE_ID, task))
+        system_id_to_vote_count = await get_votes_per_system(PHASE_ID, task)
 
         output_path = f"src/mwahahavote/static/scores/{task}.json"
         if os.path.exists(input_path := f"scoring/elo_results_{task}.pkl"):
@@ -54,6 +55,10 @@ def main() -> None:
                     ],
                     file,
                 )
+
+
+def main() -> None:
+    asyncio.run(async_main())
 
 
 if __name__ == "__main__":

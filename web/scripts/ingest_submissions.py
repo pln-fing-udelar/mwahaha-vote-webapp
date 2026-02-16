@@ -1,9 +1,10 @@
-#!/usr/bin/env -S uv run --script --env-file ../.env
+#!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
 """A script that ingests all submissions from CodaBench and any submission manually set under `submissions/`.
 
 The submissions that were already ingested are skipped.
 """
 
+import asyncio
 import dataclasses
 import datetime
 import logging
@@ -30,7 +31,7 @@ def available_tasks_in_file(path: str) -> Iterator[Task]:
                 yield task
 
 
-def main() -> None:  # noqa: C901
+async def async_main() -> None:  # noqa: C901
     # We sort them so they are ingested in order
     # so that the latest submission per user per task is the one that remains.
 
@@ -88,7 +89,7 @@ def main() -> None:  # noqa: C901
     )
     print()
 
-    already_ingested_system_ids = frozenset(list_ingested_system_ids())
+    already_ingested_system_ids = frozenset({system_id async for system_id in list_ingested_system_ids()})
 
     affected_rows = 0
     successful: set[Submission] = set()
@@ -100,7 +101,7 @@ def main() -> None:  # noqa: C901
         else:
             # noinspection PyBroadException
             try:
-                affected_rows += ingest_submission(EVALUATION_PHASE_ID, submission)
+                affected_rows += await ingest_submission(EVALUATION_PHASE_ID, submission)
                 successful.add(submission)
             except Exception:
                 logging.exception(f"Failed to ingest the submission '{submission}'. See below.")
@@ -141,6 +142,10 @@ def main() -> None:  # noqa: C901
             for submission in sorted(submissions_to_ingest, key=lambda submission: submission.user)
         )
     )
+
+
+def main() -> None:
+    asyncio.run(async_main())
 
 
 if __name__ == "__main__":

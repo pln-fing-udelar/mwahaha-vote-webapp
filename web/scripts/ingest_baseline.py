@@ -1,4 +1,5 @@
-#!/usr/bin/env -S uv run --script --env-file ../.env
+#!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
+import asyncio
 import datetime
 
 from ingestion.codabench import EVALUATION_PHASE_ID, Submission
@@ -6,8 +7,8 @@ from ingestion.submission import ingest_submission
 from mwahahavote.database import TASK_CHOICES
 
 
-def main() -> None:
-    ingest_submission(
+async def async_main() -> None:
+    await ingest_submission(
         EVALUATION_PHASE_ID,
         Submission(
             user="baseline",
@@ -19,6 +20,10 @@ def main() -> None:
         ),
         system_exists_ok=True,
     )
+
+
+def main() -> None:
+    asyncio.run(async_main())
 
 
 if __name__ == "__main__":
