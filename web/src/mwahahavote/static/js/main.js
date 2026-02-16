@@ -205,9 +205,11 @@ function main() {
 function setupSentry() {
   // The following key is public.
   window.sentryOnLoad = () => Sentry.init({
-    dsn: "https://85c805830c8feb48a02488382cecd1a5@o134888.ingest.us.sentry.io/4510338807627776", sendDefaultPii: true, // Alternatively, use `process.env.npm_package_version` for a dynamic release version
+    dsn: "https://85c805830c8feb48a02488382cecd1a5@o134888.ingest.us.sentry.io/4510338807627776",
+    sendDefaultPii: true, // Alternatively, use `process.env.npm_package_version` for a dynamic release version
     // if your build tool supports it.
-    release: "mwahahavote@0.1.0", denyUrls: [/https?:\/\/localhost/, /https?:\/\/127\.0\.0\.1/, /https?:\/\/\[::1?]/],
+    release: "mwahahavote@0.1.0",
+    denyUrls: [/https?:\/\/localhost/, /https?:\/\/127\.0\.0\.1/, /https?:\/\/\[::1?]/],
   });
 }
 
@@ -360,11 +362,9 @@ function vote(voteOption) {
   const otherIndex = (index + 1) % battles.length;
 
   $.post("vote", {
-    prompt_id: battles[oldIndex].prompt_id,
-    system_id_a: battles[oldIndex].system_id_a,
-    system_id_b: battles[oldIndex].system_id_b,
+    token: battles[oldIndex].token,
     vote: voteOption,
-    ignore_output_ids: [battles[index].prompt_id + "-" + battles[index].system_id_a, battles[index].prompt_id + "-" + battles[index].system_id_b, battles[otherIndex].prompt_id + "-" + battles[otherIndex].system_id_a, battles[otherIndex].prompt_id + "-" + battles[otherIndex].system_id_b,],
+    ignore_output_ids: [battles[index].battle_token, battles[otherIndex].battle_token],
     is_offensive_a: $isOffensiveLeft.prop("checked"),
     is_offensive_b: $isOffensiveRight.prop("checked"),
     turnstile_token: turnstileToken,

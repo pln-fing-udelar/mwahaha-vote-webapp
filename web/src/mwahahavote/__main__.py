@@ -8,6 +8,7 @@ from typing import Any, cast, override
 
 import httpx
 import sentry_sdk
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
@@ -45,6 +46,10 @@ sentry_sdk.init(
     integrations=[LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)],
 )
 
+
+fernet_cipher = Fernet(os.environ["BATTLE_TOKEN_SECRET"].encode())
+
+
 app = FastAPI()
 
 app.add_middleware(
@@ -60,6 +65,30 @@ app.add_middleware(
 )
 
 templates = Jinja2Templates(directory="src/mwahahavote/templates")
+
+
+def encrypt_as_battle_token(prompt_id: str, system_id_a: str, system_id_b: str) -> str:
+    return fernet_cipher.encrypt(f"{prompt_id}|{system_id_a}|{system_id_b}".encode()).decode("ascii")
+
+
+def decrypt_battle_token(id_: str) -> tuple[str, str, str]:  # TODO: NamedTuple?
+    try:
+        plaintext = fernet_cipher.decrypt(id_.encode(), ttl=None).decode("utf-8")
+
+        parts = plaintext.split("|")
+        if len(parts) != 3:
+            raise ValueError("Invalid token format")
+
+        prompt_id, system_id_a, system_id_b = parts
+
+        if not prompt_id or not system_id_a or not system_id_b:
+            raise ValueError("Token contains empty IDs")
+
+        return prompt_id, system_id_a, system_id_b
+    except InvalidToken as e:
+        raise ValueError("Invalid or tampered battle token") from e
+    except Exception as e:
+        raise ValueError("Failed to decrypt battle token") from e
 
 
 def _generate_id() -> str:  # From https://stackoverflow.com/a/2257449/1165181
@@ -114,15 +143,13 @@ async def _passes_turnstile(token: str) -> bool:
             return True
 
 
-def _simplify_battle_object(battle: Battle) -> dict[str, Any]:
+def _simplify_battle_object(battle: Battle) -> dict[str, Any]:  # TODO: a typed dict?
     """Removes redundant fields and simplifies the battle representation for JSON serialization."""
     return {
-        "prompt_id": battle.prompt.id,
+        "token": encrypt_as_battle_token(battle.prompt.id, battle.output_a.system.id, battle.output_b.system.id),
         "prompt": battle.prompt.verbalized,
         "prompt_image_url": battle.prompt.url,
-        "system_id_a": battle.output_a.system.id,
         "output_a": battle.output_a.text,
-        "system_id_b": battle.output_b.system.id,
         "output_b": battle.output_b.text,
     }
 
@@ -163,43 +190,48 @@ async def vote_and_get_new_battle_route(request: Request) -> Any:
     if not await _passes_turnstile(turnstile_token):
         return HTTPException(status_code=403, detail="Turnstile verification failed")
 
-    if all(
-        key in form_data
-        for key in ("prompt_id", "system_id_a", "system_id_b", "vote", "is_offensive_a", "is_offensive_b")
-    ):
+    if not (battle_token := str(form_data.get("token", ""))):
+        raise HTTPException(status_code=400, detail="Battle token required")
+
+    try:
+        prompt_id, system_id_a, system_id_b = decrypt_battle_token(battle_token)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid battle ID") from e
+
+    try:
+        task = prompt_id_to_task(prompt_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid prompt ID") from e
+
+    if all(key in form_data for key in ("vote", "is_offensive_a", "is_offensive_b")):
         vote_str = str(form_data["vote"])
         if vote_str not in VOTE_CHOICES:
-            raise ValueError(f"Invalid vote: {vote_str}")
+            raise HTTPException(status_code=400, detail="Invalid vote")
         vote = cast(VoteString, vote_str)
 
         await database.add_vote(
             session_id,
-            str(form_data["prompt_id"]),
-            str(form_data["system_id_a"]),
-            str(form_data["system_id_b"]),
+            prompt_id,
+            system_id_a,
+            system_id_b,
             vote,
             is_offensive_a=str(form_data["is_offensive_a"]).lower() == "true",
             is_offensive_b=str(form_data["is_offensive_b"]).lower() == "true",
         )
 
-    task: Task = "a-en"
-    if "prompt_id" in form_data:
+    ignored_output_ids: list[tuple[str, str]] = []
+    for ignored_battle_token in form_data.getlist("ignored_ids[]"):
         try:
-            task = prompt_id_to_task(str(form_data["prompt_id"]))
+            ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = decrypt_battle_token(
+                str(ignored_battle_token)
+            )
+            ignored_output_ids.append((ignored_prompt_id, ignored_system_id_a))
+            ignored_output_ids.append((ignored_prompt_id, ignored_system_id_b))
         except ValueError:
-            logger.exception("Prompt id not found.")
+            logger.exception(f"Invalid battle token when building from `ignored_ids[]`: {ignored_battle_token}")
 
     return await anext(
-        _get_battle_objects(
-            PHASE_ID,
-            session_id,
-            task,
-            batch_size=1,
-            ignored_output_ids=[  # type: ignore
-                tuple(str_.split("-", maxsplit=1))  # type: ignore
-                for str_ in form_data.getlist("ignored_output_ids[]")
-            ],
-        ),
+        _get_battle_objects(PHASE_ID, session_id, task, batch_size=1, ignored_output_ids=ignored_output_ids),
         {},
     )
 
