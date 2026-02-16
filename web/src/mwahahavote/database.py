@@ -2,14 +2,14 @@
 
 import datetime
 import os
-from collections.abc import Iterable, Iterator, MutableMapping
+from collections.abc import AsyncIterator, Iterable, Iterator, MutableMapping
 from dataclasses import dataclass
 from typing import Any, Literal, get_args
 
 import pandas as pd
 import sqlalchemy
 import sqlalchemy.sql
-from sqlalchemy import CursorResult
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 Task = Literal["a-en", "a-es", "a-zh", "b1", "b2"]
 TASK_CHOICES = frozenset(get_args(Task))
@@ -370,65 +370,63 @@ def create_engine() -> sqlalchemy.Engine:
 engine = create_engine()
 
 
-def _battle_rows_to_objects(
-    result: CursorResult[tuple[int, str | None, str | None, str | None, str | None, str | None, str, str, str, str]],
-) -> Iterator[Battle]:
-    for (
-        prompt_id,
-        word1,
-        word2,
-        headline,
-        url,
-        prompt,
-        _swap,
-        system_id_a,
-        text_a,
-        system_id_b,
-        text_b,
-    ) in result:
-        prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt)
-        output_a = Output(prompt=prompt, system=System(id=system_id_a), text=text_a)
-        output_b = Output(prompt=prompt, system=System(id=system_id_b), text=text_b)
-        yield Battle(output_a=output_a, output_b=output_b)
+def create_async_engine_instance() -> AsyncEngine:
+    return create_async_engine(
+        f"mysql+asyncmy://{os.environ['DB_USER']}:{os.environ['DB_PASS']}@{os.environ['DB_HOST']}/{os.environ['DB_NAME']}",
+        pool_size=10,
+        pool_recycle=3600,
+    )
 
 
-def random_least_voted_unseen_battles(
+async_engine = create_async_engine_instance()
+
+
+def _battle_row_to_object(
+    row: tuple[str, str | None, str | None, str | None, str | None, str | None, str, str, str, str, str],
+) -> Battle:
+    prompt_id, word1, word2, headline, url, prompt_text, _swap, system_id_a, text_a, system_id_b, text_b = row
+    prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text)
+    output_a = Output(prompt=prompt, system=System(id=system_id_a), text=text_a)
+    output_b = Output(prompt=prompt, system=System(id=system_id_b), text=text_b)
+    return Battle(output_a=output_a, output_b=output_b)
+
+
+async def random_least_voted_unseen_battles(
     phase_id: int, session_id: str, task: Task, batch_size: int, ignored_output_ids: Iterable[tuple[str, str]] = ()
-) -> Iterator[Battle]:
+) -> AsyncIterator[Battle]:
     """Returns an iterator with a random subsample of the top `batch_size` least-voted unseen outputs (by the session),
     each paired in a battle with a random other unseen output for the same prompt.
     """
-    with engine.connect() as connection:
-        yield from _battle_rows_to_objects(
-            connection.execute(
-                STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES,
-                {
-                    "phase_id": phase_id,
-                    "session_id": session_id,
-                    "task": task,
-                    "limit": batch_size,
-                    "ignored_output_ids": ",".join(
-                        prompt_id + "-" + system_id for prompt_id, system_id in ignored_output_ids
-                    ),
-                },
-            )
-        )
+    async with async_engine.connect() as connection:
+        for row in await connection.execute(
+            STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES,
+            {
+                "phase_id": phase_id,
+                "session_id": session_id,
+                "task": task,
+                "limit": batch_size,
+                "ignored_output_ids": ",".join(
+                    prompt_id + "-" + system_id for prompt_id, system_id in ignored_output_ids
+                ),
+            },
+        ):
+            yield _battle_row_to_object(row)  # type: ignore[invalid-argument-type]
 
 
-def random_battles(phase_id: int, task: Task, batch_size: int) -> Iterator[Battle]:
+async def random_battles(phase_id: int, task: Task, batch_size: int) -> AsyncIterator[Battle]:
     """Returns an iterator with `batch_size` random battles."""
-    with engine.connect() as connection:
-        yield from _battle_rows_to_objects(
-            connection.execute(STATEMENT_RANDOM_BATTLES, {"task": task, "phase_id": phase_id, "limit": batch_size})
-        )
+    async with async_engine.connect() as connection:
+        for row in await connection.execute(
+            STATEMENT_RANDOM_BATTLES, {"task": task, "phase_id": phase_id, "limit": batch_size}
+        ):
+            yield _battle_row_to_object(row)  # type: ignore[invalid-argument-type]
 
 
 def battles_with_same_text(phase_id: int, task: Task) -> Iterator[Battle]:
     """Returns an iterator with the battles with the same text."""
     with engine.connect() as connection:
-        yield from _battle_rows_to_objects(
-            connection.execute(
-                sqlalchemy.sql.text("""
+        for row in connection.execute(
+            sqlalchemy.sql.text("""
                     SELECT
                       prompts.prompt_id,
                       word1,
@@ -454,9 +452,9 @@ def battles_with_same_text(phase_id: int, task: Task) -> Iterator[Battle]:
                       AND phase_id = :phase_id
                       AND outputs_a.text = outputs_b.text
                 """),
-                {"task": task, "phase_id": phase_id},
-            )
-        )
+            {"task": task, "phase_id": phase_id},
+        ):
+            yield _battle_row_to_object(row)  # type: ignore[invalid-argument-type]
 
 
 def get_votes_for_battles_with_the_same_text(phase_id: int, task: Task) -> Iterator[Vote]:

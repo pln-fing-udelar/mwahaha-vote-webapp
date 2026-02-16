@@ -1,8 +1,8 @@
-import itertools
 import logging
 import os
 import random
 import string
+from collections.abc import AsyncIterator, Iterable
 from datetime import timedelta
 from typing import Any, cast, override
 
@@ -127,31 +127,34 @@ def _simplify_battle_object(battle: Battle) -> dict[str, Any]:
     }
 
 
+async def _get_battle_objects(
+    phase_id: int, session_id: str, task: Task, batch_size: int, ignored_output_ids: Iterable[tuple[str, str]] = ()
+) -> AsyncIterator[dict[str, Any]]:
+    num_returned = 0
+
+    async for battle in database.random_least_voted_unseen_battles(
+        phase_id, session_id, task, batch_size, ignored_output_ids
+    ):
+        yield _simplify_battle_object(battle)
+        num_returned += 1
+
+    if (num_missing := batch_size - num_returned) > 0:
+        async for battle in database.random_battles(phase_id, task, batch_size=num_missing):
+            yield _simplify_battle_object(battle)
+
+
 @app.get("/battles")
-def battles_route(request: Request, task: str = Query("a-en")) -> list[dict[str, Any]]:
-    session_id = request.state.session_id
-
-    if task not in TASK_CHOICES:
-        task = "a-en"
-    task = cast(Task, task)
-
-    battles = [
-        _simplify_battle_object(battle)
-        for battle in database.random_least_voted_unseen_battles(PHASE_ID, session_id, task, REQUEST_BATTLE_BATCH_SIZE)
+async def battles_route(request: Request, task: str = Query("a-en")) -> list[dict[str, Any]]:
+    task = cast(Task, task if task in TASK_CHOICES else "a-en")
+    return [
+        battle
+        async for battle in _get_battle_objects(PHASE_ID, request.state.session_id, task, REQUEST_BATTLE_BATCH_SIZE)
     ]
-
-    if len(battles) < REQUEST_BATTLE_BATCH_SIZE:
-        battles.extend(
-            _simplify_battle_object(battle)
-            for battle in database.random_battles(PHASE_ID, task, REQUEST_BATTLE_BATCH_SIZE - len(battles))
-        )
-
-    return battles
 
 
 @app.post("/vote")
 # Can't set the return type because it'd be like `dict[str, Any] | HTTPException` but that'd raise a `FastAPIError`:
-async def vote_and_get_new_battle_route(request: Request):
+async def vote_and_get_new_battle_route(request: Request) -> Any:
     session_id = request.state.session_id
 
     form_data = await request.form()
@@ -184,22 +187,21 @@ async def vote_and_get_new_battle_route(request: Request):
         try:
             task = prompt_id_to_task(str(form_data["prompt_id"]))
         except ValueError:
-            pass
+            logger.exception("Prompt id not found.")
 
-    ignored_output_id_strs = form_data.getlist("ignored_output_ids[]")
-    ignored_output_ids: list[tuple[str, str]] = [tuple(str_.split("-", maxsplit=1)) for str_ in ignored_output_id_strs]  # type: ignore
-
-    battles = (
-        _simplify_battle_object(battle)
-        for battle in itertools.chain(
-            database.random_least_voted_unseen_battles(PHASE_ID, session_id, task, 1, ignored_output_ids),
-            database.random_battles(PHASE_ID, task, 1),
-        )
+    return await anext(
+        _get_battle_objects(
+            PHASE_ID,
+            session_id,
+            task,
+            batch_size=1,
+            ignored_output_ids=[  # type: ignore
+                tuple(str_.split("-", maxsplit=1))  # type: ignore
+                for str_ in form_data.getlist("ignored_output_ids[]")
+            ],
+        ),
+        {},
     )
-
-    battle = next(iter(battles), {})
-
-    return battle
 
 
 @app.get("/l")

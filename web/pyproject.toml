@@ -5,7 +5,7 @@ description = "A web app to crowd-annotate for the MWAHAHA competition."
 authors = [{ name = "Santiago Castro", email = "sacastro@fing.edu.uy" }]
 requires-python = ">=3.14"
 dependencies = [
-    "cryptography", # Required for the database authentication when using `aiomysql`.
+    "cryptography", # Required for the database authentication when using `asyncmy`.
     "fastapi<1",
     # We better pin the version to ensure the reproducibility of the scoring.
     # We don't use the latest stable version because it has some dependency issues, and this fork has a bugfix.
@@ -19,7 +19,7 @@ dependencies = [
     "pandas<4",
     "python-multipart<1", # For forms in FastAPI.
     "sentry-sdk<3",
-    "sqlalchemy[aiomysql,mysql]<3",
+    "sqlalchemy[asyncmy,mysql]<3",
     "starlette",
     "tqdm<5",
     "uvicorn<1",

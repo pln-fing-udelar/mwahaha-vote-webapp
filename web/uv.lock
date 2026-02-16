@@ -77,18 +77,6 @@ wheels = [
 ]
 
 [[package]]
-name = "aiomysql"
-version = "0.3.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pymysql" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/29/e0/302aeffe8d90853556f47f3106b89c16cc2ec2a4d269bdfd82e3f4ae12cc/aiomysql-0.3.2.tar.gz", hash = "sha256:72d15ef5cfc34c03468eb41e1b90adb9fd9347b0b589114bd23ead569a02ac1a", size = 108311, upload-time = "2025-10-22T00:15:21.278Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4c/af/aae0153c3e28712adaf462328f6c7a3c196a1c1c27b491de4377dd3e6b52/aiomysql-0.3.2-py3-none-any.whl", hash = "sha256:c82c5ba04137d7afd5c693a258bea8ead2aad77101668044143a991e04632eb2", size = 71834, upload-time = "2025-10-22T00:15:15.905Z" },
-]
-
-[[package]]
 name = "aiosignal"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -138,6 +126,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/be/a5/8e3f9b6771b0b4085
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d2/39/e7eaf1799466a4aef85b6a4fe7bd175ad2b1c6345066aa33f1f58d4b18d0/asttokens-3.0.1-py3-none-any.whl", hash = "sha256:15a3ebc0f43c2d0a50eeafea25e19046c68398e487b9f1f5b517f7c0f40f976a", size = 27047, upload-time = "2025-11-15T16:43:16.109Z" },
 ]
+
+[[package]]
+name = "asyncmy"
+version = "0.2.11"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/3c/d8297584c40f3d1af55365026bcdca7844ecfea1d917ad19df48f8331a26/asyncmy-0.2.11.tar.gz", hash = "sha256:c3d65d959dde62c911e39ecd1ad0f1339a5e6929fc411d48cfc2f82846190bf4", size = 62865, upload-time = "2026-01-15T11:32:30.368Z" }
 
 [[package]]
 name = "attrs"
@@ -1000,7 +994,7 @@ dependencies = [
     { name = "pandas" },
     { name = "python-multipart" },
     { name = "sentry-sdk" },
-    { name = "sqlalchemy", extra = ["aiomysql", "mysql"] },
+    { name = "sqlalchemy", extra = ["asyncmy", "mysql"] },
     { name = "starlette" },
     { name = "tqdm" },
     { name = "uvicorn" },
@@ -1031,7 +1025,7 @@ requires-dist = [
     { name = "pandas", specifier = "<4" },
     { name = "python-multipart", specifier = "<1" },
     { name = "sentry-sdk", specifier = "<3" },
-    { name = "sqlalchemy", extras = ["aiomysql", "mysql"], specifier = "<3" },
+    { name = "sqlalchemy", extras = ["asyncmy", "mysql"], specifier = "<3" },
     { name = "starlette" },
     { name = "tqdm", specifier = "<5" },
     { name = "uvicorn", specifier = "<1" },
@@ -1855,8 +1849,8 @@ wheels = [
 ]
 
 [package.optional-dependencies]
-aiomysql = [
-    { name = "aiomysql" },
+asyncmy = [
+    { name = "asyncmy" },
     { name = "greenlet" },
 ]
 mysql = [
