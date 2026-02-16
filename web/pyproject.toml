@@ -5,22 +5,25 @@ description = "A web app to crowd-annotate for the MWAHAHA competition."
 authors = [{ name = "Santiago Castro", email = "sacastro@fing.edu.uy" }]
 requires-python = ">=3.14"
 dependencies = [
+    "cryptography", # Required for the database authentication when using `aiomysql`.
     "fastapi<1",
     # We better pin the version to ensure the reproducibility of the scoring.
     # We don't use the latest stable version because it has some dependency issues, and this fork has a bugfix.
     # We don't use the one from upstream because it obliges us to install `torch`.
     "fschat[webui] @ git+https://github.com/pln-fing-udelar/FastChat@431f847",
     "fsspec[http]<2027",
+    "httptools", # Faster HTTP parser picked up by uvicorn.
     "huggingface-hub>=0.34.0,<2", # For `fschat`.
     "httpx>=0.27.0,<1",
     "jinja2<4",
     "pandas<4",
-    "python-multipart<1",
+    "python-multipart<1", # For forms in FastAPI.
     "sentry-sdk<3",
-    "sqlalchemy[mysql]<3",
+    "sqlalchemy[aiomysql,mysql]<3",
     "starlette",
     "tqdm<5",
-    "uvicorn[standard]<1",
+    "uvicorn<1",
+    "uvloop", # Fast, drop-in replacement of the built-in asyncio event loop picked up by uvicorn.
 ]
 
 [project.urls]
