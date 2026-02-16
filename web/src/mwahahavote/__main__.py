@@ -77,9 +77,12 @@ def _get_session_id(request: Request) -> str:
 class CacheControlMiddleware(BaseHTTPMiddleware):
     @override
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        session_id = _get_session_id(request)
+        request.state.session_id = session_id
+
         response = await call_next(request)
         response.headers["Cache-Control"] = "max-age=0, no-cache"
-        response.set_cookie(key="id", value=_get_session_id(request), max_age=SESSION_ID_MAX_AGE)
+        response.set_cookie(key="id", value=session_id, max_age=SESSION_ID_MAX_AGE)
         return response
 
 
@@ -149,7 +152,7 @@ def battles_route(request: Request, task: str = Query("a-en")) -> list[dict[str,
 @app.post("/vote")
 # Can't set the return type because it'd be like `dict[str, Any] | HTTPException` but that'd raise a `FastAPIError`:
 async def vote_and_get_new_battle_route(request: Request):
-    session_id = _get_session_id(request)
+    session_id = request.state.session_id
 
     form_data = await request.form()
 
@@ -206,7 +209,7 @@ def leaderboard_route() -> Response:
 
 @app.get("/session-vote-count")
 def session_vote_count_route(request: Request) -> int:
-    return database.session_vote_count_without_skips(_get_session_id(request))
+    return database.session_vote_count_without_skips(request.state.session_id)
 
 
 @app.get("/vote-count")
@@ -229,7 +232,7 @@ def get_votes() -> Response:
 
 @app.post("/prolific-consent")
 def prolific_consent_route(request: Request) -> Response:
-    database.prolific_consent(_get_session_id(request))
+    database.prolific_consent(request.state.session_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -241,7 +244,7 @@ async def prolific_finish_route(request: Request) -> Response:
     task_str = str(form_data.get("task", "a-en"))
     task: Task = cast(Task, task_str if task_str in TASK_CHOICES else "a-en")
 
-    database.prolific_finish(_get_session_id(request), comments)
+    database.prolific_finish(request.state.session_id, comments)
 
     completion_code = PROLIFIC_COMPLETION_CODES[task]
     return RedirectResponse(
