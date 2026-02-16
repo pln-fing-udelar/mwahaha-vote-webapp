@@ -129,7 +129,7 @@ def _simplify_battle_object(battle: Battle) -> dict[str, Any]:
 
 @app.get("/battles")
 def battles_route(request: Request, task: str = Query("a-en")) -> list[dict[str, Any]]:
-    session_id = _get_session_id(request)
+    session_id = request.state.session_id
 
     if task not in TASK_CHOICES:
         task = "a-en"
