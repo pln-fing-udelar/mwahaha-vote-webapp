@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 PHASE_ID = 15785
 
+# noinspection SpellCheckingInspection
 PROLIFIC_COMPLETION_CODES: dict[Task, str] = {
     "a-en": "C1O4X1ZA",
     "a-es": "C5SU1Q6U",
@@ -103,7 +104,6 @@ async def _passes_turnstile(token: str) -> bool:
                     await client.post(
                         "https://challenges.cloudflare.com/turnstile/v0/siteverify",
                         json={"secret": TURNSTILE_SECRET_KEY, "response": token},
-                        timeout=5.0,
                     )
                 )
                 .json()
@@ -172,7 +172,7 @@ async def vote_and_get_new_battle_route(request: Request) -> Any:
             raise ValueError(f"Invalid vote: {vote_str}")
         vote = cast(VoteString, vote_str)
 
-        database.add_vote(
+        await database.add_vote(
             session_id,
             str(form_data["prompt_id"]),
             str(form_data["system_id_a"]),
@@ -205,58 +205,60 @@ async def vote_and_get_new_battle_route(request: Request) -> Any:
 
 
 @app.get("/l")
-def leaderboard_route() -> Response:
+async def leaderboard_route() -> Response:
     return FileResponse("src/mwahahavote/static/leaderboard.html")
 
 
 @app.get("/session-vote-count")
-def session_vote_count_route(request: Request) -> int:
-    return database.session_vote_count_without_skips(request.state.session_id)
+async def session_vote_count_route(request: Request) -> int:
+    return await database.session_vote_count_without_skips(request.state.session_id)
 
 
 @app.get("/vote-count")
-def vote_count_route() -> int:
-    return database.vote_count_without_skips()
+async def vote_count_route() -> int:
+    return await database.vote_count_without_skips()
 
 
 @app.get("/votes-per-session")
-def get_votes_per_session_route() -> dict[str, int]:
-    return database.get_votes_per_session(PHASE_ID)
+async def get_votes_per_session_route() -> dict[str, int]:
+    return await database.get_votes_per_session(PHASE_ID)
 
 
 @app.get("/votes.csv")
-def get_votes() -> Response:
-    csv_content = database.get_votes(PHASE_ID).to_csv(index=False)
+async def get_votes_route() -> Response:
     return Response(
-        content=csv_content, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=votes.csv"}
+        content=(await database.get_votes(PHASE_ID)).to_csv(index=False),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=votes.csv"},
     )
 
 
 @app.post("/prolific-consent")
-def prolific_consent_route(request: Request) -> Response:
-    database.prolific_consent(request.state.session_id)
+async def prolific_consent_route(request: Request) -> Response:
+    await database.prolific_consent(request.state.session_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.post("/prolific-finish")
 async def prolific_finish_route(request: Request) -> Response:
     form_data = await request.form()
+
     comments = str(form_data.get("comments", ""))
 
     task_str = str(form_data.get("task", "a-en"))
     task: Task = cast(Task, task_str if task_str in TASK_CHOICES else "a-en")
 
-    database.prolific_finish(request.state.session_id, comments)
+    await database.prolific_finish(request.state.session_id, comments)
 
-    completion_code = PROLIFIC_COMPLETION_CODES[task]
     return RedirectResponse(
-        url=f"https://app.prolific.co/submissions/complete?cc={completion_code}", status_code=status.HTTP_303_SEE_OTHER
+        url=f"https://app.prolific.co/submissions/complete?cc={PROLIFIC_COMPLETION_CODES[task]}",
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @app.get("/stats")
-def stats_route(request: Request) -> Response:
-    stats = database.stats()
+async def stats_route(request: Request) -> Response:
+    stats = await database.stats()
     stats["histogram"] = [["Vote count", "Prompt count"]] + [[str(a), b] for a, b in stats["histogram"].items()]
     stats["votes-per-category"] = [["Vote", "Prompt count"], *list(stats["votes-per-category"].items())]
     return templates.TemplateResponse("stats.html", {"request": request, "stats": stats})

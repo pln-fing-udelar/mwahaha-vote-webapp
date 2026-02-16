@@ -2,14 +2,14 @@
 
 import datetime
 import os
-from collections.abc import AsyncIterator, Iterable, Iterator, MutableMapping
+from collections.abc import AsyncIterator, Iterable, MutableMapping
 from dataclasses import dataclass
-from typing import Any, Literal, get_args
+from typing import Any, Literal, cast, get_args
 
 import pandas as pd
 import sqlalchemy
+import sqlalchemy.ext.asyncio
 import sqlalchemy.sql
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 Task = Literal["a-en", "a-es", "a-zh", "b1", "b2"]
 TASK_CHOICES = frozenset(get_args(Task))
@@ -44,7 +44,7 @@ class System:
 
 def prompt_id_to_task(prompt_id: str) -> Task:
     if prompt_id.startswith(("en_", "es_", "zh_")):
-        return f"a-{prompt_id[:2]}"  # type: ignore
+        return cast(Task, f"a-{prompt_id[:2]}")
     elif prompt_id.startswith("img_2_"):
         return "b2"
     elif prompt_id.startswith("img_"):
@@ -155,7 +155,7 @@ class Battle:
         return self.output_a.prompt
 
 
-VoteString = Literal["a", "b", "n", "t"]
+VoteString = Literal["a", "b", "n", "t"]  # Left (A), Right (B), Skip, and Tie.
 VOTE_CHOICES = frozenset(get_args(VoteString))
 
 
@@ -359,23 +359,20 @@ SELECT c, COUNT(*) as freq FROM prompt_counts GROUP BY c ORDER BY c
 STATEMENT_VOTE_COUNT_PER_CATEGORY = sqlalchemy.sql.text("SELECT vote, COUNT(*) FROM votes GROUP BY vote ORDER BY vote")
 
 
+def _get_engine_args(protocol: str) -> dict[str, Any]:
+    return {
+        "url": f"{protocol}://{os.environ['DB_USER']}:{os.environ['DB_PASS']}@{os.environ['DB_HOST']}/{os.environ['DB_NAME']}",
+        "pool_size": 10,
+        "pool_recycle": 3600,
+    }
+
+
 def create_engine() -> sqlalchemy.Engine:
-    return sqlalchemy.create_engine(
-        f"mysql://{os.environ['DB_USER']}:{os.environ['DB_PASS']}@{os.environ['DB_HOST']}/{os.environ['DB_NAME']}",
-        pool_size=10,
-        pool_recycle=3600,
-    )
+    return sqlalchemy.create_engine(**_get_engine_args("mysql"))
 
 
-engine = create_engine()
-
-
-def create_async_engine_instance() -> AsyncEngine:
-    return create_async_engine(
-        f"mysql+asyncmy://{os.environ['DB_USER']}:{os.environ['DB_PASS']}@{os.environ['DB_HOST']}/{os.environ['DB_NAME']}",
-        pool_size=10,
-        pool_recycle=3600,
-    )
+def create_async_engine_instance() -> sqlalchemy.ext.asyncio.AsyncEngine:
+    return sqlalchemy.ext.asyncio.create_async_engine(**_get_engine_args("mysql+asyncmy"))
 
 
 async_engine = create_async_engine_instance()
@@ -422,10 +419,10 @@ async def random_battles(phase_id: int, task: Task, batch_size: int) -> AsyncIte
             yield _battle_row_to_object(row)  # type: ignore[invalid-argument-type]
 
 
-def battles_with_same_text(phase_id: int, task: Task) -> Iterator[Battle]:
+async def battles_with_same_text(phase_id: int, task: Task) -> AsyncIterator[Battle]:
     """Returns an iterator with the battles with the same text."""
-    with engine.connect() as connection:
-        for row in connection.execute(
+    async with async_engine.connect() as connection:
+        for row in await connection.execute(
             sqlalchemy.sql.text("""
                     SELECT
                       prompts.prompt_id,
@@ -457,9 +454,9 @@ def battles_with_same_text(phase_id: int, task: Task) -> Iterator[Battle]:
             yield _battle_row_to_object(row)  # type: ignore[invalid-argument-type]
 
 
-def get_votes_for_battles_with_the_same_text(phase_id: int, task: Task) -> Iterator[Vote]:
+async def get_votes_for_battles_with_the_same_text(phase_id: int, task: Task) -> AsyncIterator[Vote]:
     """Return tie votes for any possible battle with the same text."""
-    for battle in battles_with_same_text(phase_id, task):
+    async for battle in battles_with_same_text(phase_id, task):
         yield Vote(
             battle,
             session_id="<placeholder>",
@@ -470,7 +467,7 @@ def get_votes_for_battles_with_the_same_text(phase_id: int, task: Task) -> Itera
         )
 
 
-def add_vote(
+async def add_vote(
     session_id: str,
     prompt_id: str,
     system_id_a: str,
@@ -480,8 +477,8 @@ def add_vote(
     is_offensive_b: bool,
 ) -> None:
     """Adds a vote for a battle ID by a determined session."""
-    with engine.begin() as connection:
-        connection.execute(
+    async with async_engine.begin() as connection:
+        await connection.execute(
             STATEMENT_ADD_VOTE,
             {
                 "prompt_id": prompt_id,
@@ -495,14 +492,16 @@ def add_vote(
         )
 
 
-def get_votes_for_scoring(phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ()) -> Iterator[Vote]:
+async def get_votes_for_scoring(
+    phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ()
+) -> AsyncIterator[Vote]:
     """Returns the votes for a given phase ID and task to score the systems."""
     excluded_session_ids = tuple(excluded_session_ids)
 
     if not excluded_session_ids:  # When empty, the SQL syntax breaks, so we have to put something.
         excluded_session_ids = ("__PLACEHOLDER__",)
 
-    with engine.connect() as connection:
+    async with async_engine.connect() as connection:
         for (
             prompt_id,
             system_id_a,
@@ -512,7 +511,7 @@ def get_votes_for_scoring(phase_id: int, task: Task, excluded_session_ids: Itera
             date,
             is_offensive_a,
             is_offensive_b,
-        ) in connection.execute(
+        ) in await connection.execute(
             sqlalchemy.sql.text("""
                 WITH votes_and_prompts AS (
                   SELECT
@@ -559,8 +558,8 @@ def get_votes_for_scoring(phase_id: int, task: Task, excluded_session_ids: Itera
             prompt = Prompt(id=prompt_id, headline="<placeholder>")
             yield Vote(
                 battle=Battle(
-                    output_a=Output(prompt=prompt, system=System(id=system_id_a), text=None),  # type: ignore
-                    output_b=Output(prompt=prompt, system=System(id=system_id_b), text=None),  # type: ignore
+                    output_a=Output(prompt=prompt, system=System(id=system_id_a), text=None),  # type: ignore[invalid-argument-type]
+                    output_b=Output(prompt=prompt, system=System(id=system_id_b), text=None),  # type: ignore[invalid-argument-type]
                 ),
                 session_id=session_id,
                 vote=vote,
@@ -570,10 +569,10 @@ def get_votes_for_scoring(phase_id: int, task: Task, excluded_session_ids: Itera
             )
 
 
-def get_systems(phase_id: int, task: Task) -> Iterator[str]:
+async def get_systems(phase_id: int, task: Task) -> AsyncIterator[str]:
     """Returns all the systems for a given phase ID and task."""
-    with engine.connect() as connection:
-        for (system_id,) in connection.execute(
+    async with async_engine.connect() as connection:
+        for (system_id,) in await connection.execute(
             sqlalchemy.sql.text(
                 "SELECT system_id FROM outputs NATURAL JOIN prompts"
                 " WHERE task = :task AND phase_id = :phase_id GROUP BY system_id"
@@ -583,9 +582,9 @@ def get_systems(phase_id: int, task: Task) -> Iterator[str]:
             yield system_id
 
 
-def _get_votes_per_system(
+async def _get_votes_per_system(
     phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ()
-) -> Iterator[tuple[str, int]]:
+) -> AsyncIterator[tuple[str, int]]:
     """Returns the non-skip votes per system for a given phase ID and task. If a system has no votes, it may not be part
     of the output.
     """
@@ -594,8 +593,8 @@ def _get_votes_per_system(
     if not excluded_session_ids:  # When empty, the SQL syntax breaks, so we have to put something.
         excluded_session_ids = ("__PLACEHOLDER__",)
 
-    with engine.connect() as connection:
-        yield from connection.execute(
+    async with async_engine.connect() as connection:
+        for row in await connection.execute(
             sqlalchemy.sql.text("""
                 WITH system_ids_with_outputs AS (
                   SELECT system_id
@@ -630,26 +629,29 @@ def _get_votes_per_system(
                 ORDER BY count DESC
             """),
             {"task": task, "phase_id": phase_id, "excluded_session_ids": excluded_session_ids},
-        )
+        ):
+            yield row
 
 
-def get_votes_per_system(phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ()) -> dict[str, int]:
+async def get_votes_per_system(phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ()) -> dict[str, int]:
     """Returns the non-skip votes per system for a given phase ID and task."""
-    system_id_to_vote_count = dict(_get_votes_per_system(phase_id, task, excluded_session_ids))
+    system_id_to_vote_count: dict[str, int] = {}
+    async for system_id, vote_count in _get_votes_per_system(phase_id, task, excluded_session_ids):
+        system_id_to_vote_count[system_id] = vote_count
 
     # Some systems may not be part of the output as there are no votes for them:
-    for system_id in get_systems(phase_id, task):
+    async for system_id in get_systems(phase_id, task):
         system_id_to_vote_count.setdefault(system_id, 0)
 
     return system_id_to_vote_count
 
 
-def get_votes_per_session(phase_id: int) -> dict[str, int]:
+async def get_votes_per_session(phase_id: int) -> dict[str, int]:
     """Returns the non-skip votes per session for a given phase ID."""
-    with engine.connect() as connection:
+    async with async_engine.connect() as connection:
         return dict(
             iter(
-                connection.execute(
+                await connection.execute(
                     sqlalchemy.sql.text("""
                         SELECT session_id, COUNT(*) AS count
                         FROM votes NATURAL JOIN prompts
@@ -663,26 +665,26 @@ def get_votes_per_session(phase_id: int) -> dict[str, int]:
         )  # type: ignore[no-matching-overload]
 
 
-def session_vote_count_without_skips(session_id: str) -> int:
+async def session_vote_count_without_skips(session_id: str) -> int:
     """Returns the vote count for a given session ID for any phase, including skips."""
-    with engine.connect() as connection:
-        return connection.execute(  # type: ignore
-            STATEMENT_SESSION_VOTE_COUNT, {"session_id": session_id, "without_skips": True}
-        ).fetchone()[0]
+    async with async_engine.connect() as connection:
+        return (
+            await connection.execute(STATEMENT_SESSION_VOTE_COUNT, {"session_id": session_id, "without_skips": True})
+        ).one()[0]
 
 
-def vote_count_without_skips() -> int:
+async def vote_count_without_skips() -> int:
     """Returns the vote count for any phase, not including skips."""
-    with engine.connect() as connection:
-        return connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True}).fetchone()[0]  # type: ignore
+    async with async_engine.connect() as connection:
+        return (await connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True})).one()[0]
 
 
-def get_votes(phase_id: int) -> pd.DataFrame:
+async def get_votes(phase_id: int) -> pd.DataFrame:
     """Returns the non-skip votes with all the associated information."""
-    with engine.connect() as connection:
+    async with async_engine.connect() as connection:
         return pd.DataFrame(
             iter(
-                connection.execute(
+                await connection.execute(
                     sqlalchemy.sql.text("""
                         SELECT
                           *
@@ -703,36 +705,36 @@ def get_votes(phase_id: int) -> pd.DataFrame:
         )
 
 
-def prolific_consent(session_id: str) -> None:
+async def prolific_consent(session_id: str) -> None:
     """Sets the current time as the consent date for the prolific session ID."""
-    with engine.begin() as connection:
-        connection.execute(STATEMENT_PROLIFIC_CONSENT, {"session_id": session_id})
+    async with async_engine.connect() as connection:
+        await connection.execute(STATEMENT_PROLIFIC_CONSENT, {"session_id": session_id})
 
 
-def prolific_finish(session_id: str, comments: str) -> None:
+async def prolific_finish(session_id: str, comments: str) -> None:
     """Sets the current time as the finish date and the given comments for the prolific session ID."""
-    with engine.begin() as connection:
-        connection.execute(
+    async with async_engine.connect() as connection:
+        await connection.execute(
             STATEMENT_PROLIFIC_FINISH,
             {"session_id": session_id, "finish_date": datetime.datetime.now(), "comments": comments},
         )
 
 
-def stats() -> MutableMapping[str, Any]:
+async def stats() -> MutableMapping[str, Any]:
     """Returns the vote count, vote count without skips, vote count histogram, and votes per category.
 
     The results consider all phases.
     """
-    with engine.connect() as connection:
+    async with async_engine.connect() as connection:
         result: dict[str, Any] = {
-            "votes": connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": False}).fetchone()[0],  # type: ignore
-            "sessions": connection.execute(STATEMENT_SESSION_COUNT, {"without_skips": False}).fetchone()[0],  # type: ignore
-            "histogram": dict(connection.execute(STATEMENT_HISTOGRAM)),  # type: ignore
-            "votes-per-category": dict(connection.execute(STATEMENT_VOTE_COUNT_PER_CATEGORY)),  # type: ignore
-            "votes-without-skips": connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True}).fetchone()[0],  # type: ignore
-            "sessions-without-skips": connection.execute(STATEMENT_SESSION_COUNT, {"without_skips": True}).fetchone()[  # type: ignore
-                0
-            ],
+            "votes": (await connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": False})).one()[0],
+            "sessions": (await connection.execute(STATEMENT_SESSION_COUNT, {"without_skips": False})).one()[0],
+            "histogram": dict(iter(await connection.execute(STATEMENT_HISTOGRAM))),  # type: ignore[no-matching-overload]
+            "votes-per-category": dict(iter(await connection.execute(STATEMENT_VOTE_COUNT_PER_CATEGORY))),  # type: ignore[no-matching-overload]
+            "votes-without-skips": (await connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True})).one()[0],
+            "sessions-without-skips": (
+                await connection.execute(STATEMENT_SESSION_COUNT, {"without_skips": True})
+            ).one()[0],
         }
 
     for category in VOTE_CHOICES:
