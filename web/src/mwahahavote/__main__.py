@@ -59,8 +59,44 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[dict[str, Any]]:
         yield {"database_engine": database_engine}
 
 
+def _generate_id() -> str:  # From https://stackoverflow.com/a/2257449/1165181
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=100))
+
+
+def _get_session_id(request: Request) -> str:
+    if (prolific_id := request.query_params.get("PROLIFIC_PID")) and (
+        session_id := request.query_params.get("SESSION_ID")
+    ):
+        return f"prolific-id-{prolific_id}-{session_id}"
+    else:
+        return request.cookies.get("id") or _generate_id()
+
+
+class CacheControlMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        session_id = _get_session_id(Request(scope))
+        scope.setdefault("state", {})["session_id"] = session_id
+
+        async def send_with_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers.append("Cache-Control", "max-age=0, no-cache")
+                headers.append("Set-Cookie", f"id={session_id}; Max-Age={SESSION_ID_MAX_AGE}; Path=/; SameSite=lax")
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+
 app = FastAPI(lifespan=_lifespan)
 
+app.add_middleware(CacheControlMiddleware)  # type: ignore[arg-type]
 app.add_middleware(
     CORSMiddleware,  # type: ignore[arg-type]
     allow_origins=[
@@ -163,45 +199,6 @@ def _perturb_text(text: str) -> str:
         i += 1
 
     return "".join(result)
-
-
-def _generate_id() -> str:  # From https://stackoverflow.com/a/2257449/1165181
-    return "".join(random.choices(string.ascii_uppercase + string.digits, k=100))
-
-
-def _get_session_id(request: Request) -> str:
-    if (prolific_id := request.query_params.get("PROLIFIC_PID")) and (
-        session_id := request.query_params.get("SESSION_ID")
-    ):
-        return f"prolific-id-{prolific_id}-{session_id}"
-    else:
-        return request.cookies.get("id") or _generate_id()
-
-
-class CacheControlMiddleware:
-    def __init__(self, app: ASGIApp) -> None:
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-
-        request = Request(scope)
-        session_id = _get_session_id(request)
-        scope.setdefault("state", {})["session_id"] = session_id
-
-        async def send_with_headers(message: Message) -> None:
-            if message["type"] == "http.response.start":
-                headers = MutableHeaders(scope=message)
-                headers.append("Cache-Control", "max-age=0, no-cache")
-                headers.append("Set-Cookie", f"id={session_id}; Max-Age={SESSION_ID_MAX_AGE}; Path=/; SameSite=lax")
-            await send(message)
-
-        await self.app(scope, receive, send_with_headers)
-
-
-app.add_middleware(CacheControlMiddleware)  # type: ignore[arg-type]
 
 
 async def _passes_turnstile(token: str) -> bool:
