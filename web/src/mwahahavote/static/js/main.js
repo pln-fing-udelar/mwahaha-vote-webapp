@@ -14,8 +14,11 @@ let $isOffensiveRight;
 let emoji;
 
 let task = "a-en";
+
 let battles = [];
 let index = 0;
+let nextReplaceIndex = 0;
+
 let turnstileToken = null;
 
 const PROLIFIC_MAX_BATTLES = 100;
@@ -350,44 +353,66 @@ function changeTask() {
   window.location.href = "?task=" + encodeURIComponent($task.val());
 }
 
+function resetTurnstile() {
+  if (typeof turnstile !== 'undefined') {
+    turnstile.reset();
+  }
+  turnstileToken = null;
+}
+
 function vote(voteOption) {
   if (!turnstileToken) {
     $.mdtoast("Please complete the verification challenge (CAPTCHA)", {duration: 3000});
     return;
   }
 
-  const oldIndex = index;
-  index = (index + 1) % battles.length;
-
   $.post("vote", {
-    token: battles[oldIndex].token,
+    token: battles[index].token,
     vote: voteOption,
     is_offensive_a: $isOffensiveLeft.prop("checked"),
     is_offensive_b: $isOffensiveRight.prop("checked"),
     turnstile_token: turnstileToken,
-  }, () => {
-    // After a successful vote, fetch a new battle to replace the one we just voted on.
-    // Pass the remaining battles as ignored_ids to avoid duplicates.
-    const ignoredIds = battles.filter((_, i) => i !== oldIndex).map(b => b.token);
-    $.getJSON("battles", {task: task, batch_size: 1, ignored_ids: ignoredIds}, data => {
-      if (data.length > 0) {
-        battles[oldIndex] = data[0];
-      }
-    });
-
-    if (typeof turnstile !== 'undefined') {
-      turnstile.reset();
-    }
-    turnstileToken = null;
-  }).fail(() => {
-    const lang = getLanguageFromTask();
-    $.mdtoast(translations[lang].error, {duration: 3000});
-
-    if (typeof turnstile !== 'undefined') {
-      turnstile.reset();
-    }
-    turnstileToken = null;
+  }, () => resetTurnstile()).fail(() => {
+    $.mdtoast(translations[getLanguageFromTask()].error, {duration: 3000});
+    resetTurnstile();
   });
+
+  // There are potential race conditions in the following code,
+  // but we don't use locks or anything because it'd be complicated, the race conditions seem unlikely,
+  // and the consequences aren't severe.
+  // I can identify that at least the following code blocks should occur atomically:
+  // 1. From increasing the index to the if condition.
+  // 2. The previous one plus the `ignoreIds` calculation if we enter inside the if condition
+  //    (so the whole code block should be atomic actually...).
+  // 3. The callback from calling /battles.
+
+  index = (index + 1) % battles.length;
+
+  console.log("Vote option: " + voteOption);
+  console.log(`  Index: ${index}, nextReplaceIndex: ${nextReplaceIndex}`);
+
+  const usedCount = (index - nextReplaceIndex + battles.length) % battles.length;
+  const remainingCount = battles.length - usedCount;
+
+  console.log(`  Used count: ${usedCount}, remaining count: ${remainingCount}, battles length: ${battles.length}`);
+  console.log();
+
+  if (remainingCount <= Math.floor(battles.length / 2)) {
+    const ignoredIds = [];
+    for (let i = 0; i < remainingCount; i++) {
+      ignoredIds.push(battles[(index + i) % battles.length].token);
+    }
+
+    $.getJSON("battles", {task: task, batch_size: usedCount, ignored_ids: ignoredIds}, data => {
+      for (let i = 0; i < Math.min(data.length, usedCount); i++) {
+        battles[nextReplaceIndex] = data[i];
+        nextReplaceIndex = (nextReplaceIndex + 1) % battles.length;
+      }
+      console.log("Battles replaced. New battles length: " + battles.length);
+      console.log(`  Index: ${index}, nextReplaceIndex: ${nextReplaceIndex}`);
+      console.log();
+    });
+  }
 
   showBattle();
 
