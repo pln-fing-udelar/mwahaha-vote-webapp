@@ -382,7 +382,7 @@ function vote(voteOption) {
   // and the consequences aren't severe.
   // I can identify that at least the following code blocks should occur atomically:
   // 1. From increasing the index to the if condition.
-  // 2. The previous one plus the `ignoreIds` calculation if we enter inside the if condition
+  // 2. The previous one plus the `ignoreTokens` calculation if we enter inside the if condition
   //    (so the whole code block should be atomic actually...).
   // 3. The callback from calling /battles.
 
@@ -398,12 +398,12 @@ function vote(voteOption) {
   console.log();
 
   if (remainingCount <= Math.floor(battles.length / 2)) {
-    const ignoredIds = [];
+    const ignoredTokens = [];
     for (let i = 0; i < remainingCount; i++) {
-      ignoredIds.push(battles[(index + i) % battles.length].token);
+      ignoredTokens.push(battles[(index + i) % battles.length].token);
     }
 
-    $.getJSON("battles", {task: task, batch_size: usedCount, ignored_ids: ignoredIds}, data => {
+    $.getJSON("battles", {task: task, batch_size: usedCount, ignored_tokens: ignoredTokens}, data => {
       for (let i = 0; i < Math.min(data.length, usedCount); i++) {
         battles[nextReplaceIndex] = data[i];
         nextReplaceIndex = (nextReplaceIndex + 1) % battles.length;

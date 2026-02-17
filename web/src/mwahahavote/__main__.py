@@ -264,22 +264,22 @@ async def battles_route(
     request: Request,
     task: str = Query("a-en"),
     batch_size: int = Query(REQUEST_BATTLE_BATCH_SIZE),
-    ignored_ids: Iterable[str] = Query(()),
+    ignored_tokens: Iterable[str] = Query(()),
 ) -> list[SimplifiedBattleDict]:
     task = cast(Task, task if task in TASK_CHOICES else "a-en")
 
     batch_size = max(min(batch_size, REQUEST_BATTLE_BATCH_SIZE), 1)
 
     ignored_output_ids: list[tuple[str, str]] = []
-    for ignored_battle_token in ignored_ids:
+    for ignored_token in ignored_tokens:
         try:
             ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = _decrypt_battle_token(
-                str(ignored_battle_token)
+                str(ignored_token)
             )
             ignored_output_ids.append((ignored_prompt_id, ignored_system_id_a))
             ignored_output_ids.append((ignored_prompt_id, ignored_system_id_b))
         except ValueError:
-            logger.exception(f"Invalid battle token in ignored_ids: {ignored_battle_token}")
+            logger.exception(f"Invalid battle token in ignored_tokens: {ignored_token}")
 
     return [
         battle
