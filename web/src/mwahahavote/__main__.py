@@ -91,6 +91,65 @@ def decrypt_battle_token(id_: str) -> tuple[str, str, str]:  # TODO: NamedTuple?
         raise ValueError("Failed to decrypt battle token") from e
 
 
+def _perturb_text(text: str) -> str:
+    """Return a perturbed version of the input text using spacing modifications. The resulting text looks nearly
+    identical to the human eye but has the following non-deterministic slight modifications:
+
+    - Sometimes doubles single spaces (one space becomes two)
+    - Sometimes removes spaces after periods and other punctuation
+    """
+
+    if not text:
+        return text
+
+    double_space_rate = random.uniform(0.02, 0.1)
+    remove_space_rate = random.uniform(0.15, 0.3)
+
+    result: list[str] = []
+    i = 0
+
+    while i < len(text):
+        char = text[i]
+
+        # Handle periods followed by a space:
+        if char == "." and i + 1 < len(text) and text[i + 1] == " ":
+            result.append(".")
+            # Use position-based seed for consistency
+            position_hash = (random.getstate()[1][i % 624] + i) / (2**32)
+            if position_hash < remove_space_rate:
+                # Remove the space after period
+                i += 1  # Skip the space
+            i += 1
+            continue
+
+        # Handle other punctuation followed by space (,!?;:):
+        elif char in "!?,;:" and i + 1 < len(text) and text[i + 1] == " ":
+            result.append(char)
+            # Use position-based seed for consistency
+            position_hash = (random.getstate()[1][i % 624] + i) / (2**32)
+            if position_hash < remove_space_rate * 0.5:  # Less aggressive for other punctuation
+                # Remove the space after punctuation
+                i += 1  # Skip the space
+            i += 1
+            continue
+
+        # Handle regular spaces:
+        elif char == " ":
+            # Use position-based seed for consistency
+            position_hash = (random.getstate()[1][i % 624] + i) / (2**32)
+            if position_hash < double_space_rate:
+                result.append("  ")
+            else:
+                result.append(" ")
+
+        else:
+            result.append(char)
+
+        i += 1
+
+    return "".join(result)
+
+
 def _generate_id() -> str:  # From https://stackoverflow.com/a/2257449/1165181
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=100))
 
@@ -147,10 +206,10 @@ def _simplify_battle_object(battle: Battle) -> dict[str, Any]:  # TODO: a typed 
     """Removes redundant fields and simplifies the battle representation for JSON serialization."""
     return {
         "token": encrypt_as_battle_token(battle.prompt.id, battle.output_a.system.id, battle.output_b.system.id),
-        "prompt": battle.prompt.verbalized,
-        "prompt_image_url": battle.prompt.url,
-        "output_a": battle.output_a.text,
-        "output_b": battle.output_b.text,
+        "prompt": _perturb_text(battle.prompt.verbalized) if battle.prompt.verbalized else battle.prompt.verbalized,
+        "prompt_image_url": battle.prompt.url,  # TODO: perturb the URL? We could add stuff like useless query params.
+        "output_a": _perturb_text(battle.output_a.text),
+        "output_b": _perturb_text(battle.output_b.text),
     }
 
 
