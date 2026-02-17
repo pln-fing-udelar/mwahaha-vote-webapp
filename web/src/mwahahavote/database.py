@@ -1,4 +1,5 @@
 """Provides mechanisms to handle the database."""
+
 import datetime
 import os
 import random
@@ -179,10 +180,11 @@ WITH
       system_id_a,
       system_id_b,
       session_id
-    FROM
-      votes
+    FROM votes NATURAL JOIN prompts
     WHERE
       vote != 'n'
+      AND task = :task
+      AND phase_id = :phase_id
   ),
   votes_from_session AS (
     SELECT
@@ -190,10 +192,11 @@ WITH
       system_id_a,
       system_id_b,
       session_id
-    FROM
-      votes
+    FROM votes NATURAL JOIN prompts
     WHERE
       session_id = :session_id
+      AND task = :task
+      AND phase_id = :phase_id
   ), system_ids_with_outputs AS (
     SELECT system_id
     FROM outputs NATURAL JOIN prompts
