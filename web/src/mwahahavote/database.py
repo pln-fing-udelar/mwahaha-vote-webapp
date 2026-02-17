@@ -159,16 +159,13 @@ class Vote:
 STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES = sqlalchemy.sql.text("""
 WITH
   unskipped_votes AS (
-    SELECT
-      prompt_id,
-      system_id_a,
-      system_id_b,
-      session_id
+    SELECT prompt_id, system_id_a AS system_id
     FROM votes NATURAL JOIN prompts
-    WHERE
-      vote != 'n'
-      AND task = :task
-      AND phase_id = :phase_id
+    WHERE vote != 'n' AND task = :task AND phase_id = :phase_id
+    UNION ALL
+    SELECT prompt_id, system_id_b AS system_id
+    FROM votes NATURAL JOIN prompts
+    WHERE vote != 'n' AND task = :task AND phase_id = :phase_id
   ),
   votes_from_session AS (
     SELECT prompt_id, system_id_a AS system_id
@@ -225,10 +222,7 @@ WITH
       LEFT JOIN unskipped_votes
       ON (
         unskipped_votes.prompt_id = outputs.prompt_id
-        AND (
-          unskipped_votes.system_id_a = outputs.system_id
-          OR unskipped_votes.system_id_b = outputs.system_id
-        )
+        AND unskipped_votes.system_id = outputs.system_id
       )
   WHERE
     votes_from_session.prompt_id IS NULL
