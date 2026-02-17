@@ -1,7 +1,7 @@
 """Provides mechanisms to handle the database."""
-
 import datetime
 import os
+import random
 from collections.abc import AsyncIterator, Iterable, MutableMapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -263,11 +263,10 @@ SELECT
   headline,
   url,
   prompt,
-  @swap := RAND() >= 0.5 AS swap,
-  IF(@swap, outputs_b.system_id, random_least_voted_unseen_outputs_from_least_voted_systems_a.system_id) AS system_id_a,
-  IF(@swap, outputs_b.text, random_least_voted_unseen_outputs_from_least_voted_systems_a.text) AS text_a,
-  IF(@swap, random_least_voted_unseen_outputs_from_least_voted_systems_a.system_id, outputs_b.system_id) AS system_id_b,
-  IF(@swap, random_least_voted_unseen_outputs_from_least_voted_systems_a.text, outputs_b.text) AS text_b
+  random_least_voted_unseen_outputs_from_least_voted_systems_a.system_id AS system_id_a,
+  random_least_voted_unseen_outputs_from_least_voted_systems_a.text AS text_a,
+  outputs_b.system_id AS system_id_b,
+  outputs_b.text AS text_b
 FROM
   prompts
   NATURAL JOIN random_least_voted_unseen_outputs_from_least_voted_systems_a
@@ -305,7 +304,6 @@ SELECT
   headline,
   url,
   prompt,
-  'placeholder',
   outputs_a.system_id AS system_id_a,
   outputs_a.text AS text_a,
   outputs_b.system_id AS system_id_b,
@@ -373,12 +371,20 @@ async def create_engine() -> AsyncIterator[sqlalchemy.ext.asyncio.AsyncEngine]:
 
 
 def _battle_row_to_object(
-    row: tuple[str, str | None, str | None, str | None, str | None, str | None, str, str, str, str, str],
+    row: tuple[str, str | None, str | None, str | None, str | None, str | None, str, str, str, str],
+    randomly_swap_systems: bool = True,
 ) -> Battle:
-    prompt_id, word1, word2, headline, url, prompt_text, _swap, system_id_a, text_a, system_id_b, text_b = row
+    prompt_id, word1, word2, headline, url, prompt_text, system_id_a, text_a, system_id_b, text_b = row
+
     prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text)
+
     output_a = Output(prompt=prompt, system=System(id=system_id_a), text=text_a)
     output_b = Output(prompt=prompt, system=System(id=system_id_b), text=text_b)
+
+    if randomly_swap_systems:
+        if random.random() < 0.5:
+            output_a, output_b = output_b, output_a
+
     return Battle(output_a=output_a, output_b=output_b)
 
 
