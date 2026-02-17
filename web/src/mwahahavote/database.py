@@ -367,10 +367,6 @@ def _get_engine_args(protocol: str) -> dict[str, Any]:
     }
 
 
-def create_engine() -> sqlalchemy.Engine:
-    return sqlalchemy.create_engine(**_get_engine_args("mysql"))
-
-
 def create_async_engine_instance() -> sqlalchemy.ext.asyncio.AsyncEngine:
     return sqlalchemy.ext.asyncio.create_async_engine(**_get_engine_args("mysql+asyncmy"))
 

@@ -67,11 +67,11 @@ app.add_middleware(
 templates = Jinja2Templates(directory="src/mwahahavote/templates")
 
 
-def encrypt_as_battle_token(prompt_id: str, system_id_a: str, system_id_b: str) -> str:
+def _encrypt_as_battle_token(prompt_id: str, system_id_a: str, system_id_b: str) -> str:
     return fernet_cipher.encrypt(f"{prompt_id}|{system_id_a}|{system_id_b}".encode()).decode("ascii")
 
 
-def decrypt_battle_token(id_: str) -> tuple[str, str, str]:  # TODO: NamedTuple?
+def _decrypt_battle_token(id_: str) -> tuple[str, str, str]:  # TODO: NamedTuple?
     try:
         plaintext = fernet_cipher.decrypt(id_.encode(), ttl=None).decode("utf-8")
 
@@ -205,7 +205,7 @@ async def _passes_turnstile(token: str) -> bool:
 def _simplify_battle_object(battle: Battle) -> dict[str, Any]:  # TODO: a typed dict?
     """Removes redundant fields and simplifies the battle representation for JSON serialization."""
     return {
-        "token": encrypt_as_battle_token(battle.prompt.id, battle.output_a.system.id, battle.output_b.system.id),
+        "token": _encrypt_as_battle_token(battle.prompt.id, battle.output_a.system.id, battle.output_b.system.id),
         "prompt": _perturb_text(battle.prompt.verbalized) if battle.prompt.verbalized else battle.prompt.verbalized,
         "prompt_image_url": battle.prompt.url,  # TODO: perturb the URL? We could add stuff like useless query params.
         "output_a": _perturb_text(battle.output_a.text),
@@ -253,7 +253,7 @@ async def vote_and_get_new_battle_route(request: Request) -> Any:
         raise HTTPException(status_code=400, detail="Battle token required")
 
     try:
-        prompt_id, system_id_a, system_id_b = decrypt_battle_token(battle_token)
+        prompt_id, system_id_a, system_id_b = _decrypt_battle_token(battle_token)
     except ValueError as e:
         raise HTTPException(status_code=400, detail="Invalid battle ID") from e
 
@@ -281,7 +281,7 @@ async def vote_and_get_new_battle_route(request: Request) -> Any:
     ignored_output_ids: list[tuple[str, str]] = []
     for ignored_battle_token in form_data.getlist("ignored_ids[]"):
         try:
-            ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = decrypt_battle_token(
+            ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = _decrypt_battle_token(
                 str(ignored_battle_token)
             )
             ignored_output_ids.append((ignored_prompt_id, ignored_system_id_a))
