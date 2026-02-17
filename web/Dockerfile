@@ -1,4 +1,4 @@
-FROM python:3.14
+FROM python:3.14-slim
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ COPY src/mwahahavote src/mwahahavote
 RUN \
     --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
     --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-default-groups --locked --inexact
+    uv sync --no-default-groups --locked
 
 EXPOSE 80
 
