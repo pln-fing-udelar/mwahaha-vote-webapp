@@ -1,7 +1,6 @@
 import logging
 import os
 import random
-import string
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -60,7 +59,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[dict[str, Any]]:
 
 
 def _generate_id() -> str:  # From https://stackoverflow.com/a/2257449/1165181
-    return "".join(random.choices(string.ascii_uppercase + string.digits, k=100))
+    # With 16 chars of 16 options each, the probability of a collision is ~sqrt(16^16) = ~4B sessions.
+    return "".join(random.choices("0123456789abcdef", k=16))
 
 
 def _get_session_id(request: Request) -> str:
