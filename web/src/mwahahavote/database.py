@@ -200,7 +200,6 @@ WITH
     WHERE
       task = :task
       AND phase_id = :phase_id
-      AND phase_id = :phase_id
     GROUP BY system_id
   ), system_votes AS (
     SELECT
@@ -252,7 +251,7 @@ WITH
       )
   WHERE
     votes_from_session.prompt_id IS NULL
-    AND FIND_IN_SET(CONCAT(outputs.prompt_id, outputs.system_id), :ignored_output_ids) = 0
+    AND FIND_IN_SET(CONCAT(outputs.prompt_id, '-', outputs.system_id), :ignored_output_ids) = 0
   GROUP BY
     prompt_id,
     system_id
@@ -264,7 +263,7 @@ SELECT
   headline,
   url,
   prompt,
-  @swap := RAND() > 0.5 AS swap,
+  @swap := RAND() >= 0.5 AS swap,
   IF(@swap, outputs_b.system_id, random_least_voted_unseen_outputs_from_least_voted_systems_a.system_id) AS system_id_a,
   IF(@swap, outputs_b.text, random_least_voted_unseen_outputs_from_least_voted_systems_a.text) AS text_a,
   IF(@swap, random_least_voted_unseen_outputs_from_least_voted_systems_a.system_id, outputs_b.system_id) AS system_id_b,
@@ -289,7 +288,7 @@ WHERE
   task = :task
   AND phase_id = :phase_id
   AND votes_from_session_b.prompt_id IS NULL
-  AND FIND_IN_SET(CONCAT(outputs_b.prompt_id, outputs_b.system_id), :ignored_output_ids) = 0
+  AND FIND_IN_SET(CONCAT(outputs_b.prompt_id, '-', outputs_b.system_id), :ignored_output_ids) = 0
 HAVING text_a != text_b
 ORDER BY
   system_count,
