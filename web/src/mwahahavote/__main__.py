@@ -20,7 +20,7 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from mwahahavote import database
-from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString, prompt_id_to_task
+from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString
 
 logger = logging.getLogger(__name__)
 
@@ -199,6 +199,9 @@ async def _passes_turnstile(token: str) -> bool:
     if not TURNSTILE_SECRET_KEY:
         return False
 
+    if not token:
+        return False
+
     async with httpx.AsyncClient() as client:
         try:
             return (
@@ -257,39 +260,41 @@ async def _get_battle_objects(
 
 
 @app.get("/battles")
-async def battles_route(request: Request, task: str = Query("a-en")) -> list[SimplifiedBattleDict]:
+async def battles_route(
+    request: Request,
+    task: str = Query("a-en"),
+    batch_size: int = Query(REQUEST_BATTLE_BATCH_SIZE),
+    ignored_ids: Iterable[str] = Query(()),
+) -> list[SimplifiedBattleDict]:
     task = cast(Task, task if task in TASK_CHOICES else "a-en")
+
+    batch_size = max(min(batch_size, REQUEST_BATTLE_BATCH_SIZE), 1)
+
+    ignored_output_ids: list[tuple[str, str]] = []
+    for ignored_battle_token in ignored_ids:
+        try:
+            ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = _decrypt_battle_token(
+                str(ignored_battle_token)
+            )
+            ignored_output_ids.append((ignored_prompt_id, ignored_system_id_a))
+            ignored_output_ids.append((ignored_prompt_id, ignored_system_id_b))
+        except ValueError:
+            logger.exception(f"Invalid battle token in ignored_ids: {ignored_battle_token}")
+
     return [
         battle
         async for battle in _get_battle_objects(
-            request.state.database_engine, PHASE_ID, request.state.session_id, task, REQUEST_BATTLE_BATCH_SIZE
+            request.state.database_engine, PHASE_ID, request.state.session_id, task, batch_size, ignored_output_ids
         )
     ]
 
 
 @app.post("/vote")
-# Can't set the return type because it'd be like `BattleDict | HTTPException` but that'd raise a `FastAPIError`:
-async def vote_and_get_new_battle_route(request: Request) -> Any:
+async def vote_route(request: Request) -> Response:
     form_data = await request.form()
 
-    turnstile_token = str(form_data.get("turnstile_token", ""))
-    if not await _passes_turnstile(turnstile_token):
-        return HTTPException(status_code=403, detail="Turnstile verification failed")
-
-    if not (battle_token := str(form_data.get("token", ""))):
-        raise HTTPException(status_code=400, detail="Battle token required")
-
-    try:
-        prompt_id, system_id_a, system_id_b = _decrypt_battle_token(battle_token)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail="Invalid battle ID") from e
-
-    try:
-        task = prompt_id_to_task(prompt_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail="Invalid prompt ID") from e
-
-    session_id = request.state.session_id
+    if not await _passes_turnstile(str(form_data.get("turnstile_token", ""))):
+        raise HTTPException(status_code=403, detail="Turnstile verification failed")
 
     if all(key in form_data for key in ("vote", "is_offensive_a", "is_offensive_b")):
         vote_str = str(form_data["vote"])
@@ -297,9 +302,17 @@ async def vote_and_get_new_battle_route(request: Request) -> Any:
             raise HTTPException(status_code=400, detail="Invalid vote")
         vote = cast(VoteString, vote_str)
 
+        if not (battle_token := str(form_data.get("token", ""))):
+            raise HTTPException(status_code=400, detail="Battle token required")
+
+        try:
+            prompt_id, system_id_a, system_id_b = _decrypt_battle_token(battle_token)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail="Invalid battle ID") from e
+
         await database.add_vote(
             request.state.database_engine,
-            session_id,
+            request.state.session_id,
             prompt_id,
             system_id_a,
             system_id_b,
@@ -308,28 +321,7 @@ async def vote_and_get_new_battle_route(request: Request) -> Any:
             is_offensive_b=str(form_data["is_offensive_b"]).lower() == "true",
         )
 
-    ignored_output_ids: list[tuple[str, str]] = []
-    for ignored_battle_token in form_data.getlist("ignored_ids[]"):
-        try:
-            ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = _decrypt_battle_token(
-                str(ignored_battle_token)
-            )
-            ignored_output_ids.append((ignored_prompt_id, ignored_system_id_a))
-            ignored_output_ids.append((ignored_prompt_id, ignored_system_id_b))
-        except ValueError:
-            logger.exception(f"Invalid battle token when building from `ignored_ids[]`: {ignored_battle_token}")
-
-    return await anext(
-        _get_battle_objects(
-            request.state.database_engine,
-            PHASE_ID,
-            session_id,
-            task,
-            batch_size=1,
-            ignored_output_ids=ignored_output_ids,
-        ),
-        {},
-    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/l")

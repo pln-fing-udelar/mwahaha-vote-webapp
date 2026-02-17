@@ -359,23 +359,27 @@ function vote(voteOption) {
   const oldIndex = index;
   index = (index + 1) % battles.length;
 
-  const otherIndex = (index + 1) % battles.length;
-
   $.post("vote", {
     token: battles[oldIndex].token,
     vote: voteOption,
-    ignore_output_ids: [battles[index].battle_token, battles[otherIndex].battle_token],
     is_offensive_a: $isOffensiveLeft.prop("checked"),
     is_offensive_b: $isOffensiveRight.prop("checked"),
     turnstile_token: turnstileToken,
-  }, battle => {
-    battles[oldIndex] = battle;
+  }, () => {
+    // After a successful vote, fetch a new battle to replace the one we just voted on.
+    // Pass the remaining battles as ignored_ids to avoid duplicates.
+    const ignoredIds = battles.filter((_, i) => i !== oldIndex).map(b => b.token);
+    $.getJSON("battles", {task: task, batch_size: 1, ignored_ids: ignoredIds}, data => {
+      if (data.length > 0) {
+        battles[oldIndex] = data[0];
+      }
+    });
 
     if (typeof turnstile !== 'undefined') {
       turnstile.reset();
     }
     turnstileToken = null;
-  }, "json").fail(() => {
+  }).fail(() => {
     const lang = getLanguageFromTask();
     $.mdtoast(translations[lang].error, {duration: 3000});
 
