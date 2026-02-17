@@ -17,22 +17,6 @@ Task = Literal["a-en", "a-es", "a-zh", "b1", "b2"]
 TASK_CHOICES = frozenset(get_args(Task))
 
 
-def task_to_prompt_id_sql_like_expression(task: Task) -> str:
-    match task:
-        case "a-en":
-            return r"en\_____"
-        case "a-es":
-            return r"es\_____"
-        case "a-zh":
-            return r"zh\_____"
-        case "b1":
-            return r"img\_____"
-        case "b2":
-            return r"img\_2\_____"
-        case _:
-            raise ValueError(f"Unknown task: {task}")
-
-
 @dataclass(frozen=True)
 class System:
     id: str
