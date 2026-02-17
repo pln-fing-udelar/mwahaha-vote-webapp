@@ -171,16 +171,13 @@ WITH
       AND phase_id = :phase_id
   ),
   votes_from_session AS (
-    SELECT
-      prompt_id,
-      system_id_a,
-      system_id_b,
-      session_id
+    SELECT prompt_id, system_id_a AS system_id
     FROM votes NATURAL JOIN prompts
-    WHERE
-      session_id = :session_id
-      AND task = :task
-      AND phase_id = :phase_id
+    WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
+    UNION
+    SELECT prompt_id, system_id_b AS system_id
+    FROM votes NATURAL JOIN prompts
+    WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
   ), system_ids_with_outputs AS (
     SELECT system_id
     FROM outputs NATURAL JOIN prompts
@@ -223,10 +220,7 @@ WITH
       LEFT JOIN votes_from_session
       ON (
         votes_from_session.prompt_id = outputs.prompt_id
-        AND (
-          votes_from_session.system_id_a = outputs.system_id
-          OR votes_from_session.system_id_b = outputs.system_id
-        )
+        AND votes_from_session.system_id = outputs.system_id
       )
       LEFT JOIN unskipped_votes
       ON (
@@ -265,10 +259,7 @@ FROM
   LEFT JOIN votes_from_session AS votes_from_session_b
     ON (
       votes_from_session_b.prompt_id = outputs_b.prompt_id
-      AND (
-        votes_from_session_b.system_id_a = outputs_b.system_id
-        OR votes_from_session_b.system_id_b = outputs_b.system_id
-      )
+      AND votes_from_session_b.system_id = outputs_b.system_id
     )
 WHERE
   task = :task
