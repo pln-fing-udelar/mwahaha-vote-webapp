@@ -52,6 +52,7 @@ CREATE TABLE votes
   INDEX (system_id_a),
   INDEX (system_id_b),
   INDEX (session_id),
+  INDEX (vote),
   INDEX idx_session_vote (session_id, vote),
   FOREIGN KEY (prompt_id, system_id_a) REFERENCES outputs (prompt_id, system_id),
   FOREIGN KEY (prompt_id, system_id_b) REFERENCES outputs (prompt_id, system_id)
