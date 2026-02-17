@@ -2,7 +2,7 @@ import logging
 import os
 import tempfile
 import zipfile
-from collections.abc import AsyncIterable, AsyncIterator, Iterable
+from collections.abc import AsyncIterable, Iterable
 from typing import Any
 
 import fsspec
