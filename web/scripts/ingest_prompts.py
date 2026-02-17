@@ -29,7 +29,7 @@ def read_prompt_files(dir_: str) -> pd.DataFrame:
 
 
 async def async_main() -> None:
-    async with mwahahavote.database.async_engine.begin() as connection:
+    async with mwahahavote.database.create_engine() as engine, engine.begin() as connection:
         print(
             "Number of rows affected:",
             await connection.run_sync(

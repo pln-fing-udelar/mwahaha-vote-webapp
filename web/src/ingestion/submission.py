@@ -2,17 +2,18 @@ import logging
 import os
 import tempfile
 import zipfile
-from collections.abc import AsyncIterable, Iterable
+from collections.abc import AsyncIterable, AsyncIterator, Iterable
 from typing import Any
 
 import fsspec
 import pandas as pd
 import sqlalchemy
 import sqlalchemy.dialects.mysql
+import sqlalchemy.ext.asyncio
 from pandas.io.sql import SQLTable
 
 from ingestion.codabench import Submission
-from mwahahavote.database import TASK_CHOICES, async_engine, task_to_prompt_id_sql_like_expression
+from mwahahavote.database import TASK_CHOICES, task_to_prompt_id_sql_like_expression
 
 
 def print_stats(submissions: list[Submission]) -> None:
@@ -71,9 +72,9 @@ def print_stats(submissions: list[Submission]) -> None:
     print()
 
 
-async def list_ingested_system_ids() -> AsyncIterable[str]:
+async def list_ingested_system_ids(engine: sqlalchemy.ext.asyncio.AsyncEngine) -> AsyncIterable[str]:
     """List all system IDs in the database."""
-    async with async_engine.begin() as connection:
+    async with engine.begin() as connection:
         for row in await connection.execute(sqlalchemy.sql.text("SELECT system_id FROM systems")):
             yield row[0]
 
@@ -94,10 +95,14 @@ def _read_submission_file(path: str) -> pd.DataFrame:
 
 
 async def ingest_submission(
-    phase_id: int, submission: Submission, system_exists_ok: bool = False, accept_null_texts: bool = True
+    engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    phase_id: int,
+    submission: Submission,
+    system_exists_ok: bool = False,
+    accept_null_texts: bool = True,
 ) -> int:
     """Ingest a submission into the database. Returns the number of affected rows."""
-    async with async_engine.begin() as connection:
+    async with engine.begin() as connection:
         with tempfile.TemporaryDirectory() as dir_:
             try:
                 connection.execute(

@@ -3,11 +3,13 @@ import os
 import random
 import string
 from collections.abc import AsyncIterator, Iterable
+from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Any, NamedTuple, TypedDict, cast, override
 
 import httpx
 import sentry_sdk
+import sqlalchemy.ext.asyncio
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,7 +52,13 @@ sentry_sdk.init(
 fernet_cipher = Fernet(os.environ["BATTLE_TOKEN_SECRET"].encode())
 
 
-app = FastAPI()
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[dict[str, Any]]:
+    async with database.create_engine() as database_engine:
+        yield {"database_engine": database_engine}
+
+
+app = FastAPI(lifespan=_lifespan)
 
 app.add_middleware(
     CORSMiddleware,  # type: ignore[arg-type]
@@ -228,18 +236,23 @@ def _simplify_battle_object(battle: Battle) -> SimplifiedBattleDict:
 
 
 async def _get_battle_objects(
-    phase_id: int, session_id: str, task: Task, batch_size: int, ignored_output_ids: Iterable[tuple[str, str]] = ()
+    engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    phase_id: int,
+    session_id: str,
+    task: Task,
+    batch_size: int,
+    ignored_output_ids: Iterable[tuple[str, str]] = (),
 ) -> AsyncIterator[SimplifiedBattleDict]:
     num_returned = 0
 
     async for battle in database.random_least_voted_unseen_battles(
-        phase_id, session_id, task, batch_size, ignored_output_ids
+        engine, phase_id, session_id, task, batch_size, ignored_output_ids
     ):
         yield _simplify_battle_object(battle)
         num_returned += 1
 
     if (num_missing := batch_size - num_returned) > 0:
-        async for battle in database.random_battles(phase_id, task, batch_size=num_missing):
+        async for battle in database.random_battles(engine, phase_id, task, batch_size=num_missing):
             yield _simplify_battle_object(battle)
 
 
@@ -248,15 +261,15 @@ async def battles_route(request: Request, task: str = Query("a-en")) -> list[Sim
     task = cast(Task, task if task in TASK_CHOICES else "a-en")
     return [
         battle
-        async for battle in _get_battle_objects(PHASE_ID, request.state.session_id, task, REQUEST_BATTLE_BATCH_SIZE)
+        async for battle in _get_battle_objects(
+            request.state.database_engine, PHASE_ID, request.state.session_id, task, REQUEST_BATTLE_BATCH_SIZE
+        )
     ]
 
 
 @app.post("/vote")
 # Can't set the return type because it'd be like `BattleDict | HTTPException` but that'd raise a `FastAPIError`:
 async def vote_and_get_new_battle_route(request: Request) -> Any:
-    session_id = request.state.session_id
-
     form_data = await request.form()
 
     turnstile_token = str(form_data.get("turnstile_token", ""))
@@ -276,6 +289,8 @@ async def vote_and_get_new_battle_route(request: Request) -> Any:
     except ValueError as e:
         raise HTTPException(status_code=400, detail="Invalid prompt ID") from e
 
+    session_id = request.state.session_id
+
     if all(key in form_data for key in ("vote", "is_offensive_a", "is_offensive_b")):
         vote_str = str(form_data["vote"])
         if vote_str not in VOTE_CHOICES:
@@ -283,6 +298,7 @@ async def vote_and_get_new_battle_route(request: Request) -> Any:
         vote = cast(VoteString, vote_str)
 
         await database.add_vote(
+            request.state.database_engine,
             session_id,
             prompt_id,
             system_id_a,
@@ -304,7 +320,14 @@ async def vote_and_get_new_battle_route(request: Request) -> Any:
             logger.exception(f"Invalid battle token when building from `ignored_ids[]`: {ignored_battle_token}")
 
     return await anext(
-        _get_battle_objects(PHASE_ID, session_id, task, batch_size=1, ignored_output_ids=ignored_output_ids),
+        _get_battle_objects(
+            request.state.database_engine,
+            PHASE_ID,
+            session_id,
+            task,
+            batch_size=1,
+            ignored_output_ids=ignored_output_ids,
+        ),
         {},
     )
 
@@ -316,23 +339,23 @@ async def leaderboard_route() -> Response:
 
 @app.get("/session-vote-count")
 async def session_vote_count_route(request: Request) -> int:
-    return await database.session_vote_count_without_skips(request.state.session_id)
+    return await database.session_vote_count_without_skips(request.state.database_engine, request.state.session_id)
 
 
 @app.get("/vote-count")
-async def vote_count_route() -> int:
-    return await database.vote_count_without_skips()
+async def vote_count_route(request: Request) -> int:
+    return await database.vote_count_without_skips(request.state.database_engine)
 
 
 @app.get("/votes-per-session")
-async def get_votes_per_session_route() -> dict[str, int]:
-    return await database.get_votes_per_session(PHASE_ID)
+async def get_votes_per_session_route(request: Request) -> dict[str, int]:
+    return await database.get_votes_per_session(request.state.database_engine, PHASE_ID)
 
 
 @app.get("/votes.csv")
-async def get_votes_route() -> Response:
+async def get_votes_route(request: Request) -> Response:
     return Response(
-        content=(await database.get_votes(PHASE_ID)).to_csv(index=False),
+        content=(await database.get_votes(request.state.database_engine, PHASE_ID)).to_csv(index=False),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=votes.csv"},
     )
@@ -340,7 +363,7 @@ async def get_votes_route() -> Response:
 
 @app.post("/prolific-consent")
 async def prolific_consent_route(request: Request) -> Response:
-    await database.prolific_consent(request.state.session_id)
+    await database.prolific_consent(request.state.database_engine, request.state.session_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -353,7 +376,7 @@ async def prolific_finish_route(request: Request) -> Response:
     task_str = str(form_data.get("task", "a-en"))
     task: Task = cast(Task, task_str if task_str in TASK_CHOICES else "a-en")
 
-    await database.prolific_finish(request.state.session_id, comments)
+    await database.prolific_finish(request.state.database_engine, request.state.session_id, comments)
 
     return RedirectResponse(
         url=f"https://app.prolific.co/submissions/complete?cc={PROLIFIC_COMPLETION_CODES[task]}",
@@ -363,7 +386,7 @@ async def prolific_finish_route(request: Request) -> Response:
 
 @app.get("/stats")
 async def stats_route(request: Request) -> Response:
-    stats = await database.stats()
+    stats = await database.stats(request.state.database_engine)
     stats["histogram"] = [["Vote count", "Prompt count"]] + [[str(a), b] for a, b in stats["histogram"].items()]
     stats["votes-per-category"] = [["Vote", "Prompt count"], *list(stats["votes-per-category"].items())]
     return templates.TemplateResponse("stats.html", {"request": request, "stats": stats})
