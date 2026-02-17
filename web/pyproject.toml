@@ -13,6 +13,7 @@ dependencies = [
     "orjson<4", # Fast JSON parser picked up by FastAPI.
     "pandas<4",
     "python-multipart<1", # For forms in FastAPI.
+    "redis[hiredis]>=5,<8",
     "sentry-sdk<3",
     "sqlalchemy[asyncmy]<3",
     "starlette",

@@ -7,4 +7,13 @@ services:
       - DB_USER=root
       - DB_PASS
       - DB_NAME=mwahaha
+      - REDIS_HOST=redis
       - TURNSTILE_SECRET_KEY
+    networks:
+      - redis_net
+  redis:
+    image: redis:8-alpine
+    networks:
+      - redis_net
+networks:
+  redis_net:

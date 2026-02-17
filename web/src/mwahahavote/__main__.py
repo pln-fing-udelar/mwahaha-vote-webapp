@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import random
@@ -7,6 +8,8 @@ from datetime import timedelta
 from typing import Any, NamedTuple, TypedDict, cast
 
 import httpx
+import orjson
+import redis.asyncio
 import sentry_sdk
 import sqlalchemy.ext.asyncio
 from cryptography.fernet import Fernet, InvalidToken
@@ -40,6 +43,10 @@ IS_LOCAL_DEVELOPMENT = "VIRTUAL_HOST" not in os.environ
 
 REQUEST_BATTLE_BATCH_SIZE = 4
 
+QUEUE_TARGET_SIZE = 10 * REQUEST_BATTLE_BATCH_SIZE
+QUEUE_REFILL_THRESHOLD = QUEUE_TARGET_SIZE // 2
+QUEUE_PLACEHOLDER_SESSION = "__queue_placeholder__"
+
 SESSION_ID_MAX_AGE = int(timedelta(weeks=1000).total_seconds())
 
 sentry_sdk.init(
@@ -52,10 +59,161 @@ sentry_sdk.init(
 fernet_cipher = Fernet(os.environ["BATTLE_TOKEN_SECRET"].encode())
 
 
+def _queue_key(task: Task) -> str:
+    return f"battle_queue:{task}"
+
+
+def _serialize_battle(battle: Battle) -> bytes:
+    return orjson.dumps(
+        {
+            "prompt_id": battle.prompt.id,
+            "word1": battle.prompt.word1,
+            "word2": battle.prompt.word2,
+            "headline": battle.prompt.headline,
+            "url": battle.prompt.url,
+            "prompt": battle.prompt.prompt,
+            "system_id_a": battle.output_a.system.id,
+            "text_a": battle.output_a.text,
+            "system_id_b": battle.output_b.system.id,
+            "text_b": battle.output_b.text,
+        }
+    )
+
+
+def _deserialize_battle(data: bytes) -> Battle:
+    d = orjson.loads(data)
+    prompt = database.Prompt(
+        id=d["prompt_id"], word1=d["word1"], word2=d["word2"], headline=d["headline"], url=d["url"], prompt=d["prompt"]
+    )
+    return Battle(
+        output_a=database.Output(prompt=prompt, system=database.System(id=d["system_id_a"]), text=d["text_a"]),
+        output_b=database.Output(prompt=prompt, system=database.System(id=d["system_id_b"]), text=d["text_b"]),
+    )
+
+
+async def _fill_queue(
+    engine: sqlalchemy.ext.asyncio.AsyncEngine, redis_client: redis.asyncio.Redis[bytes], task: Task, target_size: int
+) -> None:
+    key = _queue_key(task)
+    current_size = await redis_client.llen(key)
+
+    if (needed_size := target_size - current_size) <= 0:
+        return
+
+    serialized_battles = [
+        _serialize_battle(battle)
+        async for battle in database.random_least_voted_unseen_battles(
+            engine, PHASE_ID, QUEUE_PLACEHOLDER_SESSION, task, needed_size
+        )
+    ]
+
+    if serialized_battles:
+        await redis_client.lpush(key, *serialized_battles)
+
+
+REFILL_LOCK_TTL = 30  # seconds
+
+
+async def _do_refill(
+    engine: sqlalchemy.ext.asyncio.AsyncEngine, redis_client: redis.asyncio.Redis[bytes], task: Task
+) -> None:
+    lock_key = f"battle_queue_refill_lock:{task}"
+    try:
+        if not await redis_client.set(lock_key, b"1", nx=True, ex=REFILL_LOCK_TTL):
+            return
+        try:
+            await _fill_queue(engine, redis_client, task, QUEUE_TARGET_SIZE)
+        finally:
+            await redis_client.delete(lock_key)
+    except Exception:
+        logger.exception("Queue refill failed")
+
+
+async def _maybe_trigger_refill(
+    engine: sqlalchemy.ext.asyncio.AsyncEngine, redis_client: redis.asyncio.Redis[bytes], task: Task
+) -> None:
+    if (await redis_client.llen(_queue_key(task))) < QUEUE_REFILL_THRESHOLD:
+        await _do_refill(engine, redis_client, task)
+
+
+def _pick_from_queue(
+    queue: list[Battle], voted: set[tuple[str, str]], batch_size: int
+) -> tuple[list[int], list[Battle]]:
+    """Dequeue battles from the queue, preferring the unvoted ones."""
+    picked_indices: list[int] = []
+    result: list[Battle] = []
+
+    for i, battle in enumerate(queue):
+        if len(result) >= batch_size:
+            break
+        key_a = (battle.output_a.prompt.id, battle.output_a.system.id)
+        key_b = (battle.output_b.prompt.id, battle.output_b.system.id)
+        if key_a not in voted and key_b not in voted:
+            picked_indices.append(i)
+            result.append(battle)
+
+    if len(result) < batch_size:
+        picked_set = set(picked_indices)
+        for i, battle in enumerate(queue):
+            if len(result) >= batch_size:
+                break
+            if i not in picked_set:
+                picked_indices.append(i)
+                result.append(battle)
+
+    return picked_indices, result
+
+
+async def _pick_battles_from_queue(
+    engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    redis_client: redis.asyncio.Redis[bytes],
+    session_id: str,
+    task: Task,
+    batch_size: int,
+    ignored_output_ids: Iterable[tuple[str, str]] = (),
+) -> list[SimplifiedBattleDict]:
+    key = _queue_key(task)
+
+    seen = await database.get_session_voted_output_ids(engine, PHASE_ID, session_id, task)
+    seen.update(ignored_output_ids)
+
+    result: list[Battle] = []
+
+    try:
+        async with redis_client.pipeline(transaction=True) as pipe:
+            pipe.lrange(key, 0, -1)
+            pipe.delete(key)
+            all_items_raw, _ = await pipe.execute()
+
+        all_battles = [_deserialize_battle(item) for item in all_items_raw]
+
+        picked_indices, result = _pick_from_queue(all_battles, seen, batch_size)
+
+        picked_set = frozenset(picked_indices)
+        if unpicked_raw := [all_items_raw[i] for i in range(len(all_items_raw)) if i not in picked_set]:
+            await redis_client.rpush(key, *unpicked_raw)
+    except redis.RedisError:
+        logger.warning("Redis unavailable, falling back to database", exc_info=True)
+
+    if not result:
+        async for battle in database.random_least_voted_unseen_battles(
+            engine, PHASE_ID, session_id, task, batch_size, ignored_output_ids
+        ):
+            result.append(battle)
+
+    return [_simplify_battle_object(battle) for battle in result]
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[dict[str, Any]]:
-    async with database.create_engine() as database_engine:
-        yield {"database_engine": database_engine}
+    async with (
+        database.create_engine() as database_engine,
+        redis.asyncio.Redis(host=os.environ["REDIS_HOST"], decode_responses=False) as redis_client,
+    ):
+        await asyncio.gather(
+            *(_fill_queue(database_engine, redis_client, cast(Task, task), QUEUE_TARGET_SIZE) for task in TASK_CHOICES)
+        )
+        yield {"database_engine": database_engine, "redis_client": redis_client}
 
 
 def _generate_id() -> str:  # From https://stackoverflow.com/a/2257449/1165181
@@ -247,30 +405,10 @@ def _simplify_battle_object(battle: Battle) -> SimplifiedBattleDict:
     }
 
 
-async def _get_battle_objects(
-    engine: sqlalchemy.ext.asyncio.AsyncEngine,
-    phase_id: int,
-    session_id: str,
-    task: Task,
-    batch_size: int,
-    ignored_output_ids: Iterable[tuple[str, str]] = (),
-) -> AsyncIterator[SimplifiedBattleDict]:
-    num_returned = 0
-
-    async for battle in database.random_least_voted_unseen_battles(
-        engine, phase_id, session_id, task, batch_size, ignored_output_ids
-    ):
-        yield _simplify_battle_object(battle)
-        num_returned += 1
-
-    if (num_missing := batch_size - num_returned) > 0:
-        async for battle in database.random_battles(engine, phase_id, task, batch_size=num_missing):
-            yield _simplify_battle_object(battle)
-
-
 @app.get("/battles", response_class=ORJSONResponse)
 async def battles_route(
     request: Request,
+    background_tasks: BackgroundTasks,
     task: str = Query("a-en"),
     batch_size: int = Query(REQUEST_BATTLE_BATCH_SIZE),
     # Note that the length of the following list is limited by the maximum URL length,
@@ -291,12 +429,16 @@ async def battles_route(
         except ValueError:
             logger.exception(f"Invalid battle token in ignored_tokens: {ignored_token}")
 
-    return [
-        battle
-        async for battle in _get_battle_objects(
-            request.state.database_engine, PHASE_ID, request.state.session_id, task, batch_size, ignored_output_ids
-        )
-    ]
+    background_tasks.add_task(_maybe_trigger_refill, request.state.database_engine, request.state.redis_client, task)
+
+    return await _pick_battles_from_queue(
+        request.state.database_engine,
+        request.state.redis_client,
+        request.state.session_id,
+        task,
+        batch_size,
+        ignored_output_ids,
+    )
 
 
 @app.post("/vote")

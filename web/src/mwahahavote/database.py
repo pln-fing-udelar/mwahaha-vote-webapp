@@ -2,7 +2,6 @@
 
 import asyncio
 import datetime
-import logging
 import os
 import random
 from collections import defaultdict
@@ -182,7 +181,7 @@ STATEMENT_PROMPT_NON_SKIP_VOTE_COUNTS = sqlalchemy.sql.text("""
   GROUP BY prompt_id
 """)
 
-STATEMENT_VOTED_BY_SESSION = sqlalchemy.sql.text("""
+STATEMENT_OUTPUTS_VOTED_BY_SESSION = sqlalchemy.sql.text("""
   SELECT prompt_id, system_id_a AS system_id
   FROM votes NATURAL JOIN prompts
   WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
@@ -190,34 +189,6 @@ STATEMENT_VOTED_BY_SESSION = sqlalchemy.sql.text("""
   SELECT prompt_id, system_id_b AS system_id
   FROM votes NATURAL JOIN prompts
   WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
-""")
-
-STATEMENT_RANDOM_BATTLES = sqlalchemy.sql.text("""
-SELECT
-  prompts.prompt_id,
-  word1,
-  word2,
-  headline,
-  url,
-  prompt,
-  outputs_a.system_id AS system_id_a,
-  outputs_a.text AS text_a,
-  outputs_b.system_id AS system_id_b,
-  outputs_b.text AS text_b
-FROM
-  prompts
-  NATURAL JOIN outputs AS outputs_a
-  JOIN outputs AS outputs_b
-    ON (
-      outputs_b.prompt_id = outputs_a.prompt_id
-      AND outputs_b.system_id != outputs_a.system_id
-    )
-WHERE
-  task = :task
-  AND phase_id = :phase_id
-ORDER BY
-  RAND()  -- FIXME: this can take forever.
-LIMIT :limit
 """)
 
 STATEMENT_ADD_VOTE = sqlalchemy.sql.text("""
@@ -278,17 +249,6 @@ def _create_battle_with_prompt(
     return Battle(output_a=output_a, output_b=output_b)
 
 
-def _battle_row_to_object(
-    row: tuple[str, str | None, str | None, str | None, str | None, str | None, str, str, str, str],
-    randomly_swap_systems: bool = True,
-) -> Battle:
-    prompt_id, word1, word2, headline, url, prompt_text, system_id_a, text_a, system_id_b, text_b = row
-    prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text)
-    return _create_battle_with_prompt(
-        prompt, system_id_a, text_a, system_id_b, text_b, randomly_swap_systems=randomly_swap_systems
-    )
-
-
 async def random_least_voted_unseen_battles(
     engine: sqlalchemy.ext.asyncio.AsyncEngine,
     phase_id: int,
@@ -307,12 +267,12 @@ async def random_least_voted_unseen_battles(
             outputs_cursor,
             system_non_skip_vote_counts_cursor,
             prompt_non_skip_vote_counts_cursor,
-            session_votes_cursor,
+            session_output_votes_cursor,
         ) = await asyncio.gather(
             connection.execute(STATEMENT_OUTPUTS_FOR_TASK, task_params),
             connection.execute(STATEMENT_SYSTEM_NON_SKIP_VOTE_COUNTS, task_params),
             connection.execute(STATEMENT_PROMPT_NON_SKIP_VOTE_COUNTS, task_params),
-            connection.execute(STATEMENT_VOTED_BY_SESSION, {"session_id": session_id, **task_params}),
+            connection.execute(STATEMENT_OUTPUTS_VOTED_BY_SESSION, {"session_id": session_id, **task_params}),
         )
 
     # TODO: these two variables could probably be cached:
@@ -326,7 +286,9 @@ async def random_least_voted_unseen_battles(
 
     system_id_to_non_skip_vote_count: dict[str, int] = dict(iter(system_non_skip_vote_counts_cursor))  # type: ignore[no-matching-overload]
     prompt_id_to_non_skip_vote_count: dict[str, int] = dict(iter(prompt_non_skip_vote_counts_cursor))  # type: ignore[no-matching-overload]
-    excluded_output_ids: set[tuple[str, str]] = set(iter(session_votes_cursor))  # type: ignore[no-matching-overload]
+
+    # We consider the outputs voted by the session and not the battles themselves.
+    excluded_output_ids: set[tuple[str, str]] = set(iter(session_output_votes_cursor))  # type: ignore[no-matching-overload]
     excluded_output_ids.update(ignored_output_ids)
 
     # Build candidate list: the unseen outputs from the systems that have at least one vote.
@@ -367,17 +329,19 @@ async def random_least_voted_unseen_battles(
         batch_size -= 1
 
 
-async def random_battles(
-    engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int, task: Task, batch_size: int
-) -> AsyncIterator[Battle]:
-    """Returns an iterator with `batch_size` random battles."""
+async def get_session_voted_output_ids(
+    engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int, session_id: str, task: Task
+) -> set[tuple[str, str]]:
+    """Returns the (prompt_id, system_id) pairs a session has voted on."""
     async with engine.connect() as connection:
-        for row in await connection.execute(
-            STATEMENT_RANDOM_BATTLES, {"task": task, "phase_id": phase_id, "limit": batch_size}
-        ):
-            prompt_id, word1, word2, headline, url, prompt_text, system_id_a, text_a, system_id_b, text_b = row
-            prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text)
-            yield _create_battle_with_prompt(prompt, system_id_a, text_a, system_id_b, text_b)
+        return set(
+            iter(
+                await connection.execute(
+                    STATEMENT_OUTPUTS_VOTED_BY_SESSION,
+                    {"session_id": session_id, "task": task, "phase_id": phase_id},
+                )
+            )
+        )  # type: ignore[no-matching-overload]
 
 
 async def battles_with_same_text(
@@ -413,7 +377,11 @@ async def battles_with_same_text(
                 """),
             {"task": task, "phase_id": phase_id},
         ):
-            yield _battle_row_to_object(row, randomly_swap_systems=False)  # type: ignore[invalid-argument-type]
+            prompt_id, word1, word2, headline, url, prompt_text, system_id_a, text_a, system_id_b, text_b = row
+            prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text)
+            yield _create_battle_with_prompt(
+                prompt, system_id_a, text_a, system_id_b, text_b, randomly_swap_systems=False
+            )
 
 
 async def get_votes_for_battles_with_the_same_text(
