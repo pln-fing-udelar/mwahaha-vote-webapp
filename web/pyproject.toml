@@ -13,7 +13,7 @@ dependencies = [
     "pandas<4",
     "python-multipart<1", # For forms in FastAPI.
     "sentry-sdk<3",
-    "sqlalchemy[asyncmy,mysql]<3",
+    "sqlalchemy[asyncmy]<3",
     "starlette",
     "uvicorn<1",
     "uvloop", # Fast, drop-in replacement of the built-in asyncio event loop picked up by uvicorn.
