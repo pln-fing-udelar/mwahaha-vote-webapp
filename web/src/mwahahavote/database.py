@@ -1,8 +1,11 @@
 """Provides mechanisms to handle the database."""
 
+import asyncio
 import datetime
+import logging
 import os
 import random
+from collections import defaultdict
 from collections.abc import AsyncIterator, Iterable, MutableMapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -155,92 +158,38 @@ class Vote:
     is_offensive_b: bool
 
 
-# noinspection SqlAggregates
-STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES = sqlalchemy.sql.text("""
-WITH
-  unskipped_votes AS (
-    SELECT prompt_id, system_id_a AS system_id
-    FROM votes NATURAL JOIN prompts
+STATEMENT_OUTPUTS_FOR_TASK = sqlalchemy.sql.text("""
+  SELECT prompt_id, system_id, text, word1, word2, headline, url, prompt
+  FROM outputs NATURAL JOIN prompts
+  WHERE task = :task AND phase_id = :phase_id
+""")
+
+STATEMENT_SYSTEM_NON_SKIP_VOTE_COUNTS = sqlalchemy.sql.text("""
+  SELECT system_id, COUNT(*) AS count
+  FROM (
+    SELECT system_id_a AS system_id FROM votes NATURAL JOIN prompts
     WHERE vote != 'n' AND task = :task AND phase_id = :phase_id
     UNION ALL
-    SELECT prompt_id, system_id_b AS system_id
-    FROM votes NATURAL JOIN prompts
+    SELECT system_id_b AS system_id FROM votes NATURAL JOIN prompts
     WHERE vote != 'n' AND task = :task AND phase_id = :phase_id
-  ),
-  votes_from_session AS (
-    SELECT prompt_id, system_id_a AS system_id
-    FROM votes NATURAL JOIN prompts
-    WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
-    UNION
-    SELECT prompt_id, system_id_b AS system_id
-    FROM votes NATURAL JOIN prompts
-    WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
-  ), system_unskipped_votes AS (
-    SELECT system_id, COUNT(*) AS count
-    FROM unskipped_votes
-    GROUP BY system_id
-  ), random_least_voted_unseen_outputs_from_least_voted_systems_a AS (
-    SELECT
-      outputs.prompt_id,
-      outputs.system_id,
-      text,
-      system_unskipped_votes.count AS system_count,
-      COUNT(unskipped_votes.prompt_id) prompt_count
-    FROM
-      outputs
-      NATURAL JOIN system_unskipped_votes
-      LEFT JOIN votes_from_session
-      ON (
-        votes_from_session.prompt_id = outputs.prompt_id
-        AND votes_from_session.system_id = outputs.system_id
-      )
-      LEFT JOIN unskipped_votes
-      ON (
-        unskipped_votes.prompt_id = outputs.prompt_id
-        AND unskipped_votes.system_id = outputs.system_id
-      )
-  WHERE
-    votes_from_session.prompt_id IS NULL
-    AND FIND_IN_SET(CONCAT(outputs.prompt_id, '-', outputs.system_id), :ignored_output_ids) = 0
-  GROUP BY
-    prompt_id,
-    system_id
-  )
-SELECT
-  prompts.prompt_id,
-  word1,
-  word2,
-  headline,
-  url,
-  prompt,
-  random_least_voted_unseen_outputs_from_least_voted_systems_a.system_id AS system_id_a,
-  random_least_voted_unseen_outputs_from_least_voted_systems_a.text AS text_a,
-  outputs_b.system_id AS system_id_b,
-  outputs_b.text AS text_b
-FROM
-  prompts
-  NATURAL JOIN random_least_voted_unseen_outputs_from_least_voted_systems_a
-  JOIN outputs AS outputs_b
-    ON (
-      outputs_b.prompt_id = random_least_voted_unseen_outputs_from_least_voted_systems_a.prompt_id
-      AND outputs_b.system_id != random_least_voted_unseen_outputs_from_least_voted_systems_a.system_id
-    )
-  LEFT JOIN votes_from_session AS votes_from_session_b
-    ON (
-      votes_from_session_b.prompt_id = outputs_b.prompt_id
-      AND votes_from_session_b.system_id = outputs_b.system_id
-    )
-WHERE
-  task = :task
-  AND phase_id = :phase_id
-  AND votes_from_session_b.prompt_id IS NULL
-  AND FIND_IN_SET(CONCAT(outputs_b.prompt_id, '-', outputs_b.system_id), :ignored_output_ids) = 0
-HAVING text_a != text_b
-ORDER BY
-  system_count,
-  prompt_count,
-  RAND()
-LIMIT :limit
+  ) t GROUP BY system_id
+""")
+
+STATEMENT_PROMPT_NON_SKIP_VOTE_COUNTS = sqlalchemy.sql.text("""
+  SELECT prompt_id, COUNT(*) as count
+  FROM prompts NATURAL JOIN votes
+  WHERE vote != 'n' AND task = :task AND phase_id = :phase_id
+  GROUP BY prompt_id
+""")
+
+STATEMENT_VOTED_BY_SESSION = sqlalchemy.sql.text("""
+  SELECT prompt_id, system_id_a AS system_id
+  FROM votes NATURAL JOIN prompts
+  WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
+  UNION
+  SELECT prompt_id, system_id_b AS system_id
+  FROM votes NATURAL JOIN prompts
+  WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
 """)
 
 STATEMENT_RANDOM_BATTLES = sqlalchemy.sql.text("""
@@ -267,7 +216,7 @@ WHERE
   task = :task
   AND phase_id = :phase_id
 ORDER BY
-  RAND()
+  RAND()  -- FIXME: this can take forever.
 LIMIT :limit
 """)
 
@@ -317,22 +266,27 @@ async def create_engine() -> AsyncIterator[sqlalchemy.ext.asyncio.AsyncEngine]:
         await engine.dispose()
 
 
+def _create_battle_with_prompt(
+    prompt: Prompt, system_id_a: str, text_a: str, system_id_b: str, text_b: str, randomly_swap_systems: bool = True
+) -> Battle:
+    output_a = Output(prompt=prompt, system=System(id=system_id_a), text=text_a)
+    output_b = Output(prompt=prompt, system=System(id=system_id_b), text=text_b)
+
+    if randomly_swap_systems and random.random() < 0.5:
+        output_a, output_b = output_b, output_a
+
+    return Battle(output_a=output_a, output_b=output_b)
+
+
 def _battle_row_to_object(
     row: tuple[str, str | None, str | None, str | None, str | None, str | None, str, str, str, str],
     randomly_swap_systems: bool = True,
 ) -> Battle:
     prompt_id, word1, word2, headline, url, prompt_text, system_id_a, text_a, system_id_b, text_b = row
-
     prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text)
-
-    output_a = Output(prompt=prompt, system=System(id=system_id_a), text=text_a)
-    output_b = Output(prompt=prompt, system=System(id=system_id_b), text=text_b)
-
-    if randomly_swap_systems:
-        if random.random() < 0.5:
-            output_a, output_b = output_b, output_a
-
-    return Battle(output_a=output_a, output_b=output_b)
+    return _create_battle_with_prompt(
+        prompt, system_id_a, text_a, system_id_b, text_b, randomly_swap_systems=randomly_swap_systems
+    )
 
 
 async def random_least_voted_unseen_battles(
@@ -346,20 +300,71 @@ async def random_least_voted_unseen_battles(
     """Returns an iterator with a random subsample of the top `batch_size` least-voted unseen outputs (by the session),
     each paired in a battle with a random other unseen output for the same prompt.
     """
+    task_params = {"task": task, "phase_id": phase_id}
+
     async with engine.connect() as connection:
-        for row in await connection.execute(
-            STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES,
-            {
-                "phase_id": phase_id,
-                "session_id": session_id,
-                "task": task,
-                "limit": batch_size,
-                "ignored_output_ids": ",".join(
-                    prompt_id + "-" + system_id for prompt_id, system_id in ignored_output_ids
-                ),
-            },
-        ):
-            yield _battle_row_to_object(row)  # type: ignore[invalid-argument-type]
+        (
+            outputs_cursor,
+            system_non_skip_vote_counts_cursor,
+            prompt_non_skip_vote_counts_cursor,
+            session_votes_cursor,
+        ) = await asyncio.gather(
+            connection.execute(STATEMENT_OUTPUTS_FOR_TASK, task_params),
+            connection.execute(STATEMENT_SYSTEM_NON_SKIP_VOTE_COUNTS, task_params),
+            connection.execute(STATEMENT_PROMPT_NON_SKIP_VOTE_COUNTS, task_params),
+            connection.execute(STATEMENT_VOTED_BY_SESSION, {"session_id": session_id, **task_params}),
+        )
+
+    # TODO: these two variables could probably be cached:
+    prompt_id_to_prompt: dict[str, Prompt] = {}
+    prompt_id_to_outputs: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for prompt_id, system_id, text, word1, word2, headline, url, prompt_text in outputs_cursor:
+        prompt_id_to_prompt.setdefault(
+            prompt_id, Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text)
+        )
+        prompt_id_to_outputs[prompt_id].append((system_id, text))
+
+    system_id_to_non_skip_vote_count: dict[str, int] = dict(iter(system_non_skip_vote_counts_cursor))  # type: ignore[no-matching-overload]
+    prompt_id_to_non_skip_vote_count: dict[str, int] = dict(iter(prompt_non_skip_vote_counts_cursor))  # type: ignore[no-matching-overload]
+    excluded_output_ids: set[tuple[str, str]] = set(iter(session_votes_cursor))  # type: ignore[no-matching-overload]
+    excluded_output_ids.update(ignored_output_ids)
+
+    # Build candidate list: the unseen outputs from the systems that have at least one vote.
+    # Note it's not super scalable to tons of outputs.
+    candidates: list[tuple[int, int, str, str, str]] = []
+    for prompt_id, outputs in prompt_id_to_outputs.items():
+        for system_id, text in outputs:
+            if (prompt_id, system_id) in excluded_output_ids:
+                continue
+            system_non_skip_vote_count = system_id_to_non_skip_vote_count.get(system_id, 0)
+            prompt_non_skip_vote_count = prompt_id_to_non_skip_vote_count.get(prompt_id, 0)
+            candidates.append((system_non_skip_vote_count, prompt_non_skip_vote_count, prompt_id, system_id, text))
+
+    random.shuffle(candidates)
+    candidates.sort(key=lambda c: (c[0], c[1]))
+    # TODO: we could simulate each pick adds a vote to the system and prompt,
+    #       to influence the selection of the next picks.
+
+    # Pair each candidate with a random valid partner:
+    for _, _, prompt_id, system_id_a, text_a in candidates:
+        if batch_size <= 0:
+            break
+
+        partners = [
+            (system_id, text)
+            for system_id, text in prompt_id_to_outputs[prompt_id]
+            if system_id != system_id_a and (prompt_id, system_id) not in excluded_output_ids and text != text_a
+        ]
+        if not partners:
+            continue
+
+        system_id_b, text_b = random.choice(partners)
+        # FIXME: we should ensure the same battle wasn't selected again (e.g., swapped).
+        prompt = prompt_id_to_prompt[prompt_id]
+
+        yield _create_battle_with_prompt(prompt, system_id_a, text_a, system_id_b, text_b)
+
+        batch_size -= 1
 
 
 async def random_battles(
@@ -370,7 +375,9 @@ async def random_battles(
         for row in await connection.execute(
             STATEMENT_RANDOM_BATTLES, {"task": task, "phase_id": phase_id, "limit": batch_size}
         ):
-            yield _battle_row_to_object(row)  # type: ignore[invalid-argument-type]
+            prompt_id, word1, word2, headline, url, prompt_text, system_id_a, text_a, system_id_b, text_b = row
+            prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text)
+            yield _create_battle_with_prompt(prompt, system_id_a, text_a, system_id_b, text_b)
 
 
 async def battles_with_same_text(
@@ -387,7 +394,6 @@ async def battles_with_same_text(
                       headline,
                       url,
                       prompt,
-                      'placeholder',
                       outputs_a.system_id AS system_id_a,
                       outputs_a.text AS text_a,
                       outputs_b.system_id AS system_id_b,
@@ -407,7 +413,7 @@ async def battles_with_same_text(
                 """),
             {"task": task, "phase_id": phase_id},
         ):
-            yield _battle_row_to_object(row)  # type: ignore[invalid-argument-type]
+            yield _battle_row_to_object(row, randomly_swap_systems=False)  # type: ignore[invalid-argument-type]
 
 
 async def get_votes_for_battles_with_the_same_text(
