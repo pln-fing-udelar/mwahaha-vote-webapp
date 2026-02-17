@@ -4,7 +4,7 @@ import random
 import string
 from collections.abc import AsyncIterator, Iterable
 from datetime import timedelta
-from typing import Any, cast, override
+from typing import Any, NamedTuple, TypedDict, cast, override
 
 import httpx
 import sentry_sdk
@@ -71,7 +71,13 @@ def _encrypt_as_battle_token(prompt_id: str, system_id_a: str, system_id_b: str)
     return fernet_cipher.encrypt(f"{prompt_id}|{system_id_a}|{system_id_b}".encode()).decode("ascii")
 
 
-def _decrypt_battle_token(id_: str) -> tuple[str, str, str]:  # TODO: NamedTuple?
+class BattleId(NamedTuple):
+    prompt_id: str
+    system_id_a: str
+    system_id_b: str
+
+
+def _decrypt_battle_token(id_: str) -> BattleId:
     try:
         plaintext = fernet_cipher.decrypt(id_.encode(), ttl=None).decode("utf-8")
 
@@ -84,7 +90,7 @@ def _decrypt_battle_token(id_: str) -> tuple[str, str, str]:  # TODO: NamedTuple
         if not prompt_id or not system_id_a or not system_id_b:
             raise ValueError("Token contains empty IDs")
 
-        return prompt_id, system_id_a, system_id_b
+        return BattleId(prompt_id, system_id_a, system_id_b)
     except InvalidToken as e:
         raise ValueError("Invalid or tampered battle token") from e
     except Exception as e:
@@ -202,7 +208,15 @@ async def _passes_turnstile(token: str) -> bool:
             return True
 
 
-def _simplify_battle_object(battle: Battle) -> dict[str, Any]:  # TODO: a typed dict?
+class SimplifiedBattleDict(TypedDict):
+    token: str
+    prompt: str | None
+    prompt_image_url: str | None
+    output_a: str
+    output_b: str
+
+
+def _simplify_battle_object(battle: Battle) -> SimplifiedBattleDict:
     """Removes redundant fields and simplifies the battle representation for JSON serialization."""
     return {
         "token": _encrypt_as_battle_token(battle.prompt.id, battle.output_a.system.id, battle.output_b.system.id),
@@ -215,7 +229,7 @@ def _simplify_battle_object(battle: Battle) -> dict[str, Any]:  # TODO: a typed 
 
 async def _get_battle_objects(
     phase_id: int, session_id: str, task: Task, batch_size: int, ignored_output_ids: Iterable[tuple[str, str]] = ()
-) -> AsyncIterator[dict[str, Any]]:
+) -> AsyncIterator[SimplifiedBattleDict]:
     num_returned = 0
 
     async for battle in database.random_least_voted_unseen_battles(
@@ -230,7 +244,7 @@ async def _get_battle_objects(
 
 
 @app.get("/battles")
-async def battles_route(request: Request, task: str = Query("a-en")) -> list[dict[str, Any]]:
+async def battles_route(request: Request, task: str = Query("a-en")) -> list[SimplifiedBattleDict]:
     task = cast(Task, task if task in TASK_CHOICES else "a-en")
     return [
         battle
@@ -239,7 +253,7 @@ async def battles_route(request: Request, task: str = Query("a-en")) -> list[dic
 
 
 @app.post("/vote")
-# Can't set the return type because it'd be like `dict[str, Any] | HTTPException` but that'd raise a `FastAPIError`:
+# Can't set the return type because it'd be like `BattleDict | HTTPException` but that'd raise a `FastAPIError`:
 async def vote_and_get_new_battle_route(request: Request) -> Any:
     session_id = request.state.session_id
 
