@@ -11,7 +11,7 @@ import httpx
 import sentry_sdk
 import sqlalchemy.ext.asyncio
 from cryptography.fernet import Fernet, InvalidToken
-from fastapi import FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -131,7 +131,7 @@ def _perturb_text(text: str) -> str:
             # Use position-based seed for consistency
             position_hash = (random.getstate()[1][i % 624] + i) / (2**32)
             if position_hash < remove_space_rate:
-                # Remove the space after period
+                # Remove the space after a period
                 i += 1  # Skip the space
             i += 1
             continue
@@ -290,7 +290,7 @@ async def battles_route(
 
 
 @app.post("/vote")
-async def vote_route(request: Request) -> Response:
+async def vote_route(request: Request, background_tasks: BackgroundTasks) -> Response:
     form_data = await request.form()
 
     if not await _passes_turnstile(str(form_data.get("turnstile_token", ""))):
@@ -310,7 +310,8 @@ async def vote_route(request: Request) -> Response:
         except ValueError as e:
             raise HTTPException(status_code=400, detail="Invalid battle ID") from e
 
-        await database.add_vote(
+        background_tasks.add_task(
+            database.add_vote,
             request.state.database_engine,
             request.state.session_id,
             prompt_id,
@@ -354,13 +355,13 @@ async def get_votes_route(request: Request) -> Response:
 
 
 @app.post("/prolific-consent")
-async def prolific_consent_route(request: Request) -> Response:
-    await database.prolific_consent(request.state.database_engine, request.state.session_id)
+async def prolific_consent_route(request: Request, background_tasks: BackgroundTasks) -> Response:
+    background_tasks.add_task(database.prolific_consent, request.state.database_engine, request.state.session_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.post("/prolific-finish")
-async def prolific_finish_route(request: Request) -> Response:
+async def prolific_finish_route(request: Request, background_tasks: BackgroundTasks) -> Response:
     form_data = await request.form()
 
     comments = str(form_data.get("comments", ""))
@@ -368,7 +369,9 @@ async def prolific_finish_route(request: Request) -> Response:
     task_str = str(form_data.get("task", "a-en"))
     task: Task = cast(Task, task_str if task_str in TASK_CHOICES else "a-en")
 
-    await database.prolific_finish(request.state.database_engine, request.state.session_id, comments)
+    background_tasks.add_task(
+        database.prolific_finish, request.state.database_engine, request.state.session_id, comments
+    )
 
     return RedirectResponse(
         url=f"https://app.prolific.co/submissions/complete?cc={PROLIFIC_COMPLETION_CODES[task]}",
