@@ -5,7 +5,7 @@ import string
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from typing import Any, NamedTuple, TypedDict, cast, override
+from typing import Any, NamedTuple, TypedDict, cast
 
 import httpx
 import sentry_sdk
@@ -17,7 +17,8 @@ from fastapi.responses import FileResponse, ORJSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sentry_sdk.integrations.logging import LoggingIntegration
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.datastructures import MutableHeaders
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from mwahahavote import database
 from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString
@@ -177,16 +178,27 @@ def _get_session_id(request: Request) -> str:
         return request.cookies.get("id") or _generate_id()
 
 
-class CacheControlMiddleware(BaseHTTPMiddleware):
-    @override
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        session_id = _get_session_id(request)
-        request.state.session_id = session_id
+class CacheControlMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
 
-        response = await call_next(request)
-        response.headers["Cache-Control"] = "max-age=0, no-cache"
-        response.set_cookie(key="id", value=session_id, max_age=SESSION_ID_MAX_AGE)
-        return response
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope)
+        session_id = _get_session_id(request)
+        scope.setdefault("state", {})["session_id"] = session_id
+
+        async def send_with_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers.append("Cache-Control", "max-age=0, no-cache")
+                headers.append("Set-Cookie", f"id={session_id}; Max-Age={SESSION_ID_MAX_AGE}; Path=/; SameSite=lax")
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
 
 
 app.add_middleware(CacheControlMiddleware)  # type: ignore[arg-type]
@@ -273,9 +285,7 @@ async def battles_route(
     ignored_output_ids: list[tuple[str, str]] = []
     for ignored_token in ignored_tokens:
         try:
-            ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = _decrypt_battle_token(
-                str(ignored_token)
-            )
+            ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = _decrypt_battle_token(str(ignored_token))
             ignored_output_ids.append((ignored_prompt_id, ignored_system_id_a))
             ignored_output_ids.append((ignored_prompt_id, ignored_system_id_b))
         except ValueError:
