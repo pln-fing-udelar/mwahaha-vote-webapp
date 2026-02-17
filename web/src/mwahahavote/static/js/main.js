@@ -197,7 +197,7 @@ function main() {
   setupPlaceload();
   setupEmojiConverter();
   getTask();
-  getRandomBattles();
+  getBattles();
   setUiListeners();
   setupProlificSessionIfNeeded();
 }
@@ -319,7 +319,7 @@ function getTask() {
   window.history.replaceState({}, "", newUrl);
 }
 
-function getRandomBattles() {
+function getBattles() {
   $.getJSON("battles", {task: task}, data => {
     battles = data;
     showBattle();
