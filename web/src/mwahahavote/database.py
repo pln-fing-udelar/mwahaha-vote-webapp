@@ -175,34 +175,9 @@ WITH
     SELECT prompt_id, system_id_b AS system_id
     FROM votes NATURAL JOIN prompts
     WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
-  ), system_ids_with_outputs AS (
-    SELECT system_id
-    FROM outputs NATURAL JOIN prompts
-    WHERE
-      task = :task
-      AND phase_id = :phase_id
-    GROUP BY system_id
-  ), system_votes AS (
-    SELECT
-      system_id_a,
-      system_id_b
-    FROM
-      votes
-      JOIN system_ids_with_outputs ON (
-        votes.system_id_a = system_ids_with_outputs.system_id
-          OR votes.system_id_b = system_ids_with_outputs.system_id
-      )
-      NATURAL JOIN prompts
-    WHERE
-      task = :task
-      AND phase_id = :phase_id
-      AND vote != 'n'
-  ), votes_and_prompts_per_system AS (
-    SELECT system_id_a AS system_id FROM system_votes UNION ALL
-      SELECT system_id_b AS system_id FROM system_votes
   ), system_unskipped_votes AS (
     SELECT system_id, COUNT(*) AS count
-    FROM votes_and_prompts_per_system
+    FROM unskipped_votes
     GROUP BY system_id
   ), random_least_voted_unseen_outputs_from_least_voted_systems_a AS (
     SELECT
