@@ -273,6 +273,9 @@ async def battles_route(
     request: Request,
     task: str = Query("a-en"),
     batch_size: int = Query(REQUEST_BATTLE_BATCH_SIZE),
+    # Note that the length of the following list is limited by the maximum URL length,
+    # which is typically around 2000 characters.
+    # We should be good for up to length 16.
     ignored_tokens: Iterable[str] = Query(()),
 ) -> list[SimplifiedBattleDict]:
     task = cast(Task, task if task in TASK_CHOICES else "a-en")
