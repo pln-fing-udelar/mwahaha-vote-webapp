@@ -10,6 +10,7 @@ dependencies = [
     "httptools", # Faster HTTP parser picked up by uvicorn.
     "httpx>=0.27.0,<1",
     "jinja2<4",
+    "orjson<4", # Fast JSON parser picked up by FastAPI.
     "pandas<4",
     "python-multipart<1", # For forms in FastAPI.
     "sentry-sdk<3",

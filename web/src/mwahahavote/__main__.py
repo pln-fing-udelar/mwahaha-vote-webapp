@@ -13,7 +13,7 @@ import sqlalchemy.ext.asyncio
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, ORJSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sentry_sdk.integrations.logging import LoggingIntegration
@@ -259,7 +259,7 @@ async def _get_battle_objects(
             yield _simplify_battle_object(battle)
 
 
-@app.get("/battles")
+@app.get("/battles", response_class=ORJSONResponse)
 async def battles_route(
     request: Request,
     task: str = Query("a-en"),
@@ -340,7 +340,7 @@ async def vote_count_route(request: Request) -> int:
     return await database.vote_count_without_skips(request.state.database_engine)
 
 
-@app.get("/votes-per-session")
+@app.get("/votes-per-session", response_class=ORJSONResponse)
 async def get_votes_per_session_route(request: Request) -> dict[str, int]:
     return await database.get_votes_per_session(request.state.database_engine, PHASE_ID)
 
