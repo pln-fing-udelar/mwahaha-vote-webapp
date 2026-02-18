@@ -4,7 +4,7 @@ import random
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from typing import Any, NamedTuple, TypedDict, cast
+from typing import Annotated, Any, NamedTuple, TypedDict, cast
 
 import httpx
 import sentry_sdk
@@ -276,14 +276,14 @@ async def battles_route(
     # Note that the length of the following list is limited by the maximum URL length,
     # which is typically around 2000 characters.
     # We should be good for up to length 16.
-    ignored_tokens: Iterable[str] = Query(()),
+    ignored_tokens: Annotated[list[str] | None, Query(alias="ignored_tokens[]")] = None,
 ) -> list[SimplifiedBattleDict]:
     task = cast(Task, task if task in TASK_CHOICES else "a-en")
 
     batch_size = max(min(batch_size, REQUEST_BATTLE_BATCH_SIZE), 1)
 
     ignored_output_ids: list[tuple[str, str]] = []
-    for ignored_token in ignored_tokens:
+    for ignored_token in ignored_tokens or ():
         try:
             ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = _decrypt_battle_token(str(ignored_token))
             ignored_output_ids.append((ignored_prompt_id, ignored_system_id_a))
