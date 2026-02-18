@@ -1,5 +1,4 @@
 """Provides mechanisms to handle the database."""
-
 import asyncio
 import datetime
 import logging
@@ -9,6 +8,7 @@ from collections import defaultdict
 from collections.abc import AsyncIterator, Iterable, MutableMapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any, Literal, cast, get_args
 
 import pandas as pd
@@ -158,7 +158,7 @@ class Vote:
     is_offensive_b: bool
 
 
-STATEMENT_OUTPUTS_FOR_TASK = sqlalchemy.sql.text("""
+STATEMENT_TASK_OUTPUTS = sqlalchemy.sql.text("""
   SELECT prompt_id, system_id, text, word1, word2, headline, url, prompt
   FROM outputs NATURAL JOIN prompts
   WHERE task = :task AND phase_id = :phase_id
@@ -182,14 +182,17 @@ STATEMENT_PROMPT_NON_SKIP_VOTE_COUNTS = sqlalchemy.sql.text("""
   GROUP BY prompt_id
 """)
 
-STATEMENT_VOTED_BY_SESSION = sqlalchemy.sql.text("""
-  SELECT prompt_id, system_id_a AS system_id
-  FROM votes NATURAL JOIN prompts
-  WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
-  UNION
-  SELECT prompt_id, system_id_b AS system_id
-  FROM votes NATURAL JOIN prompts
-  WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
+STATEMENT_SESSION_OUTPUT_VOTE_COUNTS = sqlalchemy.sql.text("""
+  SELECT prompt_id, system_id, COUNT(*) AS count
+  FROM (
+    SELECT prompt_id, system_id_a AS system_id
+    FROM votes NATURAL JOIN prompts
+    WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
+    UNION
+    SELECT prompt_id, system_id_b AS system_id
+    FROM votes NATURAL JOIN prompts
+    WHERE session_id = :session_id AND task = :task AND phase_id = :phase_id
+  ) t GROUP BY prompt_id, system_id
 """)
 
 STATEMENT_RANDOM_BATTLES = sqlalchemy.sql.text("""
@@ -289,7 +292,7 @@ def _battle_row_to_object(
     )
 
 
-async def random_least_voted_unseen_battles(
+async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the session.
     engine: sqlalchemy.ext.asyncio.AsyncEngine,
     phase_id: int,
     session_id: str,
@@ -297,69 +300,118 @@ async def random_least_voted_unseen_battles(
     batch_size: int,
     ignored_output_ids: Iterable[tuple[str, str]] = (),
 ) -> AsyncIterator[Battle]:
-    """Returns an iterator with a random subsample of the top `batch_size` least-voted unseen outputs (by the session),
-    each paired in a battle with a random other unseen output for the same prompt.
+    """Returns an iterator with a random subsample of the top `batch_size` least-voted outputs,
+    and unvoted by the session, each paired in a battle with a random other unvoted output for the same prompt.
+
+    This algorithm attempts to reach a compromise between a balanced system coverage, a balanced prompt coverage,
+    and diversity for the session. The implementation works as follows.
+    For each element in the return batch, given a phase and a task, pick an output A (prompt-system pair) that:
+
+    1. It's unvoted by the session (if they were all voted, consider the least voted one).
+    2. Among those, its system is the least non-skip-voted overall.
+    3. Among those, its prompt is unvoted so far by the session (if they were all voted, consider the least voted one).
+    4. Among those, its prompt is the least non-skip-voted overall.
+
+    Then, pair this output A with another output B for the same prompt such that:
+
+    1. B's system is different from A's.
+    2. B's text is different from A's.
+    3. It's unvoted by the session (if they were all voted, consider the least voted one).
+
+    For the choice of A and B, this implementation breaks ties randomly.
+
+    Note: we don't care if a session already voted the battle A-B. If this battle was chosen, then it means that
+    a session has voted all outputs already, which is an unlikely scenario. And it's also unlikely to arrive to this
+    scenario, in which the session already voted for a battle given that it already voted for each of its outputs
+    (in some battle).
     """
-    task_params = {"task": task, "phase_id": phase_id}
+    common_query_kwargs = {"phase_id": phase_id, "task": task}
 
     async with engine.connect() as connection:
         (
             outputs_cursor,
             system_non_skip_vote_counts_cursor,
             prompt_non_skip_vote_counts_cursor,
-            session_votes_cursor,
+            session_output_vote_counts_cursor,
         ) = await asyncio.gather(
-            connection.execute(STATEMENT_OUTPUTS_FOR_TASK, task_params),
-            connection.execute(STATEMENT_SYSTEM_NON_SKIP_VOTE_COUNTS, task_params),
-            connection.execute(STATEMENT_PROMPT_NON_SKIP_VOTE_COUNTS, task_params),
-            connection.execute(STATEMENT_VOTED_BY_SESSION, {"session_id": session_id, **task_params}),
+            connection.execute(STATEMENT_TASK_OUTPUTS, common_query_kwargs),
+            connection.execute(STATEMENT_SYSTEM_NON_SKIP_VOTE_COUNTS, common_query_kwargs),
+            connection.execute(STATEMENT_PROMPT_NON_SKIP_VOTE_COUNTS, common_query_kwargs),
+            connection.execute(STATEMENT_SESSION_OUTPUT_VOTE_COUNTS, {"session_id": session_id, **common_query_kwargs}),
         )
 
-    # TODO: these two variables could probably be cached:
+    # TODO: some of the following variables could probably be cached.
+
+    # We use `MappingProxyType` as a read-only dict to ensure they aren't modified by mistake.
+
     prompt_id_to_prompt: dict[str, Prompt] = {}
     prompt_id_to_outputs: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for prompt_id, system_id, text, word1, word2, headline, url, prompt_text in outputs_cursor:
         prompt_id_to_prompt.setdefault(
-            prompt_id, Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text)
+            prompt_id,
+            Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text),
         )
         prompt_id_to_outputs[prompt_id].append((system_id, text))
+    prompt_id_to_prompt: MappingProxyType[str, Prompt] = MappingProxyType(prompt_id_to_prompt)
+    prompt_id_to_outputs: MappingProxyType[str, list[tuple[str, str]]] = MappingProxyType(prompt_id_to_outputs)
 
-    system_id_to_non_skip_vote_count: dict[str, int] = dict(iter(system_non_skip_vote_counts_cursor))  # type: ignore[no-matching-overload]
-    prompt_id_to_non_skip_vote_count: dict[str, int] = dict(iter(prompt_non_skip_vote_counts_cursor))  # type: ignore[no-matching-overload]
-    excluded_output_ids: set[tuple[str, str]] = set(iter(session_votes_cursor))  # type: ignore[no-matching-overload]
-    excluded_output_ids.update(ignored_output_ids)
+    system_id_to_non_skip_vote_count: MappingProxyType[str, int] = MappingProxyType(
+        dict(iter(system_non_skip_vote_counts_cursor))  # type: ignore[no-matching-overload]
+    )
+    prompt_id_to_non_skip_vote_count: MappingProxyType[str, int] = MappingProxyType(
+        dict(iter(prompt_non_skip_vote_counts_cursor))  # type: ignore[no-matching-overload]
+    )
 
-    # Build candidate list: the unseen outputs from the systems that have at least one vote.
-    # Note it's not super scalable to tons of outputs.
-    candidates: list[tuple[int, int, str, str, str]] = []
-    for prompt_id, outputs in prompt_id_to_outputs.items():
-        for system_id, text in outputs:
-            if (prompt_id, system_id) in excluded_output_ids:
-                continue
-            system_non_skip_vote_count = system_id_to_non_skip_vote_count.get(system_id, 0)
-            prompt_non_skip_vote_count = prompt_id_to_non_skip_vote_count.get(prompt_id, 0)
-            candidates.append((system_non_skip_vote_count, prompt_non_skip_vote_count, prompt_id, system_id, text))
+    session_voted_outputs: dict[tuple[str, str], int] = {
+        (prompt_id, system_id): count for prompt_id, system_id, count in session_output_vote_counts_cursor
+    }
+    session_voted_outputs: MappingProxyType[tuple[str, str], int] = MappingProxyType(session_voted_outputs)
 
-    random.shuffle(candidates)
-    candidates.sort(key=lambda c: (c[0], c[1]))
+    session_voted_prompts: dict[str, int] = defaultdict(int)
+    for (prompt_id, _), count in session_voted_outputs.items():
+        session_voted_prompts[prompt_id] += count
+    session_voted_prompts: MappingProxyType[str, int] = MappingProxyType(session_voted_prompts)
+
+    ignored_output_ids: frozenset[tuple[str, str]] = frozenset(ignored_output_ids)
+
+    candidate_outputs = [
+        (
+            session_voted_outputs.get((prompt_id, system_id), 0),
+            system_id_to_non_skip_vote_count.get(system_id, 0),
+            session_voted_prompts.get(prompt_id, 0),
+            prompt_id_to_non_skip_vote_count.get(prompt_id, 0),
+            prompt_id,
+            system_id,
+            text,
+        )
+        for prompt_id, outputs in prompt_id_to_outputs.items()
+        for system_id, text in outputs
+        if (prompt_id, system_id) not in ignored_output_ids
+    ]
+
+    random.shuffle(candidate_outputs)
+    candidate_outputs.sort(key=lambda c: (c[0], c[1], c[2], c[3]))  # TODO: top-batch_size is probably faster.
+
+    logging.critical(candidate_outputs[:4])
+
     # TODO: we could simulate each pick adds a vote to the system and prompt,
     #       to influence the selection of the next picks.
 
-    # Pair each candidate with a random valid partner:
-    for _, _, prompt_id, system_id_a, text_a in candidates:
+    for _, _, _, _, prompt_id, system_id_a, text_a in candidate_outputs:
         if batch_size <= 0:
             break
 
-        partners = [
-            (system_id, text)
+        partner_outputs = [
+            (session_voted_outputs.get((prompt_id, system_id), 0), system_id, text)
             for system_id, text in prompt_id_to_outputs[prompt_id]
-            if system_id != system_id_a and (prompt_id, system_id) not in excluded_output_ids and text != text_a
+            if system_id != system_id_a and (prompt_id, system_id) not in ignored_output_ids and text != text_a
         ]
-        if not partners:
+        if not partner_outputs:
             continue
 
-        system_id_b, text_b = random.choice(partners)
-        # FIXME: we should ensure the same battle wasn't selected again (e.g., swapped).
+        random.shuffle(partner_outputs)
+        _, system_id_b, text_b = min(partner_outputs, key=lambda p: p[0])
+
         prompt = prompt_id_to_prompt[prompt_id]
 
         yield _create_battle_with_prompt(prompt, system_id_a, text_a, system_id_b, text_b)
