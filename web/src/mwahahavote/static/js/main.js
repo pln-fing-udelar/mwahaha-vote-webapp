@@ -398,10 +398,11 @@ function vote(voteOption) {
   console.log();
 
   if (remainingCount <= Math.floor(battles.length / 2)) {
-    const ignoredTokens = [];
-    for (let i = 0; i < remainingCount; i++) {
-      ignoredTokens.push(battles[(index + i) % battles.length].token);
-    }
+    // We ignore all battles in the buffer (both used and remaining ones), as opposed to just the remaining ones,
+    // which should be the logical thing to do.
+    // We do this because it may be the case that the used ones weren't processed as voted yet,
+    // especially for the battle that was just voted.
+    const ignoredTokens = battles.map(battle => battle.token);
 
     $.getJSON("battles", {task: task, batch_size: usedCount, ignored_tokens: ignoredTokens}, data => {
       for (let i = 0; i < Math.min(data.length, usedCount); i++) {
