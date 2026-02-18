@@ -1,7 +1,7 @@
 """Provides mechanisms to handle the database."""
+
 import asyncio
 import datetime
-import logging
 import os
 import random
 from collections import defaultdict
@@ -391,8 +391,6 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
 
     random.shuffle(candidate_outputs)
     candidate_outputs.sort(key=lambda c: (c[0], c[1], c[2], c[3]))  # TODO: top-batch_size is probably faster.
-
-    logging.critical(candidate_outputs[:4])
 
     # TODO: we could simulate each pick adds a vote to the system and prompt,
     #       to influence the selection of the next picks.
