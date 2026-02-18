@@ -390,7 +390,8 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
     ]
 
     random.shuffle(candidate_outputs)
-    candidate_outputs.sort(key=lambda c: (c[0], c[1], c[2], c[3]))  # TODO: top-batch_size is probably faster.
+    # We don't do top-k because some candidates may not have partners.
+    candidate_outputs.sort(key=lambda c: (c[0], c[1], c[2], c[3]))
 
     # TODO: we could simulate each pick adds a vote to the system and prompt,
     #       to influence the selection of the next picks.
@@ -399,22 +400,19 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
         if batch_size <= 0:
             break
 
-        partner_outputs = [
+        if partner_outputs := [
             (session_voted_outputs.get((prompt_id, system_id), 0), system_id, text)
             for system_id, text in prompt_id_to_outputs[prompt_id]
             if system_id != system_id_a and (prompt_id, system_id) not in ignored_output_ids and text != text_a
-        ]
-        if not partner_outputs:
-            continue
+        ]:
+            random.shuffle(partner_outputs)
+            _, system_id_b, text_b = min(partner_outputs, key=lambda p: p[0])
 
-        random.shuffle(partner_outputs)
-        _, system_id_b, text_b = min(partner_outputs, key=lambda p: p[0])
+            prompt = prompt_id_to_prompt[prompt_id]
 
-        prompt = prompt_id_to_prompt[prompt_id]
+            yield _create_battle_with_prompt(prompt, system_id_a, text_a, system_id_b, text_b)
 
-        yield _create_battle_with_prompt(prompt, system_id_a, text_a, system_id_b, text_b)
-
-        batch_size -= 1
+            batch_size -= 1
 
 
 async def random_battles(
