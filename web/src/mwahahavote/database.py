@@ -323,6 +323,9 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
     After each chosen battle, and before choosing the next one, we simulate as if it was voted by the session
     to increase the diversity.
 
+    The outputs from `ignored_output_ids` are considered voted for the sake of this algorithm.
+    Otherwise, we may yield battles that repeat their prompts (but not their outputs).
+
     Note: we don't care if a session already voted the battle A-B. If this battle was chosen, then it means that
     a session has voted all outputs already, which is an unlikely scenario. And it's also unlikely to arrive to this
     scenario, in which the session already voted for a battle given that it already voted for each of its outputs
@@ -374,24 +377,29 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
     # We fix the double-counting, because the original dict came from outputs,
     # which were counted based on battles (which have 2 outputs).
     for prompt_id in session_voted_prompts.keys():
-        session_voted_prompts[prompt_id] /= 2
+        session_voted_prompts[prompt_id] //= 2
 
-    ignored_output_ids: frozenset[tuple[str, str]] = frozenset(ignored_output_ids)
+    # We consider the ignored output IDs as voted, as they are pending in the buffer of the client.
+    # Otherwise, we may yield battles that repeat their prompts (but not their outputs).
+    for prompt_id, system_id in ignored_output_ids:
+        session_voted_outputs[(prompt_id, system_id)] += 1
+        system_id_to_non_skip_vote_count[system_id] += 1
+        session_voted_prompts[prompt_id] += 1
+        prompt_id_to_non_skip_vote_count[prompt_id] += 1
 
     while batch_size > 0:
         candidate_outputs = [
             (
-                session_voted_outputs.get((prompt_id, system_id), 0),
-                system_id_to_non_skip_vote_count.get(system_id, 0),
-                session_voted_prompts.get(prompt_id, 0),
-                prompt_id_to_non_skip_vote_count.get(prompt_id, 0),
+                session_voted_outputs[(prompt_id, system_id)],
+                system_id_to_non_skip_vote_count[system_id],
+                session_voted_prompts[prompt_id],
+                prompt_id_to_non_skip_vote_count[prompt_id],
                 prompt_id,
                 system_id,
                 text,
             )
             for prompt_id, outputs in prompt_id_to_outputs.items()
             for system_id, text in outputs
-            if (prompt_id, system_id) not in ignored_output_ids
         ]
 
         random.shuffle(candidate_outputs)
@@ -406,9 +414,9 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
             _, _, _, _, prompt_id, system_id_a, text_a = candidate_output_queue.popleft()
 
             if partner_outputs := [
-                (session_voted_outputs.get((prompt_id, system_id), 0), system_id, text)
+                (session_voted_outputs[(prompt_id, system_id)], system_id, text)
                 for system_id, text in prompt_id_to_outputs[prompt_id]
-                if system_id != system_id_a and (prompt_id, system_id) not in ignored_output_ids and text != text_a
+                if system_id != system_id_a and (prompt_id, system_id) and text != text_a
             ]:
                 random.shuffle(partner_outputs)
                 _, system_id_b, text_b = min(partner_outputs, key=lambda p: p[0])
@@ -416,8 +424,6 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
                 prompt = prompt_id_to_prompt[prompt_id]
 
                 yield _create_battle_with_prompt(prompt, system_id_a, text_a, system_id_b, text_b)
-
-                batch_size -= 1
 
                 # We simulate as if the yielded battle was non-skip-voted to increase the diversity:
 
@@ -430,6 +436,8 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
                 session_voted_prompts[prompt_id] += 1
 
                 prompt_id_to_non_skip_vote_count[prompt_id] += 1
+
+                batch_size -= 1
 
                 break
 
