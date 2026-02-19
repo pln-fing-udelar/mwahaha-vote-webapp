@@ -19,4 +19,7 @@ RUN \
 
 EXPOSE 80
 
-CMD uvicorn mwahahavote.__main__:app --host :: --port 80 --workers "$(($(nproc)*2 + 1))"
+# We tried with `--workers "$(($(nproc)*2 + 1))"` but it uses too much memory for DigialOcean CPU-RAM ratios
+# of the machines we use (about <.5GB per worker).
+# And fewer seems fine.
+CMD uvicorn mwahahavote.__main__:app --host :: --port 80 --workers "$(($(nproc) + 1))"
