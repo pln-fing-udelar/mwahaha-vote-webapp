@@ -46,11 +46,19 @@ def vote_to_fastchat_language(vote: Vote) -> Literal["Chinese", "English", "Span
             raise ValueError(f"Unknown language: {vote.battle.prompt.language}")
 
 
-async def async_main() -> None:
+async def async_main(only_prolific_sessions: bool = False) -> None:
     async with mwahahavote.database.create_engine() as engine:
         for task in sorted(TASK_CHOICES):
+            excluded_session_ids = [
+                session_id
+                async for session_id in mwahahavote.database.get_session_ids(engine, PHASE_ID, task)
+                if not session_id.startswith("prolific-id-")
+            ] if only_prolific_sessions else []
+
+            excluded_session_ids += EXCLUDED_SESSION_IDS
+
             system_id_to_vote_count = await mwahahavote.database.get_votes_per_system(
-                engine, PHASE_ID, task, EXCLUDED_SESSION_IDS
+                engine, PHASE_ID, task, excluded_session_ids
             )
 
             async for vote in mwahahavote.database.get_votes_for_battles_with_the_same_text(engine, PHASE_ID, task):
@@ -74,7 +82,7 @@ async def async_main() -> None:
                             "tstamp": round(vote.date.timestamp()),
                         }
                         async for vote in aioitertools.chain(
-                            mwahahavote.database.get_votes_for_scoring(engine, PHASE_ID, task, EXCLUDED_SESSION_IDS),
+                            mwahahavote.database.get_votes_for_scoring(engine, PHASE_ID, task, excluded_session_ids),
                             mwahahavote.database.get_votes_for_battles_with_the_same_text(engine, PHASE_ID, task),
                         )
                         if (

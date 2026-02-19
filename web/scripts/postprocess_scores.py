@@ -16,6 +16,8 @@ PHASE_ID = EVALUATION_PHASE_ID
 async def async_main() -> None:
     async with mwahahavote.database.create_engine() as engine:
         for task in sorted(TASK_CHOICES):
+            # Note we aren't excluding any session ID here,
+            # but it's fine because these vote counts are only used when a system doesn't have a score yet.
             system_id_to_vote_count = await mwahahavote.database.get_votes_per_system(engine, PHASE_ID, task)
 
             output_path = f"src/mwahahavote/static/scores/{task}.json"

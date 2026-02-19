@@ -572,9 +572,9 @@ async def get_votes_for_scoring(
                     AND v.vote != 'n'
                     AND session_id NOT IN :excluded_session_ids
                 ), systems_a AS (
-                  SELECT system_id_a FROM votes_and_prompts GROUP BY system_id_a
+                  SELECT DISTINCT system_id_a FROM votes_and_prompts
                 ), systems_b AS (
-                  SELECT system_id_b FROM votes_and_prompts GROUP BY system_id_b
+                  SELECT DISTINCT system_id_b FROM votes_and_prompts
                 )
                 SELECT
                   prompt_id,
@@ -609,13 +609,25 @@ async def get_votes_for_scoring(
             )
 
 
+async def get_session_ids(engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int, task: Task) -> AsyncIterator[str]:
+    """Returns all the session IDs for a given phase ID and task."""
+    async with engine.connect() as connection:
+        for (session_id,) in await connection.execute(
+            sqlalchemy.sql.text(
+                "SELECT DISTINCT session_id FROM votes NATURAL JOIN prompts WHERE task = :task AND phase_id = :phase_id"
+            ),
+            {"task": task, "phase_id": phase_id},
+        ):
+            yield session_id
+
+
 async def get_systems(engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int, task: Task) -> AsyncIterator[str]:
     """Returns all the systems for a given phase ID and task."""
     async with engine.connect() as connection:
         for (system_id,) in await connection.execute(
             sqlalchemy.sql.text(
-                "SELECT system_id FROM outputs NATURAL JOIN prompts"
-                " WHERE task = :task AND phase_id = :phase_id GROUP BY system_id"
+                "SELECT DISTINCT system_id FROM outputs NATURAL JOIN prompts"
+                " WHERE task = :task AND phase_id = :phase_id"
             ),
             {"task": task, "phase_id": phase_id},
         ):
@@ -637,12 +649,11 @@ async def _get_votes_per_system(
         for row in await connection.execute(
             sqlalchemy.sql.text("""
                 WITH system_ids_with_outputs AS (
-                  SELECT system_id
+                  SELECT DISTINCT system_id
                   FROM outputs NATURAL JOIN prompts
                   WHERE
                     task = :task
                     AND phase_id = :phase_id
-                  GROUP BY system_id
                 ), system_votes AS (
                   SELECT
                     system_id_a,
