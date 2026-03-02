@@ -10,9 +10,8 @@ import httpx
 import sentry_sdk
 import sqlalchemy.ext.asyncio
 from cryptography.fernet import Fernet, InvalidToken
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sentry_sdk.integrations.logging import LoggingIntegration
@@ -335,9 +334,9 @@ async def _get_battle_objects(
 #     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.get("/leaderboard")
-async def leaderboard_route() -> Response:
-    return FileResponse("src/mwahahavote/static/leaderboard.html")
+# @app.get("/leaderboard")
+# async def leaderboard_route() -> Response:
+#     return FileResponse("src/mwahahavote/static/leaderboard.html")
 
 
 # @app.get("/session-vote-count")
