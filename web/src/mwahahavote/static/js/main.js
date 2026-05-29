@@ -13,7 +13,7 @@ let $voteRight;
 let $isOffensiveRight;
 let emoji;
 
-let task = "a-en";
+let task = "t3";
 
 let battles = [];
 let index = 0;
@@ -199,7 +199,7 @@ function main() {
   setupElements();
   setupPlaceload();
   setupEmojiConverter();
-  getTask();
+  // getTask();
   getBattles();
   setUiListeners();
   setupProlificSessionIfNeeded();
@@ -298,29 +298,29 @@ function setupEmojiConverter() {
   emoji.img_sets.twitter.path = "https://raw.githubusercontent.com/iamcal/emoji-data/" + "a97b2d2efa64535d6300660eb2cd15ecb584e79e/img-twitter-64/";
 }
 
-function getTask() {
-  const urlParams = new URLSearchParams(window.location.search);
-
-  task = urlParams.get("task");
-
-  if (task === null) {
-    if (navigator.language.startsWith("es")) {
-      task = "a-es";
-    } else if (navigator.language.startsWith("zh")) {
-      task = "a-zh";
-    } else {
-      task = "a-en";
-    }
-  }
-
-  urlParams.set("task", task);
-
-  $task.val(task);
-
-  // We set the query param in the URL without refreshing the page:
-  const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + urlParams.toString();
-  window.history.replaceState({}, "", newUrl);
-}
+// function getTask() {
+//   const urlParams = new URLSearchParams(window.location.search);
+//
+//   task = urlParams.get("task");
+//
+//   if (task === null) {
+//     if (navigator.language.startsWith("es")) {
+//       task = "a-es";
+//     } else if (navigator.language.startsWith("zh")) {
+//       task = "a-zh";
+//     } else {
+//       task = "a-en";
+//     }
+//   }
+//
+//   urlParams.set("task", task);
+//
+//   $task.val(task);
+//
+//   // We set the query param in the URL without refreshing the page:
+//   const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + urlParams.toString();
+//   window.history.replaceState({}, "", newUrl);
+// }
 
 function getBattles() {
   $.getJSON("battles", {task: task}, data => {
@@ -388,14 +388,14 @@ function vote(voteOption) {
 
   index = (index + 1) % battles.length;
 
-  console.log("Vote option: " + voteOption);
-  console.log(`  Index: ${index}, nextReplaceIndex: ${nextReplaceIndex}`);
+  // console.log("Vote option: " + voteOption);
+  // console.log(`  Index: ${index}, nextReplaceIndex: ${nextReplaceIndex}`);
 
   const usedCount = (index - nextReplaceIndex + battles.length) % battles.length;
   const remainingCount = battles.length - usedCount;
 
-  console.log(`  Used count: ${usedCount}, remaining count: ${remainingCount}, battles length: ${battles.length}`);
-  console.log();
+  // console.log(`  Used count: ${usedCount}, remaining count: ${remainingCount}, battles length: ${battles.length}`);
+  // console.log();
 
   if (remainingCount <= Math.floor(battles.length / 2)) {
     // We ignore all battles in the buffer (both used and remaining ones), as opposed to just the remaining ones,

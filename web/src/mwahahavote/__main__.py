@@ -4,35 +4,37 @@ import random
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from typing import Any, NamedTuple, TypedDict
+from typing import Annotated, Any, NamedTuple, TypedDict, cast
 
 import httpx
 import sentry_sdk
 import sqlalchemy.ext.asyncio
 from cryptography.fernet import Fernet, InvalidToken
-from fastapi import FastAPI, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sentry_sdk.integrations.logging import LoggingIntegration
+from starlette import status
 from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from mwahahavote import database
-from mwahahavote.database import Battle, Task
+from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString
 
 logger = logging.getLogger(__name__)
 
-PHASE_ID = 15785
+PHASE_ID = 1
 
 # noinspection SpellCheckingInspection
-PROLIFIC_COMPLETION_CODES: dict[Task, str] = {
-    "a-en": "CC4WY7K5",
-    "a-es": "C5SU1Q6U",
-    "a-zh": "C11V5NNR",
-    "b1": "CCI5PILX",
-    "b2": "C13AY54S",
-}
+# PROLIFIC_COMPLETION_CODES: dict[Task, str] = {
+#     "a-en": "CC4WY7K5",
+#     "a-es": "C5SU1Q6U",
+#     "a-zh": "C11V5NNR",
+#     "b1": "CCI5PILX",
+#     "b2": "C13AY54S",
+# }
 
 TURNSTILE_SECRET_KEY = os.environ["TURNSTILE_SECRET_KEY"]
 IS_LOCAL_DEVELOPMENT = "VIRTUAL_HOST" not in os.environ
@@ -267,71 +269,71 @@ async def _get_battle_objects(
             yield _simplify_battle_object(battle)
 
 
-# @app.get("/battles", response_class=ORJSONResponse)
-# async def battles_route(
-#     request: Request,
-#     task: str = Query("a-en"),
-#     batch_size: int = Query(REQUEST_BATTLE_BATCH_SIZE),
-#     # Note that the length of the following list is limited by the maximum URL length,
-#     # which is typically around 2000 characters.
-#     # We should be good for up to length 16.
-#     ignored_tokens: Annotated[list[str] | None, Query(alias="ignored_tokens[]")] = None,
-# ) -> list[SimplifiedBattleDict]:
-#     task = cast(Task, task if task in TASK_CHOICES else "a-en")
-#
-#     batch_size = max(min(batch_size, REQUEST_BATTLE_BATCH_SIZE), 1)
-#
-#     ignored_output_ids: list[tuple[str, str]] = []
-#     for ignored_token in ignored_tokens or ():
-#         try:
-#             ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = _decrypt_battle_token(str(ignored_token))
-#             ignored_output_ids.append((ignored_prompt_id, ignored_system_id_a))
-#             ignored_output_ids.append((ignored_prompt_id, ignored_system_id_b))
-#         except ValueError:
-#             logger.exception(f"Invalid battle token in ignored_tokens: {ignored_token}")
-#
-#     return [
-#         battle
-#         async for battle in _get_battle_objects(
-#             request.state.database_engine, PHASE_ID, request.state.session_id, task, batch_size, ignored_output_ids
-#         )
-#     ]
-#
-#
-# @app.post("/vote")
-# async def vote_route(request: Request, background_tasks: BackgroundTasks) -> Response:
-#     form_data = await request.form()
-#
-#     if not await _passes_turnstile(str(form_data.get("turnstile_token", ""))):
-#         raise HTTPException(status_code=403, detail="Turnstile verification failed")
-#
-#     if all(key in form_data for key in ("vote", "is_offensive_a", "is_offensive_b")):
-#         vote_str = str(form_data["vote"])
-#         if vote_str not in VOTE_CHOICES:
-#             raise HTTPException(status_code=400, detail="Invalid vote")
-#         vote = cast(VoteString, vote_str)
-#
-#         if not (battle_token := str(form_data.get("token", ""))):
-#             raise HTTPException(status_code=400, detail="Battle token required")
-#
-#         try:
-#             prompt_id, system_id_a, system_id_b = _decrypt_battle_token(battle_token)
-#         except ValueError as e:
-#             raise HTTPException(status_code=400, detail="Invalid battle ID") from e
-#
-#         background_tasks.add_task(
-#             database.add_vote,
-#             request.state.database_engine,
-#             request.state.session_id,
-#             prompt_id,
-#             system_id_a,
-#             system_id_b,
-#             vote,
-#             is_offensive_a=str(form_data["is_offensive_a"]).lower() == "true",
-#             is_offensive_b=str(form_data["is_offensive_b"]).lower() == "true",
-#         )
-#
-#     return Response(status_code=status.HTTP_204_NO_CONTENT)
+@app.get("/battles", response_class=ORJSONResponse)
+async def battles_route(
+    request: Request,
+    task: str = Query("t3"),
+    batch_size: int = Query(REQUEST_BATTLE_BATCH_SIZE),
+    # Note that the length of the following list is limited by the maximum URL length,
+    # which is typically around 2000 characters.
+    # We should be good for up to length 16.
+    ignored_tokens: Annotated[list[str] | None, Query(alias="ignored_tokens[]")] = None,
+) -> list[SimplifiedBattleDict]:
+    task = cast(Task, task if task in TASK_CHOICES else "t3")
+
+    batch_size = max(min(batch_size, REQUEST_BATTLE_BATCH_SIZE), 1)
+
+    ignored_output_ids: list[tuple[str, str]] = []
+    for ignored_token in ignored_tokens or ():
+        try:
+            ignored_prompt_id, ignored_system_id_a, ignored_system_id_b = _decrypt_battle_token(str(ignored_token))
+            ignored_output_ids.append((ignored_prompt_id, ignored_system_id_a))
+            ignored_output_ids.append((ignored_prompt_id, ignored_system_id_b))
+        except ValueError:
+            logger.exception(f"Invalid battle token in ignored_tokens: {ignored_token}")
+
+    return [
+        battle
+        async for battle in _get_battle_objects(
+            request.state.database_engine, PHASE_ID, request.state.session_id, task, batch_size, ignored_output_ids
+        )
+    ]
+
+
+@app.post("/vote", status_code=status.HTTP_204_NO_CONTENT)
+async def vote_route(request: Request, background_tasks: BackgroundTasks) -> Response:
+    form_data = await request.form()
+
+    if not await _passes_turnstile(str(form_data.get("turnstile_token", ""))):
+        raise HTTPException(status_code=403, detail="Turnstile verification failed")
+
+    if all(key in form_data for key in ("vote", "is_offensive_a", "is_offensive_b")):
+        vote_str = str(form_data["vote"])
+        if vote_str not in VOTE_CHOICES:
+            raise HTTPException(status_code=400, detail="Invalid vote")
+        vote = cast(VoteString, vote_str)
+
+        if not (battle_token := str(form_data.get("token", ""))):
+            raise HTTPException(status_code=400, detail="Battle token required")
+
+        try:
+            prompt_id, system_id_a, system_id_b = _decrypt_battle_token(battle_token)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail="Invalid battle ID") from e
+
+        background_tasks.add_task(
+            database.add_vote,
+            request.state.database_engine,
+            request.state.session_id,
+            prompt_id,
+            system_id_a,
+            system_id_b,
+            vote,
+            is_offensive_a=str(form_data["is_offensive_a"]).lower() == "true",
+            is_offensive_b=str(form_data["is_offensive_b"]).lower() == "true",
+        )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # @app.get("/leaderboard")

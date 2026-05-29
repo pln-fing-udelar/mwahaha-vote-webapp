@@ -1,11 +1,8 @@
 import logging
 import os
-import tempfile
-import zipfile
 from collections.abc import AsyncIterable, Iterable
 from typing import Any
 
-import fsspec
 import pandas as pd
 import sqlalchemy
 import sqlalchemy.dialects.mysql
@@ -103,70 +100,68 @@ async def ingest_submission(
 ) -> int:
     """Ingest a submission into the database. Returns the number of affected rows."""
     async with engine.begin() as connection:
-        with tempfile.TemporaryDirectory() as dir_:
-            try:
-                connection.execute(
-                    sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"),
-                    {"system_id": submission.system_id},
+        # with tempfile.TemporaryDirectory() as dir_:
+        try:
+            await connection.execute(
+                sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"),
+                {"system_id": submission.system_id},
+            )
+        except sqlalchemy.exc.IntegrityError:  # type: ignore[possibly-missing-attribute]
+            if system_exists_ok:
+                logging.info("The system already exists in the table `systems`. Not adding a row.")
+            else:
+                raise
+
+        # with fsspec.open(submission.compute_path_or_url()) as file, zipfile.ZipFile(file) as zip_file:
+        #     zip_file.extractall(dir_)
+
+        affected_rows = 0
+
+        assert submission.tasks
+
+        for task in submission.tasks:
+            path = submission.compute_path_or_url()
+
+            if not os.path.exists(path):
+                raise ValueError(f"The file that corresponds to the task '{task}' doesn't exist: {path}")
+
+            if not os.path.isfile(path):
+                raise ValueError(f"The file that corresponds to the task '{task}' isn't a file: {path}")
+
+            submission_df = _read_submission_file(path)
+
+            reference_prompt_ids = frozenset(
+                row[0]
+                for row in await connection.execute(
+                    sqlalchemy.sql.text("SELECT prompt_id FROM prompts WHERE phase_id = :phase_id AND task = :task"),
+                    {"phase_id": phase_id, "task": task},
                 )
-            except sqlalchemy.exc.IntegrityError:  # type: ignore[possibly-missing-attribute]
-                if system_exists_ok:
-                    logging.info("The system already exists in the table `systems`. Not adding a row.")
-                else:
-                    raise
+            )
+            submitted_prompt_ids = frozenset(submission_df.index)
 
-            with fsspec.open(submission.compute_path_or_url()) as file, zipfile.ZipFile(file) as zip_file:
-                zip_file.extractall(dir_)
-
-            affected_rows = 0
-
-            assert submission.tasks
-
-            for task in submission.tasks:
-                path = os.path.join(dir_, f"task-{task}.tsv")
-
-                if not os.path.exists(path):
-                    raise ValueError(f"The file that corresponds to the task '{task}' doesn't exist: {path}")
-
-                if not os.path.isfile(path):
-                    raise ValueError(f"The file that corresponds to the task '{task}' isn't a file: {path}")
-
-                submission_df = _read_submission_file(path)
-
-                reference_prompt_ids = frozenset(
-                    row[0]
-                    for row in await connection.execute(
-                        sqlalchemy.sql.text(
-                            "SELECT prompt_id FROM prompts WHERE phase_id = :phase_id AND task = :task"
-                        ),
-                        {"phase_id": phase_id, "task": task},
-                    )
-                )
-                submitted_prompt_ids = frozenset(submission_df.index)
-
-                if submitted_prompt_ids != reference_prompt_ids:
-                    raise ValueError(
-                        f"The submitted prompt IDs for the file from the submission '{submission}'"
-                        f" do not match the reference IDs for the task '{task}'."
-                        f" Missing IDs: {sorted(reference_prompt_ids - submitted_prompt_ids)}."
-                        f" Extra IDs: {sorted(submitted_prompt_ids - reference_prompt_ids)}."
-                    )
-
-                if accept_null_texts:
-                    if nan_prompt_ids := submission_df.index[submission_df["text"].isna()].tolist():
-                        logging.warning(
-                            f"Null 'text' values for the submission '{submission}' and task '{task}',"
-                            f" for the following prompt IDs: {nan_prompt_ids}."
-                        )
-
-                        submission_df.loc[:, "text"].fillna("-", inplace=True)
-
-                submission_df["system_id"] = submission.system_id
-
-                affected_rows += await connection.run_sync(
-                    lambda sync_connection, submission_df=submission_df: (
-                        submission_df.to_sql("outputs", sync_connection, if_exists="append") or 0
-                    )
+            if submitted_prompt_ids != reference_prompt_ids:
+                raise ValueError(
+                    f"The submitted prompt IDs for the file from the submission '{submission}'"
+                    f" do not match the reference IDs for the task '{task}'."
+                    f" Missing IDs: {sorted(reference_prompt_ids - submitted_prompt_ids)}."
+                    f" Extra IDs: {sorted(submitted_prompt_ids - reference_prompt_ids)}."
                 )
 
-            return affected_rows
+            if accept_null_texts:
+                if nan_prompt_ids := submission_df.index[submission_df["text"].isna()].tolist():
+                    logging.warning(
+                        f"Null 'text' values for the submission '{submission}' and task '{task}',"
+                        f" for the following prompt IDs: {nan_prompt_ids}."
+                    )
+
+                    submission_df.loc[:, "text"].fillna("-", inplace=True)
+
+            submission_df["system_id"] = submission.system_id
+
+            affected_rows += await connection.run_sync(
+                lambda sync_connection, submission_df=submission_df: (
+                    submission_df.to_sql("outputs", sync_connection, if_exists="append") or 0
+                )
+            )
+
+        return affected_rows

@@ -39,19 +39,20 @@ def is_session_id_valid(session_id: str) -> bool:
 
 def task_id_to_task(task_id: int) -> Task:
     """Converts a CodaBench task ID to our internal string representation."""
-    match task_id:
-        case 21359:
-            return "a-es"
-        case 21358:
-            return "a-en"
-        case 21360:
-            return "a-zh"
-        case 21361:
-            return "b1"
-        case 22992:
-            return "b2"
-        case _:
-            raise ValueError(f"Unknown task ID: {task_id}")
+    # match task_id:
+    # case 21359:
+    #     return "a-es"
+    # case 21358:
+    #     return "a-en"
+    # case 21360:
+    #     return "a-zh"
+    # case 21361:
+    #     return "b1"
+    # case 22992:
+    #     return "b2"
+    # case _:
+    #     raise ValueError(f"Unknown task ID: {task_id}")
+    return "t3"
 
 
 def get_submission_url(submission_id: int, session_id: str | None = None) -> str:

@@ -9,14 +9,14 @@ from collections.abc import AsyncIterator, Iterable, MutableMapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Any, Literal, cast, get_args
+from typing import Any, Literal, get_args
 
 import pandas as pd
 import sqlalchemy
 import sqlalchemy.ext.asyncio
 import sqlalchemy.sql
 
-Task = Literal["a-en", "a-es", "a-zh", "b1", "b2"]
+Task = Literal["t3"]
 TASK_CHOICES = frozenset(get_args(Task))
 
 
@@ -32,14 +32,15 @@ class System:
 
 
 def prompt_id_to_task(prompt_id: str) -> Task:
-    if prompt_id.startswith(("en_", "es_", "zh_")):
-        return cast(Task, f"a-{prompt_id[:2]}")
-    elif prompt_id.startswith("img_2_"):
-        return "b2"
-    elif prompt_id.startswith("img_"):
-        return "b1"
-    else:
-        raise ValueError(f"Cannot determine the task for prompt ID '{prompt_id}'")
+    # if prompt_id.startswith(("en_", "es_", "zh_")):
+    #     return cast(Task, f"a-{prompt_id[:2]}")
+    # elif prompt_id.startswith("img_2_"):
+    #     return "b2"
+    # elif prompt_id.startswith("img_"):
+    #     return "b1"
+    # else:
+    #     raise ValueError(f"Cannot determine the task for prompt ID '{prompt_id}'")
+    return "t3"
 
 
 @dataclass(frozen=True)

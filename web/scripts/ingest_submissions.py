@@ -5,7 +5,6 @@ The submissions that were already ingested are skipped.
 """
 
 import asyncio
-import dataclasses
 import datetime
 import logging
 import os
@@ -17,7 +16,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 import mwahahavote.database
-from ingestion.codabench import EVALUATION_PHASE_ID, Submission, list_submissions
+from ingestion.codabench import Submission
 from ingestion.submission import ingest_submission, list_ingested_system_ids, print_stats
 from mwahahavote.database import TASK_CHOICES, Task
 
@@ -36,58 +35,74 @@ async def async_main() -> None:  # noqa: C901
     # We sort them so they are ingested in order
     # so that the latest submission per user per task is the one that remains.
 
-    print("Obtaining the list of all CodaBench submissions so far… ", end="")
-    all_submissions = sorted(list_submissions())
-    print("✅")
+    # print("Obtaining the list of all CodaBench submissions so far… ", end="")
+    # all_submissions = sorted(list_submissions())
+    # print("✅")
+    #
+    # print_stats(all_submissions)
+    #
+    # # Keep only the valid submissions:
+    # valid_submissions = [
+    #     dataclasses.replace(
+    #         submission,
+    #         tasks=[
+    #             task for task, test_passed in zip(submission.tasks, submission.tests_passed, strict=True) if test_passed
+    #         ],
+    #         tests_passed=[True] * sum(submission.tests_passed),
+    #     )
+    #     for submission in all_submissions
+    #     if not submission.is_deleted and any(submission.tests_passed)
+    # ]
+    #
+    # # Now process any submission that was set manually placed under `submissions/`.
+    # # Note we leave the manual submissions at the end to override any previous one.
+    #
+    # manual_submissions = [
+    #     Submission(
+    #         id=i,
+    #         user=os.path.splitext(filename)[0],
+    #         date=datetime.datetime.now(datetime.UTC),
+    #         tasks=(tasks := list(available_tasks_in_file(path))),  # type: ignore[invalid-argument-type]
+    #         tests_passed=[True] * len(tasks),
+    #         is_deleted=False,
+    #         path_or_url=path,
+    #     )
+    #     for i, filename in enumerate(os.listdir("submissions"))
+    #     if filename.endswith(".zip") and os.path.isfile(path := os.path.join("submissions", filename))
+    # ]
+    # valid_submissions.extend(manual_submissions)
+    # print(f"Obtained {len(manual_submissions)} manual submissions placed under `submissions/`.")
+    # print()
+    #
+    # # We only leave the last submission from each user:
+    #
+    # submissions_to_ingest: list[Submission] = []
+    # users: set[str] = set()
+    # for submission in reversed(valid_submissions):
+    #     if submission.user not in users:
+    #         users.add(submission.user)
+    #         submissions_to_ingest.append(submission)
+    #
+    # print(
+    #     "Left only the latest submission from each user,"
+    #     f" resulting in {len(submissions_to_ingest)} submissions to ingest."
+    # )
+    # print()
 
-    print_stats(all_submissions)
-
-    # Keep only the valid submissions:
-    valid_submissions = [
-        dataclasses.replace(
-            submission,
-            tasks=[
-                task for task, test_passed in zip(submission.tasks, submission.tests_passed, strict=True) if test_passed
-            ],
-            tests_passed=[True] * sum(submission.tests_passed),
-        )
-        for submission in all_submissions
-        if not submission.is_deleted and any(submission.tests_passed)
-    ]
-
-    # Now process any submission that was set manually placed under `submissions/`.
-    # Note we leave the manual submissions at the end to override any previous one.
-
-    manual_submissions = [
+    submissions_to_ingest = [
         Submission(
             id=i,
             user=os.path.splitext(filename)[0],
             date=datetime.datetime.now(datetime.UTC),
-            tasks=(tasks := list(available_tasks_in_file(path))),  # type: ignore[invalid-argument-type]
-            tests_passed=[True] * len(tasks),
+            tasks=["t3"],
+            tests_passed=[True],
             is_deleted=False,
             path_or_url=path,
         )
         for i, filename in enumerate(os.listdir("submissions"))
-        if filename.endswith(".zip") and os.path.isfile(path := os.path.join("submissions", filename))
+        if filename.endswith(".tsv") and os.path.isfile(path := os.path.join("submissions", filename))
     ]
-    valid_submissions.extend(manual_submissions)
-    print(f"Obtained {len(manual_submissions)} manual submissions placed under `submissions/`.")
-    print()
-
-    # We only leave the last submission from each user:
-
-    submissions_to_ingest: list[Submission] = []
-    users: set[str] = set()
-    for submission in reversed(valid_submissions):
-        if submission.user not in users:
-            users.add(submission.user)
-            submissions_to_ingest.append(submission)
-
-    print(
-        "Left only the latest submission from each user,"
-        f" resulting in {len(submissions_to_ingest)} submissions to ingest."
-    )
+    print(f"Obtained {len(submissions_to_ingest)} manual submissions placed under `submissions/`.")
     print()
 
     async with mwahahavote.database.create_engine() as engine:
@@ -103,7 +118,7 @@ async def async_main() -> None:  # noqa: C901
             else:
                 # noinspection PyBroadException
                 try:
-                    affected_rows += await ingest_submission(engine, EVALUATION_PHASE_ID, submission)
+                    affected_rows += await ingest_submission(engine, 1, submission)
                     successful.add(submission)
                 except Exception:
                     logging.exception(f"Failed to ingest the submission '{submission}'. See below.")
