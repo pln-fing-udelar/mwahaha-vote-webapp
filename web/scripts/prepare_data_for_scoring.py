@@ -7,10 +7,9 @@ from typing import Literal
 import aioitertools
 
 import mwahahavote.database
-from ingestion.codabench import EVALUATION_PHASE_ID
 from mwahahavote.database import TASK_CHOICES, Vote
 
-PHASE_ID = EVALUATION_PHASE_ID
+PHASE_ID = 1
 
 # With few votes, we learned that it destabilizes the score calculation for all the systems.
 MIN_VOTES_PER_SYSTEM = 20

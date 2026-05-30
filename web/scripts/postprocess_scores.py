@@ -7,10 +7,9 @@ import pickle
 import pandas as pd
 
 import mwahahavote.database
-from ingestion.codabench import EVALUATION_PHASE_ID
 from mwahahavote.database import TASK_CHOICES
 
-PHASE_ID = EVALUATION_PHASE_ID
+PHASE_ID = 1
 
 
 async def async_main() -> None:

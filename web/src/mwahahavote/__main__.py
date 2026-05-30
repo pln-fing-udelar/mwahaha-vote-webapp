@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 from sentry_sdk.integrations.logging import LoggingIntegration
 from starlette import status
 from starlette.datastructures import MutableHeaders
+from starlette.responses import FileResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from mwahahavote import database
@@ -336,35 +337,35 @@ async def vote_route(request: Request, background_tasks: BackgroundTasks) -> Res
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-# @app.get("/leaderboard")
-# async def leaderboard_route() -> Response:
-#     return FileResponse("src/mwahahavote/static/leaderboard.html")
+@app.get("/leaderboard")
+async def leaderboard_route() -> Response:
+    return FileResponse("src/mwahahavote/static/leaderboard.html")
 
 
-# @app.get("/session-vote-count")
-# async def session_vote_count_route(request: Request) -> int:
-#     return await database.session_vote_count_without_skips(request.state.database_engine, request.state.session_id)
-#
-#
-# @app.get("/vote-count")
-# async def vote_count_route(request: Request) -> int:
-#     return await database.vote_count_without_skips(request.state.database_engine)
-#
-#
-# @app.get("/votes-per-session", response_class=ORJSONResponse)
-# async def get_votes_per_session_route(request: Request) -> dict[str, int]:
-#     return await database.get_votes_per_session(request.state.database_engine, PHASE_ID)
-#
-#
-# @app.get("/votes.csv")
-# async def get_votes_route(request: Request) -> Response:
-#     return Response(
-#         content=(await database.get_votes(request.state.database_engine, PHASE_ID)).to_csv(index=False),
-#         media_type="text/csv",
-#         headers={"Content-Disposition": "attachment; filename=votes.csv"},
-#     )
-#
-#
+@app.get("/session-vote-count")
+async def session_vote_count_route(request: Request) -> int:
+    return await database.session_vote_count_without_skips(request.state.database_engine, request.state.session_id)
+
+
+@app.get("/vote-count")
+async def vote_count_route(request: Request) -> int:
+    return await database.vote_count_without_skips(request.state.database_engine)
+
+
+@app.get("/votes-per-session", response_class=ORJSONResponse)
+async def get_votes_per_session_route(request: Request) -> dict[str, int]:
+    return await database.get_votes_per_session(request.state.database_engine, PHASE_ID)
+
+
+@app.get("/votes.csv")
+async def get_votes_route(request: Request) -> Response:
+    return Response(
+        content=(await database.get_votes(request.state.database_engine, PHASE_ID)).to_csv(index=False),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=votes.csv"},
+    )
+
+
 # @app.post("/prolific-consent")
 # async def prolific_consent_route(request: Request, background_tasks: BackgroundTasks) -> Response:
 #     background_tasks.add_task(database.prolific_consent, request.state.database_engine, request.state.session_id)
@@ -388,14 +389,14 @@ async def vote_route(request: Request, background_tasks: BackgroundTasks) -> Res
 #         url=f"https://app.prolific.co/submissions/complete?cc={PROLIFIC_COMPLETION_CODES[task]}",
 #         status_code=status.HTTP_303_SEE_OTHER,
 #     )
-#
-#
-# @app.get("/stats")
-# async def stats_route(request: Request) -> Response:
-#     stats = await database.stats(request.state.database_engine)
-#     stats["histogram"] = [["Vote count", "Prompt count"]] + [[str(a), b] for a, b in stats["histogram"].items()]
-#     stats["votes-per-category"] = [["Vote", "Prompt count"], *list(stats["votes-per-category"].items())]
-#     return templates.TemplateResponse("stats.html", {"request": request, "stats": stats})
+
+
+@app.get("/stats")
+async def stats_route(request: Request) -> Response:
+    stats = await database.stats(request.state.database_engine)
+    stats["histogram"] = [["Vote count", "Prompt count"]] + [[str(a), b] for a, b in stats["histogram"].items()]
+    stats["votes-per-category"] = [["Vote", "Prompt count"], *list(stats["votes-per-category"].items())]
+    return templates.TemplateResponse("stats.html", {"request": request, "stats": stats})
 
 
 app.mount("/", StaticFiles(directory="src/mwahahavote/static", html=True), name="static")
