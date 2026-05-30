@@ -106,7 +106,7 @@ async def ingest_submission(
                 sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"),
                 {"system_id": submission.system_id},
             )
-        except sqlalchemy.exc.IntegrityError:  # type: ignore[possibly-missing-attribute]
+        except sqlalchemy.exc.IntegrityError:  # ty:ignore[possibly-missing-submodule]
             if system_exists_ok:
                 logging.info("The system already exists in the table `systems`. Not adding a row.")
             else:

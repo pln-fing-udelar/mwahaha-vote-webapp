@@ -98,9 +98,9 @@ class CacheControlMiddleware:
 
 app = FastAPI(lifespan=_lifespan)
 
-app.add_middleware(CacheControlMiddleware)  # type: ignore[arg-type]
+app.add_middleware(CacheControlMiddleware)
 app.add_middleware(
-    CORSMiddleware,  # type: ignore[arg-type]
+    CORSMiddleware,
     allow_origins=[
         "http://localhost:5000",
         *(f"https://{host.strip()}" for host in os.environ.get("VIRTUAL_HOST", "").split(",") if host.strip()),
@@ -396,7 +396,7 @@ async def stats_route(request: Request) -> Response:
     stats = await database.stats(request.state.database_engine)
     stats["histogram"] = [["Vote count", "Prompt count"]] + [[str(a), b] for a, b in stats["histogram"].items()]
     stats["votes-per-category"] = [["Vote", "Prompt count"], *list(stats["votes-per-category"].items())]
-    return templates.TemplateResponse("stats.html", {"request": request, "stats": stats})
+    return templates.TemplateResponse(request, "stats.html", {"request": request, "stats": stats})
 
 
 app.mount("/", StaticFiles(directory="src/mwahahavote/static", html=True), name="static")

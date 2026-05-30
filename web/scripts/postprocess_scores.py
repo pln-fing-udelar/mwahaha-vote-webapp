@@ -38,7 +38,7 @@ async def async_main() -> None:
                                 float("NaN"),  # final_ranking
                             ]
 
-                    df.num_battles = df.num_battles.astype(int)
+                    df.num_battles = df.num_battles.astype(int)  # ty:ignore[unresolved-attribute]
 
                     df.reset_index().to_json(output_path, orient="records")
             else:

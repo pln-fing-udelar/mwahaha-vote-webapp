@@ -31,7 +31,7 @@ def available_tasks_in_file(path: str) -> Iterator[Task]:
                 yield task
 
 
-async def async_main() -> None:  # noqa: C901
+async def async_main() -> None:
     # We sort them so they are ingested in order
     # so that the latest submission per user per task is the one that remains.
 
@@ -46,7 +46,8 @@ async def async_main() -> None:  # noqa: C901
     #     dataclasses.replace(
     #         submission,
     #         tasks=[
-    #             task for task, test_passed in zip(submission.tasks, submission.tests_passed, strict=True) if test_passed
+    #             task for task, test_passed in zip(submission.tasks, submission.tests_passed, strict=True)
+    #             if test_passed
     #         ],
     #         tests_passed=[True] * sum(submission.tests_passed),
     #     )
@@ -62,7 +63,7 @@ async def async_main() -> None:  # noqa: C901
     #         id=i,
     #         user=os.path.splitext(filename)[0],
     #         date=datetime.datetime.now(datetime.UTC),
-    #         tasks=(tasks := list(available_tasks_in_file(path))),  # type: ignore[invalid-argument-type]
+    #         tasks=(tasks := list(available_tasks_in_file(path))),
     #         tests_passed=[True] * len(tasks),
     #         is_deleted=False,
     #         path_or_url=path,

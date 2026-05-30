@@ -6,7 +6,6 @@ import os
 import pandas as pd
 
 import mwahahavote.database
-from ingestion.codabench import EVALUATION_PHASE_ID
 
 
 def read_prompt_file(path: str) -> pd.DataFrame:
