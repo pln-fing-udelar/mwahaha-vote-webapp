@@ -79,6 +79,9 @@ Note that the database docker container in production is called `clasificahumor-
 clasificahumor.
 And its Docker Compose network is called `clasificahumor_net`.
 
+When making changes on the submissions or scores, it's recommended to first test it locally,
+then apply the same change on production.
+
 To ingest new submissions and recompute the scores based on the latest annotations every hour,
 you can run the following command:
 
