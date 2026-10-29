@@ -50,18 +50,20 @@ Then, run:
 ./scripts/ingest_baseline.py
 ```
 
-## TODO: explain:
+## Running it in production
 
-`screen`
+When we run the server in production to collect annotations, we run some commands under an SSH session using `screen`
+so it survives session disconnections. You can do similarly with other programs such as `tmux`.
 
-In production:
+To conduct a test simulating high annotation load, run:
 
 ```bash
-while true; do
-  DB_HOST=$(docker container inspect clasificahumor-database-1 | jq -r '.[0].NetworkSettings.Networks."clasificahumor_net".IPAddress') ./scripts/compute_scores.sh
-  sleep 3600
-done
+./load_test.sh
+```
 
+To ingest new submissions every hour as they show up, run:
+
+```bash
 # May need to empty `submissions/` first.
 export CODABENCH_SESSION_ID=...
 while true; do
@@ -70,6 +72,11 @@ while true; do
 done
 ```
 
+To compute the scores every hour, run:
+
 ```bash
-./load_test.sh
+while true; do
+  DB_HOST=$(docker container inspect clasificahumor-database-1 | jq -r '.[0].NetworkSettings.Networks."clasificahumor_net".IPAddress') ./scripts/compute_scores.sh
+  sleep 3600
+done
 ```
