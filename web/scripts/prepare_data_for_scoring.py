@@ -68,6 +68,7 @@ async def async_main(only_prolific_sessions: bool = False, include_ties: bool = 
                 system_id_to_vote_count[vote.battle.output_a.system.id] += 1
                 system_id_to_vote_count[vote.battle.output_b.system.id] += 1
 
+            os.makedirs("scoring", exist_ok=True)
             with open(f"scoring/votes-{task}.json", "w") as file:
                 json.dump(
                     [

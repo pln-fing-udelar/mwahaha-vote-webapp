@@ -21,6 +21,7 @@ async def async_main() -> None:
             system_id_to_vote_count = await mwahahavote.database.get_votes_per_system(engine, PHASE_ID, task)
 
             output_path = f"src/mwahahavote/static/scores/{task}.json"
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
             if os.path.exists(input_path := f"scoring/elo_results_{task}.pkl"):
                 with open(input_path, "rb") as file:
                     df: pd.DataFrame = pickle.load(file)["full"]["leaderboard_table_df"]

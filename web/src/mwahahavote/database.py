@@ -649,34 +649,24 @@ async def _get_votes_per_system(
     async with engine.connect() as connection:
         for row in await connection.execute(
             sqlalchemy.sql.text("""
-                WITH system_ids_with_outputs AS (
-                  SELECT DISTINCT system_id
-                  FROM outputs NATURAL JOIN prompts
-                  WHERE
-                    task = :task
-                    AND phase_id = :phase_id
-                ), system_votes AS (
-                  SELECT
-                    system_id_a,
-                    system_id_b
-                  FROM
-                    votes
-                    JOIN system_ids_with_outputs ON (
-                      votes.system_id_a = system_ids_with_outputs.system_id
-                        OR votes.system_id_b = system_ids_with_outputs.system_id
-                    )
-                    NATURAL JOIN prompts
+                SELECT system_id, COUNT(*) AS count
+                FROM (
+                  SELECT system_id_a AS system_id
+                  FROM votes NATURAL JOIN prompts
                   WHERE
                     task = :task
                     AND phase_id = :phase_id
                     AND vote != 'n'
                     AND session_id NOT IN :excluded_session_ids
-                ), votes_and_prompts_per_system AS (
-                  SELECT system_id_a AS system_id FROM system_votes UNION ALL
-                    SELECT system_id_b AS system_id FROM system_votes
-                )
-                SELECT system_id, COUNT(*) AS count
-                FROM votes_and_prompts_per_system
+                  UNION ALL
+                  SELECT system_id_b AS system_id
+                  FROM votes NATURAL JOIN prompts
+                  WHERE
+                    task = :task
+                    AND phase_id = :phase_id
+                    AND vote != 'n'
+                    AND session_id NOT IN :excluded_session_ids
+                ) t
                 GROUP BY system_id
                 ORDER BY count DESC
             """),

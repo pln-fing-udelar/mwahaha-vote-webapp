@@ -304,9 +304,9 @@ async def test_votes_queries_and_stats(
         )
 
     votes_per_sys = await database.get_votes_per_system(seeded_db_engine, phase_id=1, task="t3")
-    assert votes_per_sys["sys_a"] == 6
-    assert votes_per_sys["sys_b"] == 4
-    assert votes_per_sys["sys_c"] == 2
+    assert votes_per_sys["sys_a"] == 3
+    assert votes_per_sys["sys_b"] == 2
+    assert votes_per_sys["sys_c"] == 1
     assert votes_per_sys["sys_d"] == 0
 
     votes_per_sys_excl = await database.get_votes_per_system(
