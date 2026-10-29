@@ -1,3 +1,4 @@
+[![ACL Anthology](https://img.shields.io/badge/ACL_Anthology-2026.semeval--1.454-ed1c24.svg)](https://aclanthology.org/2026.semeval-1.454/)
 [![Actions Status](https://github.com/pln-fing-udelar/mwahaha-vote-webapp/workflows/CI/badge.svg)](https://github.com/pln-fing-udelar/mwahaha-vote-webapp/actions)
 [![Coverage](https://codecov.io/gh/pln-fing-udelar/mwahaha-vote-webapp/branch/main/graph/badge.svg)](https://codecov.io/gh/pln-fing-udelar/mwahaha-vote-webapp)
 
@@ -144,9 +145,32 @@ If you use this software or the MWAHAHA evaluation data in your research, please
 ```bibtex
 @inproceedings{castro-etal-2026-semeval,
     title = "{S}em{E}val-2026 Task 1: {MWAHAHA}, Models Write Automatic Humor And Humans Annotate",
-    author = "Castro, Santiago and Chiruzzo, Luis and G{\'o}ngora, Santiago and Rahili, Salar and Deng, Naihao and Sastre, Ignacio and Amoroso, Victoria and Rey, Guillermo and Ros{\'a}, Aiala and Moncecchi, Guillermo and Meaney, J. A. and Prada, Juan Jos{\'e} and Mihalcea, Rada",
-    booktitle = "Proceedings of the 20th International Workshop on Semantic Evaluation (SemEval-2026)",
+    author = "Castro, Santiago  and
+      Chiruzzo, Luis  and
+      G{\'o}ngora, Santiago  and
+      Deng, Naihao  and
+      Rahili, Salar  and
+      Sastre, Ignacio  and
+      Ros{\'a}, Aiala  and
+      Amoroso, Victoria  and
+      Rey, Guillermo  and
+      Moncecchi, Guillermo  and
+      Meaney, J. A.  and
+      Prada, Juan Jos{\'e}  and
+      Mihalcea, Rada",
+    editor = "Kochmar, Ekaterina  and
+      Ghosh, Debanjan  and
+      North, Kai  and
+      Komachi, Mamoru  and
+      Zampieri, Marcos",
+    booktitle = "Proceedings of the 20th {I}nternational {W}orkshop on {S}emantic {E}valuation (2026)",
+    month = jul,
     year = "2026",
-    publisher = "Association for Computational Linguistics"
+    address = "San Diego, California, USA",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.semeval-1.454/",
+    doi = "10.18653/v1/2026.semeval-1.454",
+    pages = "3797--3822",
+    ISBN = "979-8-89176-414-9"
 }
 ```
