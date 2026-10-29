@@ -222,6 +222,15 @@ async def test_routes_end_to_end(
 
     transport = httpx2.ASGITransport(app=inject_db)
     async with httpx2.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        # GET /battles with invalid task (falls back to 't3') and out-of-range batch_size (clamped to [1, 4])
+        resp_battles_clamped = await client.get("/battles", params={"task": "invalid_task", "batch_size": "99"})
+        assert resp_battles_clamped.status_code == 200
+        assert len(resp_battles_clamped.json()) <= 4
+
+        resp_battles_min = await client.get("/battles", params={"task": "invalid_task", "batch_size": "0"})
+        assert resp_battles_min.status_code == 200
+        assert len(resp_battles_min.json()) == 1
+
         # GET /battles with valid and invalid ignored_tokens
         valid_ignored = _encrypt_as_battle_token("en_1", "sys_a", "sys_b")
         resp_battles = await client.get(

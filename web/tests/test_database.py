@@ -245,6 +245,14 @@ async def test_random_least_voted_unseen_battles_skips_unpartnerable_outputs(
     assert battles[0].prompt.id == "en_2"
 
 
+async def test_random_least_voted_unseen_battles_empty_db(
+    db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+) -> None:
+    # When no valid partner exists for any candidate (or the DB is empty), it should terminate cleanly.
+    battles = [b async for b in database.random_least_voted_unseen_battles(db_engine, 1, "sess", "t3", batch_size=4)]
+    assert battles == []
+
+
 async def test_random_battles_and_same_text_battles(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
 ) -> None:

@@ -7,6 +7,7 @@ import pytest
 import sqlalchemy
 import sqlalchemy.exc
 import sqlalchemy.ext.asyncio
+from pydantic import ValidationError
 
 from ingestion import codabench, submission
 from ingestion.codabench import Submission
@@ -138,6 +139,16 @@ def test_list_submission_dicts_and_list_submissions() -> None:
         assert by_id[101].tests_passed == [False]
         assert by_id[200].tasks == ["t3"]
         assert by_id[200].tests_passed == [False]
+
+    # Invalid API schema raises Pydantic ValidationError
+    mock_bad_resp = MagicMock()
+    mock_bad_resp.json.return_value = [{"id": "not-an-int"}]
+    with (
+        patch("ingestion.codabench.is_session_id_valid", return_value=True),
+        patch("httpx2.get", return_value=mock_bad_resp),
+        pytest.raises(ValidationError),
+    ):
+        codabench.list_submissions(session_id="sid")
 
 
 def test_print_stats(capsys: pytest.CaptureFixture[str]) -> None:
