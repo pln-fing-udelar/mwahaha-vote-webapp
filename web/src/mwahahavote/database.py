@@ -5,7 +5,7 @@ import datetime
 import os
 import random
 from collections import defaultdict, deque
-from collections.abc import AsyncIterator, Iterable, MutableMapping
+from collections.abc import AsyncGenerator, AsyncIterator, Iterable, MutableMapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -258,7 +258,7 @@ STATEMENT_VOTE_COUNT_PER_CATEGORY = sqlalchemy.sql.text("SELECT vote, COUNT(*) F
 
 
 @asynccontextmanager
-async def create_engine() -> AsyncIterator[sqlalchemy.ext.asyncio.AsyncEngine]:
+async def create_engine() -> AsyncGenerator[sqlalchemy.ext.asyncio.AsyncEngine]:
     engine = sqlalchemy.ext.asyncio.create_async_engine(
         f"mysql+asyncmy://{os.environ['DB_USER']}:{os.environ['DB_PASS']}@{os.environ['DB_HOST']}/{os.environ['DB_NAME']}",
         pool_size=10,
@@ -417,7 +417,7 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
             if partner_outputs := [
                 (session_voted_outputs[(prompt_id, system_id)], system_id, text)
                 for system_id, text in prompt_id_to_outputs[prompt_id]
-                if system_id != system_id_a and (prompt_id, system_id) and text != text_a
+                if system_id != system_id_a and text != text_a
             ]:
                 random.shuffle(partner_outputs)
                 _, system_id_b, text_b = min(partner_outputs, key=lambda p: p[0])

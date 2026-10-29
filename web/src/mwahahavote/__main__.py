@@ -1,7 +1,7 @@
 import logging
 import os
 import random
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncGenerator, AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Annotated, Any, NamedTuple, TypedDict, cast
@@ -55,7 +55,7 @@ fernet_cipher = Fernet(os.environ["BATTLE_TOKEN_SECRET"].encode())
 
 
 @asynccontextmanager
-async def _lifespan(app: FastAPI) -> AsyncIterator[dict[str, Any]]:
+async def _lifespan(app: FastAPI) -> AsyncGenerator[dict[str, Any]]:
     async with database.create_engine() as database_engine:
         yield {"database_engine": database_engine}
 
@@ -280,7 +280,7 @@ async def battles_route(
     # We should be good for up to length 16.
     ignored_tokens: Annotated[list[str] | None, Query(alias="ignored_tokens[]")] = None,
 ) -> list[SimplifiedBattleDict]:
-    task = cast(Task, task if task in TASK_CHOICES else "t3")
+    task = task if task in TASK_CHOICES else "t3"
 
     batch_size = max(min(batch_size, REQUEST_BATTLE_BATCH_SIZE), 1)
 
