@@ -254,12 +254,32 @@ async def test_random_least_voted_unseen_battles_empty_db(
     assert battles == []
 
 
-async def test_random_battles_and_same_text_battles(
+async def test_random_least_voted_unseen_battles_caching_and_ttl(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
 ) -> None:
-    random_b = [b async for b in database.random_battles(seeded_db_engine, phase_id=1, task="t3", batch_size=2)]
-    assert len(random_b) == 2
+    cache_key = database.hashkey(seeded_db_engine, 1, "t3")
+    database._task_outputs_cache.pop(cache_key, None)
 
+    # Cold cache -> populates _task_outputs_cache
+    first = [b async for b in database.random_least_voted_unseen_battles(seeded_db_engine, 1, "s1", "t3", 2)]
+    assert len(first) == 2
+    first_entry = database._task_outputs_cache[cache_key]
+
+    # Warm cache hit -> reuses the same cached entry
+    second = [b async for b in database.random_least_voted_unseen_battles(seeded_db_engine, 1, "s1", "t3", 2)]
+    assert len(second) == 2
+    assert database._task_outputs_cache[cache_key] is first_entry
+
+    # Evicted/expired cache -> refreshes the cached entry
+    database._task_outputs_cache.pop(cache_key)
+    third = [b async for b in database.random_least_voted_unseen_battles(seeded_db_engine, 1, "s1", "t3", 2)]
+    assert len(third) == 2
+    assert database._task_outputs_cache[cache_key] is not first_entry
+
+
+async def test_same_text_battles(
+    seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+) -> None:
     # In seeded_db_engine, en_1 has identical text for sys_a and sys_c
     same_b = [b async for b in database.battles_with_same_text(seeded_db_engine, phase_id=1, task="t3")]
     assert len(same_b) == 1

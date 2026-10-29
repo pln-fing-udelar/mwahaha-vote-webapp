@@ -1,5 +1,7 @@
 """Provides mechanisms to handle the database."""
 
+import functools
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterable, MutableMapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any, Literal, get_args
@@ -10,10 +12,11 @@ lazy import io
 lazy import os
 lazy import random
 lazy from collections import defaultdict, deque
-lazy from collections.abc import AsyncGenerator, AsyncIterator, Iterable, MutableMapping
 
 import sqlalchemy.ext.asyncio
 import sqlalchemy.sql
+from cachetools import TTLCache
+from cachetools.keys import hashkey
 
 Task = Literal["t3"]
 TASK_CHOICES: frozenset[Task] = frozenset(get_args(Task))
@@ -195,34 +198,6 @@ STATEMENT_SESSION_OUTPUT_VOTE_COUNTS = sqlalchemy.sql.text("""
   ) t GROUP BY prompt_id, system_id
 """)
 
-STATEMENT_RANDOM_BATTLES = sqlalchemy.sql.text("""
-SELECT
-  prompts.prompt_id,
-  word1,
-  word2,
-  headline,
-  url,
-  prompt,
-  outputs_a.system_id AS system_id_a,
-  outputs_a.text AS text_a,
-  outputs_b.system_id AS system_id_b,
-  outputs_b.text AS text_b
-FROM
-  prompts
-  NATURAL JOIN outputs AS outputs_a
-  JOIN outputs AS outputs_b
-    ON (
-      outputs_b.prompt_id = outputs_a.prompt_id
-      AND outputs_b.system_id != outputs_a.system_id
-    )
-WHERE
-  task = :task
-  AND phase_id = :phase_id
-ORDER BY
-  RAND()  -- FIXME: this can take forever.
-LIMIT :limit
-""")
-
 STATEMENT_ADD_VOTE = sqlalchemy.sql.text("""
 INSERT INTO votes (prompt_id, system_id_a, system_id_b, session_id, vote, date, is_offensive_a, is_offensive_b)
 VALUES (:prompt_id, :system_id_a, :system_id_b, :session_id, :vote, NOW(), :is_offensive_a, :is_offensive_b)
@@ -292,6 +267,58 @@ def _battle_row_to_object(
     )
 
 
+def _async_cached[**P, R](
+    cache: MutableMapping[Any, R],
+    key: Callable[..., Any] = hashkey,
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
+    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+        lock = asyncio.Lock()
+
+        @functools.wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            k = key(*args, **kwargs)
+            async with lock:
+                if (val := cache.get(k)) is not None:
+                    return val
+                val = await func(*args, **kwargs)
+                cache[k] = val
+                return val
+
+        return wrapper
+
+    return decorator
+
+
+_task_outputs_cache: TTLCache[
+    Any,
+    tuple[frozendict[str, Prompt], frozendict[str, tuple[tuple[str, str], ...]]],
+] = TTLCache(maxsize=32, ttl=300)
+
+
+@_async_cached(cache=_task_outputs_cache)
+async def _get_task_prompts_and_outputs(
+    engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    phase_id: int,
+    task: Task,
+) -> tuple[frozendict[str, Prompt], frozendict[str, tuple[tuple[str, str], ...]]]:
+    async with engine.connect() as connection:
+        outputs_cursor = await connection.execute(STATEMENT_TASK_OUTPUTS, {"phase_id": phase_id, "task": task})
+        raw_prompt_id_to_prompt: dict[str, Prompt] = {}
+        raw_prompt_id_to_outputs: dict[str, list[tuple[str, str]]] = defaultdict(list)
+        for prompt_id, system_id, text, word1, word2, headline, url, prompt_text in outputs_cursor:
+            raw_prompt_id_to_prompt.setdefault(
+                prompt_id,
+                Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text),
+            )
+            raw_prompt_id_to_outputs[prompt_id].append((system_id, text))
+    # We use `frozendict` and `tuple` as read-only structures to ensure cached data isn't modified by mistake.
+    prompt_id_to_prompt: frozendict[str, Prompt] = frozendict(raw_prompt_id_to_prompt)
+    prompt_id_to_outputs: frozendict[str, tuple[tuple[str, str], ...]] = frozendict(
+        {prompt_id: tuple(outputs) for prompt_id, outputs in raw_prompt_id_to_outputs.items()}
+    )
+    return prompt_id_to_prompt, prompt_id_to_outputs
+
+
 async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the session.
     engine: sqlalchemy.ext.asyncio.AsyncEngine,
     phase_id: int,
@@ -335,30 +362,16 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
 
     async with engine.connect() as connection:
         (
-            outputs_cursor,
+            (prompt_id_to_prompt, prompt_id_to_outputs),
             system_non_skip_vote_counts_cursor,
             prompt_non_skip_vote_counts_cursor,
             session_output_vote_counts_cursor,
         ) = await asyncio.gather(
-            connection.execute(STATEMENT_TASK_OUTPUTS, common_query_kwargs),
+            _get_task_prompts_and_outputs(engine, phase_id, task),
             connection.execute(STATEMENT_SYSTEM_NON_SKIP_VOTE_COUNTS, common_query_kwargs),
             connection.execute(STATEMENT_PROMPT_NON_SKIP_VOTE_COUNTS, common_query_kwargs),
             connection.execute(STATEMENT_SESSION_OUTPUT_VOTE_COUNTS, {"session_id": session_id, **common_query_kwargs}),
         )
-
-    # TODO: some of the following variables could probably be cached.
-
-    prompt_id_to_prompt: dict[str, Prompt] = {}
-    prompt_id_to_outputs: dict[str, list[tuple[str, str]]] = defaultdict(list)
-    for prompt_id, system_id, text, word1, word2, headline, url, prompt_text in outputs_cursor:
-        prompt_id_to_prompt.setdefault(
-            prompt_id,
-            Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text),
-        )
-        prompt_id_to_outputs[prompt_id].append((system_id, text))
-    # We use `frozendict` as a read-only dict to ensure they aren't modified by mistake.
-    prompt_id_to_prompt: frozendict[str, Prompt] = frozendict(prompt_id_to_prompt)
-    prompt_id_to_outputs: frozendict[str, list[tuple[str, str]]] = frozendict(prompt_id_to_outputs)
 
     system_id_to_non_skip_vote_count: dict[str, int] = defaultdict(int)
     system_id_to_non_skip_vote_count.update(iter(system_non_skip_vote_counts_cursor))
@@ -442,19 +455,6 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
                 break
         else:
             break
-
-
-async def random_battles(
-    engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int, task: Task, batch_size: int
-) -> AsyncIterator[Battle]:
-    """Returns an iterator with `batch_size` random battles."""
-    async with engine.connect() as connection:
-        for row in await connection.execute(
-            STATEMENT_RANDOM_BATTLES, {"task": task, "phase_id": phase_id, "limit": batch_size}
-        ):
-            prompt_id, word1, word2, headline, url, prompt_text, system_id_a, text_a, system_id_b, text_b = row
-            prompt = Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text)
-            yield _create_battle_with_prompt(prompt, system_id_a, text_a, system_id_b, text_b)
 
 
 async def battles_with_same_text(

@@ -20,6 +20,7 @@ from mwahahavote.__main__ import (
     _lifespan,
     _passes_turnstile,
     _perturb_text,
+    _perturb_url,
     _simplify_battle_object,
     app,
     fernet_cipher,
@@ -165,6 +166,12 @@ async def test_passes_turnstile(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_simplify_battle_object() -> None:
+    assert _perturb_url("") == ""
+    assert re.fullmatch(r"https://example\.com/pic\.gif\?_=[0-9a-f]{16}", _perturb_url("https://example.com/pic.gif"))
+    assert re.fullmatch(
+        r"https://example\.com/pic\.gif\?v=1&_=[0-9a-f]{16}", _perturb_url("https://example.com/pic.gif?v=1")
+    )
+
     prompt_with_text = Prompt(id="en_1", headline="Some news")
     battle = Battle(
         output_a=Output(prompt=prompt_with_text, system=System("sys_a"), text="Joke A"),
@@ -182,10 +189,11 @@ def test_simplify_battle_object() -> None:
     )
     simplified_img = _simplify_battle_object(battle_img)
     assert simplified_img["prompt"] is None
-    assert simplified_img["prompt_image_url"] == "https://example.com/pic.gif"
+    assert simplified_img["prompt_image_url"] is not None
+    assert re.fullmatch(r"https://example\.com/pic\.gif\?_=[0-9a-f]{16}", simplified_img["prompt_image_url"])
 
 
-async def test_get_battle_objects_fallback_to_random_battles(
+async def test_get_battle_objects(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
 ) -> None:
     prompt = Prompt(id="en_1", headline="News")
@@ -196,17 +204,11 @@ async def test_get_battle_objects_fallback_to_random_battles(
 
     async def fake_unseen(*_args: Any, **_kwargs: Any) -> Any:
         yield sample_battle
-
-    async def fake_random(*_args: Any, **_kwargs: Any) -> Any:
-        yield sample_battle
         yield sample_battle
 
-    with (
-        patch("mwahahavote.database.random_least_voted_unseen_battles", fake_unseen),
-        patch("mwahahavote.database.random_battles", fake_random),
-    ):
-        results = [b async for b in _get_battle_objects(seeded_db_engine, 1, "sess_1", "t3", batch_size=3)]
-        assert len(results) == 3
+    with patch("mwahahavote.database.random_least_voted_unseen_battles", fake_unseen):
+        results = [b async for b in _get_battle_objects(seeded_db_engine, 1, "sess_1", "t3", batch_size=2)]
+        assert len(results) == 2
 
 
 async def test_routes_end_to_end(

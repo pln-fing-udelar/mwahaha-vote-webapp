@@ -242,12 +242,20 @@ class SimplifiedBattleDict(TypedDict):
     output_b: str
 
 
+def _perturb_url(url: str) -> str:
+    """Return a perturbed version of the URL by appending a random query parameter."""
+    if not url:
+        return url
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}_={_generate_id()}"
+
+
 def _simplify_battle_object(battle: Battle) -> SimplifiedBattleDict:
     """Removes redundant fields and simplifies the battle representation for JSON serialization."""
     return {
         "token": _encrypt_as_battle_token(battle.prompt.id, battle.output_a.system.id, battle.output_b.system.id),
         "prompt": _perturb_text(battle.prompt.verbalized) if battle.prompt.verbalized else battle.prompt.verbalized,
-        "prompt_image_url": battle.prompt.url,  # TODO: perturb the URL? We could add stuff like useless query params.
+        "prompt_image_url": _perturb_url(battle.prompt.url) if battle.prompt.url else battle.prompt.url,
         "output_a": _perturb_text(battle.output_a.text),
         "output_b": _perturb_text(battle.output_b.text),
     }
@@ -261,17 +269,10 @@ async def _get_battle_objects(
     batch_size: int,
     ignored_output_ids: Iterable[tuple[str, str]] = (),
 ) -> AsyncIterator[SimplifiedBattleDict]:
-    num_returned = 0
-
     async for battle in database.random_least_voted_unseen_battles(
         engine, phase_id, session_id, task, batch_size, ignored_output_ids
     ):
         yield _simplify_battle_object(battle)
-        num_returned += 1
-
-    if (num_missing := batch_size - num_returned) > 0:
-        async for battle in database.random_battles(engine, phase_id, task, batch_size=num_missing):
-            yield _simplify_battle_object(battle)
 
 
 def _normalize_task(v: Any) -> Task:
