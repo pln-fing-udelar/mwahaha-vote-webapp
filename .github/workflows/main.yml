@@ -70,7 +70,7 @@ jobs:
           name: coverage-report
           path: test-reports
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: ./test-reports/coverage.xml
           use_oidc: true
