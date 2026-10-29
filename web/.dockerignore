@@ -1,0 +1,12 @@
+.coverage
+.coverage.*
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+baselines/
+prompts/
+scoring/
+submissions/
+test-reports/
+tests/

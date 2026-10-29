@@ -1,7 +1,10 @@
+[![Actions Status](https://github.com/pln-fing-udelar/mwahaha-vote-webapp/workflows/CI/badge.svg)](https://github.com/pln-fing-udelar/mwahaha-vote-webapp/actions)
+[![Coverage](https://codecov.io/gh/pln-fing-udelar/mwahaha-vote-webapp/branch/main/graph/badge.svg)](https://codecov.io/gh/pln-fing-udelar/mwahaha-vote-webapp)
+
 # MWAHAHA Vote Web App
 
 Website to crowd-annotate computer-generated jokes from
-[the MWAHAHA competition](https://pln-fing-udelar.github.io/semeval-2026-humor-gen/).
+[the MWAHAHA competition](https://pln-fing-udelar.github.io/semeval-2026-humor-gen/) (SemEval-2026 Task 1).
 It was also used to annotate for the [HAHA 2026 competition](https://www.fing.edu.uy/inco/grupos/pln/haha/).
 
 To use this repo, follow the instructions in the
@@ -19,7 +22,7 @@ cd web/
 DB_HOST=$(docker container inspect mwahaha-vote-webapp-database-1 | uv run jq -r '.[0].NetworkSettings.Networks."mwahaha-vote-webapp_net".IPAddress')
 ```
 
-To run some of the Python scripts and command in this README file,
+To run some of the Python scripts and commands in this README file,
 you may benefit from prefixing `uv run --env-file ../.env` to them.
 
 ## Add the prompts to the database
@@ -37,7 +40,8 @@ Save your CodaBench session ID in the env var `CODABENCH_SESSION_ID`.
 You can obtain it by looking at the cookie named `sessionid` in your browser's request's `Cookie` header when logged in
 to CodaBench.
 
-TODO: explain how to add submissions manually
+To add submissions manually, place `<system_id>.tsv` files (with `id` and `text` tab-separated columns matching the
+task's reference prompt IDs) under `web/submissions/`.
 
 Then, run:
 
@@ -61,6 +65,19 @@ Run:
 ```bash
 ./scripts/compute_scores.sh
 ```
+
+## Development & Testing
+
+Run the linter, formatter, type-checker, and test suite from `web/`:
+
+```bash
+uv run ruff check --fix
+uv run ruff format
+uv run ty check
+uv run pytest --doctest-modules --cov=mwahahavote --cov=ingestion
+```
+
+The linter, the formatter, and the type-checker can be run automatically when using `pre-commit`.
 
 ## Load test
 
@@ -118,4 +135,18 @@ After multiple deploys in production, if there's not enough storage available, y
 
 ```bash
 docker system prune
+```
+
+## Citing
+
+If you use this software or the MWAHAHA evaluation data in your research, please cite:
+
+```bibtex
+@inproceedings{castro-etal-2026-semeval,
+    title = "{S}em{E}val-2026 Task 1: {MWAHAHA}, Models Write Automatic Humor And Humans Annotate",
+    author = "Castro, Santiago and Chiruzzo, Luis and G{\'o}ngora, Santiago and Rahili, Salar and Deng, Naihao and Sastre, Ignacio and Amoroso, Victoria and Rey, Guillermo and Ros{\'a}, Aiala and Moncecchi, Guillermo and Meaney, J. A. and Prada, Juan Jos{\'e} and Mihalcea, Rada",
+    booktitle = "Proceedings of the 20th International Workshop on Semantic Evaluation (SemEval-2026)",
+    year = "2026",
+    publisher = "Association for Computational Linguistics"
+}
 ```
