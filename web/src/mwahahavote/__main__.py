@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Annotated, Any, NamedTuple, TypedDict, cast
 
-import httpx
+import httpx2
 import sentry_sdk
 import sqlalchemy.ext.asyncio
 from cryptography.fernet import Fernet, InvalidToken
@@ -212,7 +212,7 @@ async def _passes_turnstile(token: str) -> bool:
     if not token:
         return False
 
-    async with httpx.AsyncClient() as client:
+    async with httpx2.AsyncClient() as client:
         try:
             return (
                 (

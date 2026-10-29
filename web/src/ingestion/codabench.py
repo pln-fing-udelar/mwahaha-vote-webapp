@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-import httpx
+import httpx2
 
 from mwahahavote.database import Task
 
@@ -32,7 +32,7 @@ def is_session_id_valid(session_id: str) -> bool:
     the last 10 submissions. This can be error-prone, so we add this check.
     """
     # noinspection SpellCheckingInspection
-    response = httpx.get("https://www.codabench.org/", cookies={"sessionid": session_id})
+    response = httpx2.get("https://www.codabench.org/", cookies={"sessionid": session_id})
     response.raise_for_status()
     return "user_dropdown" in response.text  # If it's logged in fine, the user dropdown will appear.
 
@@ -59,7 +59,7 @@ def get_submission_url(submission_id: int, session_id: str | None = None) -> str
     """Returns the URL to download a submission."""
     session_id = session_id or get_environ_session_id()
     # noinspection SpellCheckingInspection
-    response = httpx.get(BASE_URL + f"submissions/{submission_id}/get_details", cookies={"sessionid": session_id})
+    response = httpx2.get(BASE_URL + f"submissions/{submission_id}/get_details", cookies={"sessionid": session_id})
     response.raise_for_status()
     return response.json()["data_file"]
 
@@ -113,7 +113,7 @@ def _list_submission_dicts(
         query_params["phase"] = phase_id
 
     # noinspection SpellCheckingInspection
-    response = httpx.get(BASE_URL + "submissions/", params=query_params, cookies={"sessionid": session_id})
+    response = httpx2.get(BASE_URL + "submissions/", params=query_params, cookies={"sessionid": session_id})
 
     response.raise_for_status()
 
