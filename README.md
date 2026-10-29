@@ -30,8 +30,8 @@ Then, run:
 ## Ingest submissions
 
 Save your CodaBench session ID in the env var `CODABENCH_SESSION_ID`.
-You can obtain by looking at the cookie named `sessionid` in your browser's request's `Cookie` header when logged in to
-CodaBench.
+You can obtain it by looking at the cookie named `sessionid` in your browser's request's `Cookie` header when logged in
+to CodaBench.
 
 TODO: explain how to add submissions manually
 
