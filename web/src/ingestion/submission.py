@@ -154,7 +154,7 @@ async def ingest_submission(
                         f" for the following prompt IDs: {nan_prompt_ids}."
                     )
 
-                    submission_df.loc[:, "text"].fillna("-", inplace=True)
+                    submission_df["text"] = submission_df["text"].fillna("-")
 
             submission_df["system_id"] = submission.system_id
 
