@@ -52,6 +52,10 @@ def test_prepare_data_for_scoring_helpers() -> None:
     assert prepare_data_for_scoring.vote_to_fastchat_language(_make_vote("es_1", "a")) == "Spanish"
     assert prepare_data_for_scoring.vote_to_fastchat_language(_make_vote("zh_1", "a")) == "Chinese"
 
+    with patch.object(Prompt, "language", new_callable=lambda: property(lambda _self: "fr")):
+        with pytest.raises(ValueError, match="Unknown language"):
+            prepare_data_for_scoring.vote_to_fastchat_language(_make_vote("en_1", "a"))
+
 
 async def test_prepare_data_for_scoring_main(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
