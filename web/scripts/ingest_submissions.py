@@ -4,21 +4,21 @@
 The submissions that were already ingested are skipped.
 """
 
-import asyncio
-import datetime
-import logging
-import os
-import tempfile
-import zipfile
-from collections.abc import Iterator
+lazy import asyncio
+lazy import datetime
+lazy import logging
+lazy import os
+lazy import tempfile
+lazy import zipfile
+lazy from collections.abc import Iterator
 
-import pandas as pd
-from tqdm.auto import tqdm
+lazy import pandas as pd
+lazy from tqdm.auto import tqdm
 
-import mwahahavote.database
-from ingestion.codabench import Submission
-from ingestion.submission import ingest_submission, list_ingested_system_ids, print_stats
-from mwahahavote.database import TASK_CHOICES, Task
+lazy import mwahahavote.database
+lazy from ingestion.codabench import Submission
+lazy from ingestion.submission import ingest_submission, list_ingested_system_ids, print_stats
+lazy from mwahahavote.database import TASK_CHOICES, Task
 
 
 def available_tasks_in_file(path: str) -> Iterator[Task]:

@@ -1,12 +1,12 @@
 import dataclasses
 import datetime
 import functools
-import os
-from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
+lazy import os
+lazy from collections.abc import Iterable
+lazy from typing import Any
 
-import httpx2
+lazy import httpx2
 
 from mwahahavote.database import Task
 

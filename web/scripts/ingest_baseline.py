@@ -1,11 +1,11 @@
 #!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
-import asyncio
-import datetime
+lazy import asyncio
+lazy import datetime
 
-import mwahahavote.database
-from ingestion.codabench import EVALUATION_PHASE_ID, Submission
-from ingestion.submission import ingest_submission
-from mwahahavote.database import TASK_CHOICES
+lazy import mwahahavote.database
+lazy from ingestion.codabench import EVALUATION_PHASE_ID, Submission
+lazy from ingestion.submission import ingest_submission
+lazy from mwahahavote.database import TASK_CHOICES
 
 
 async def async_main() -> None:

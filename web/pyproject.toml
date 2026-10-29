@@ -65,11 +65,16 @@ pythonpath = ["scripts"]
 include = ["pyproject.toml", "scripts/**/*.py", "src/**/*.py", "tests/**/*.py"]
 line-length = 120
 
+[tool.ruff.lint.isort]
+known-first-party = ["ingestion", "mwahahavote"]
+
 [tool.ruff.lint]
 ignore = [
+    "ANN002", # `*args` / `**kwargs`: the only annotation that fits is `Any`, which ANN401 then rejects.
+    "ANN003",
     "ANN401", # Allow `Any` for function args.
 ]
-select = ["ANN", "B", "C", "C90", "E", "F", "I", "N", "RUF", "UP", "W"]
+select = ["ANN", "B", "C", "C90", "E", "F", "I", "N", "RUF", "TID", "UP", "W"]
 
 [tool.ty.environment]
 extra-paths = ["scripts"]

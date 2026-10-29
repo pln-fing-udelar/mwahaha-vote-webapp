@@ -1,13 +1,13 @@
 #!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
-import asyncio
-import json
-import os
-import pickle
+lazy import asyncio
+lazy import json
+lazy import os
+lazy import pickle
 
-import pandas as pd
+lazy import pandas as pd
 
-import mwahahavote.database
-from mwahahavote.database import TASK_CHOICES, Task
+lazy import mwahahavote.database
+lazy from mwahahavote.database import TASK_CHOICES, Task
 
 PHASE_ID = 1
 

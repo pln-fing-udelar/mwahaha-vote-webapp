@@ -1,20 +1,18 @@
 """Provides mechanisms to handle the database."""
 
-import asyncio
-import datetime
-import os
-import random
-from collections import defaultdict, deque
-from collections.abc import AsyncGenerator, AsyncIterator, Iterable, MutableMapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from types import MappingProxyType
 from typing import Any, Literal, get_args
+lazy import asyncio
+lazy import datetime
+lazy import os
+lazy import random
+lazy from collections import defaultdict, deque
+lazy from collections.abc import AsyncGenerator, AsyncIterator, Iterable, MutableMapping
 
-import pandas as pd
-import sqlalchemy
 import sqlalchemy.ext.asyncio
 import sqlalchemy.sql
+lazy import pandas as pd
 
 Task = Literal["t3"]
 TASK_CHOICES: frozenset[Task] = frozenset(get_args(Task))
@@ -357,9 +355,9 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
             Prompt(id=prompt_id, word1=word1, word2=word2, headline=headline, url=url, prompt=prompt_text),
         )
         prompt_id_to_outputs[prompt_id].append((system_id, text))
-    # We use `MappingProxyType` as a read-only dict to ensure they aren't modified by mistake.
-    prompt_id_to_prompt: MappingProxyType[str, Prompt] = MappingProxyType(prompt_id_to_prompt)
-    prompt_id_to_outputs: MappingProxyType[str, list[tuple[str, str]]] = MappingProxyType(prompt_id_to_outputs)
+    # We use `frozendict` as a read-only dict to ensure they aren't modified by mistake.
+    prompt_id_to_prompt: frozendict[str, Prompt] = frozendict(prompt_id_to_prompt)
+    prompt_id_to_outputs: frozendict[str, list[tuple[str, str]]] = frozendict(prompt_id_to_outputs)
 
     system_id_to_non_skip_vote_count: dict[str, int] = defaultdict(int)
     system_id_to_non_skip_vote_count.update(iter(system_non_skip_vote_counts_cursor))

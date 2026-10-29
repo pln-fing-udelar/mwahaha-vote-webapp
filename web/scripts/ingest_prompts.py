@@ -1,11 +1,11 @@
 #!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
-import asyncio
-import csv
-import os
+lazy import asyncio
+lazy import csv
+lazy import os
 
-import pandas as pd
+lazy import pandas as pd
 
-import mwahahavote.database
+lazy import mwahahavote.database
 
 
 def read_prompt_file(path: str) -> pd.DataFrame:

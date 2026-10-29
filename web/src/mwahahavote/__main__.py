@@ -1,27 +1,30 @@
 import logging
 import os
-import random
-from collections.abc import AsyncGenerator, AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Annotated, Any, NamedTuple, TypedDict, cast
+lazy import random
+lazy from collections.abc import AsyncGenerator, AsyncIterator, Iterable
 
-import httpx2
 import sentry_sdk
-import sqlalchemy.ext.asyncio
-from cryptography.fernet import Fernet, InvalidToken
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request, Response
+from cryptography.fernet import Fernet
+from fastapi import BackgroundTasks, FastAPI, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sentry_sdk.integrations.logging import LoggingIntegration
 from starlette import status
-from starlette.datastructures import MutableHeaders
-from starlette.responses import FileResponse
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
+lazy import httpx2
+lazy import sqlalchemy.ext.asyncio
+lazy from cryptography.fernet import InvalidToken
+lazy from fastapi import HTTPException
+lazy from starlette.datastructures import MutableHeaders
+lazy from starlette.responses import FileResponse
+lazy from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from mwahahavote import database
-from mwahahavote.database import TASK_CHOICES, VOTE_CHOICES, Battle, Task, VoteString
+from mwahahavote.database import TASK_CHOICES, Task
+lazy from mwahahavote import database
+lazy from mwahahavote.database import VOTE_CHOICES, Battle, VoteString
 
 logger = logging.getLogger(__name__)
 
@@ -394,8 +397,8 @@ async def get_votes_route(request: Request) -> Response:
 @app.get("/stats")
 async def stats_route(request: Request) -> Response:
     stats = await database.stats(request.state.database_engine)
-    stats["histogram"] = [["Vote count", "Prompt count"]] + [[str(a), b] for a, b in stats["histogram"].items()]
-    stats["votes-per-category"] = [["Vote", "Prompt count"], *list(stats["votes-per-category"].items())]
+    stats["histogram"] = [["Vote count", "Prompt count"], *([str(a), b] for a, b in stats["histogram"].items())]
+    stats["votes-per-category"] = [["Vote", "Prompt count"], *stats["votes-per-category"].items()]
     return templates.TemplateResponse(request, "stats.html", {"request": request, "stats": stats})
 
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
-import asyncio
-import json
 import os
-from typing import Literal
+lazy import asyncio
+lazy import json
+lazy from typing import Literal
 
-import aioitertools
+lazy import aioitertools
 
-import mwahahavote.database
-from mwahahavote.database import TASK_CHOICES, Vote
+lazy import mwahahavote.database
+lazy from mwahahavote.database import TASK_CHOICES, Vote
 
 PHASE_ID = 1
 

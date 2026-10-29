@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
-import sys
+lazy import sys
 
-import pandas as pd
+lazy import pandas as pd
 
 
 def main() -> None:

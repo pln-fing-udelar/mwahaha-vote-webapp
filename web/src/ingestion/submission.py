@@ -1,16 +1,16 @@
-import logging
-import os
-from collections.abc import AsyncIterable, Iterable
-from typing import Any
+lazy import logging
+lazy import os
+lazy from collections.abc import AsyncIterable, Iterable
+lazy from typing import Any
 
-import pandas as pd
-import sqlalchemy
-import sqlalchemy.dialects.mysql
-import sqlalchemy.ext.asyncio
-from pandas.io.sql import SQLTable
+lazy import pandas as pd
+lazy import sqlalchemy
+lazy import sqlalchemy.dialects.mysql
+lazy import sqlalchemy.ext.asyncio
+lazy from pandas.io.sql import SQLTable
 
-from ingestion.codabench import Submission
-from mwahahavote.database import TASK_CHOICES
+lazy from ingestion.codabench import Submission
+lazy from mwahahavote.database import TASK_CHOICES
 
 
 def print_stats(submissions: list[Submission]) -> None:
