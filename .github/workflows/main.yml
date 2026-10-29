@@ -19,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.2.0
+        uses: astral-sh/setup-uv@v10.3.2
         with:
           working-directory: web
       - name: Install the project
@@ -40,7 +40,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Install uv and set the python version
-        uses: astral-sh/setup-uv@v10.2.0
+        uses: astral-sh/setup-uv@v10.3.2
         with:
           python-version: '3.15'
           working-directory: web
@@ -49,7 +49,7 @@ jobs:
       - name: Test
         run: uv run pytest --cov=mwahahavote --cov=ingestion --cov-fail-under=90 --cov-report=xml
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: web/test-reports/coverage.xml
@@ -65,12 +65,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Download coverage artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-report
           path: test-reports
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: ./test-reports/coverage.xml
           use_oidc: true
