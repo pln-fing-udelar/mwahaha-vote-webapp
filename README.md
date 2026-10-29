@@ -18,6 +18,9 @@ cd web/
 DB_HOST=$(docker container inspect mwahaha-vote-webapp-database-1 | uv run jq -r '.[0].NetworkSettings.Networks."mwahaha-vote-webapp_net".IPAddress')
 ```
 
+To run some of the Python scripts and command in this README file,
+you may benefit from prefixing `uv run --env-file ../.env` to them.
+
 ## Add the prompts to the database
 
 First, place the prompt files under the directory `web/prompts/`.
@@ -50,33 +53,59 @@ Then, run:
 ./scripts/ingest_baseline.py
 ```
 
-## Running it in production
+## Compute the scores
 
-When we run the server in production to collect annotations, we run some commands under an SSH session using `screen`
-so it survives session disconnections. You can do similarly with other programs such as `tmux`.
+Run:
 
-To conduct a test simulating high annotation load, run:
+```bash
+./scripts/compute_scores.sh
+```
+
+## Load test
+
+To conduct a test simulating high annotation load (especially for production), run:
 
 ```bash
 ./load_test.sh
 ```
 
-To ingest new submissions every hour as they show up, run:
+## Running it in production
+
+When we run the server in production to collect annotations, we run some commands under an SSH session using `screen`
+so it survives session disconnections. You can do similarly with other programs such as `tmux`.
+
+Note that the database docker container in production is called `clasificahumor-database-1` because it's shared with
+clasificahumor.
+And its Docker Compose network is called `clasificahumor_net`.
+
+To ingest new submissions and recompute the scores based on the latest annotations every hour,
+you can run the following command:
 
 ```bash
-# May need to empty `submissions/` first.
+# You may need to empty the `submissions/` subdirectory first.
 export CODABENCH_SESSION_ID=...
 while true; do
-  DB_HOST=$(docker container inspect clasificahumor-database-1 | jq -r '.[0].NetworkSettings.Networks."clasificahumor_net".IPAddress') ./scripts/ingest_submissions.py
+  export DB_HOST=$(docker container inspect clasificahumor-database-1 | uv run jq -r '.[0].NetworkSettings.Networks."clasificahumor_net".IPAddress')
+  ./scripts/ingest_submissions.py
+  ./scripts/compute_scores.sh
   sleep 3600
 done
 ```
 
-To compute the scores every hour, run:
+To inspect and run queries against the database in production:
 
 ```bash
-while true; do
-  DB_HOST=$(docker container inspect clasificahumor-database-1 | jq -r '.[0].NetworkSettings.Networks."clasificahumor_net".IPAddress') ./scripts/compute_scores.sh
-  sleep 3600
-done
+uv run mycli -h "$(docker container inspect clasificahumor-database-1 | jq -r '.[0].NetworkSettings.Networks."clasificahumor_net".IPAddress')" -u root mwahaha
+```
+
+To save a database dump:
+
+```bash
+docker exec clasificahumor-database-1 mysqldump -u root -p mwahaha > /opt/dump-mwahaha-DATE.sql
+```
+
+To inspect the web logs:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f web
 ```
