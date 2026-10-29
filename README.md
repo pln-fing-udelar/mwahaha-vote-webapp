@@ -74,7 +74,7 @@ Run the linter, formatter, type-checker, and test suite from `web/`:
 uv run ruff check --fix
 uv run ruff format
 uv run ty check
-uv run pytest --doctest-modules --cov=mwahahavote --cov=ingestion
+uv run pytest
 ```
 
 The linter, the formatter, and the type-checker can be run automatically when using `pre-commit`.

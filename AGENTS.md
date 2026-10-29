@@ -105,7 +105,7 @@ cd web/
 uv run ruff check --fix
 uv run ruff format
 uv run ty check
-uv run pytest --doctest-modules --cov=mwahahavote --cov=ingestion --cov-fail-under=90 --cov-report=term-missing
+uv run pytest --cov-fail-under=90 --cov-report=term-missing
 ```
 
 Configuration in `pyproject.toml`: Python `>=3.15` (using PEP 810 `lazy import` checked by Ruff `TID255`, and PEP 814 `frozendict`), line length 120.
