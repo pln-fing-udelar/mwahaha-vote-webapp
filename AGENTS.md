@@ -4,9 +4,9 @@ This file provides guidance to AI agents when working with code in this reposito
 
 ## Project Overview
 
-A crowd-annotation web app for the MWAHAHA competition (SemEval 2026 humor generation).
+A crowd-annotation web app for the MWAHAHA competition (SemEval-2026 Task 1 on humor generation) and HAHA 2026.
 Users perform pairwise comparisons of computer-generated jokes,
-and the system uses FastChat's Elo ranking to score submissions.
+and the system uses FastChat's Bradley-Terry / Elo ranking to score submissions.
 
 ## Architecture
 
@@ -14,18 +14,20 @@ and the system uses FastChat's Elo ranking to score submissions.
 
 **Database Layer** (`web/src/mwahahavote/database.py`):
 
-- MySQL backend with SQLAlchemy
-- Four main tables: `prompts`, `systems`, `outputs`, `votes`
-- Complex SQL query in `STATEMENT_RANDOM_LEAST_VOTED_UNSEEN_BATTLES` implements the battle selection algorithm:
-  prioritizes systems/prompts with fewer votes, ensures users don't see duplicates
-- Task types: `a-en`, `a-es`, `a-zh` (text-based), `b1`, `b2` (image-based)
+- MySQL backend with SQLAlchemy (`asyncmy` in production; `aiosqlite` in tests)
+- Five tables: `prompts`, `systems`, `outputs`, `votes`, `prolific`
+- `random_least_voted_unseen_battles` implements the battle selection algorithm in Python using `frozendict` (PEP 814):
+  prioritizes systems/prompts with fewer non-skip votes, ensures users don't see duplicates or identical texts
+- Task types: currently `"t3"` (HAHA 2026); previously `"a-en"`, `"a-es"`, `"a-zh"` (text-based), `"b1"`, `"b2"` (image-based)
 - Vote types: `a` (system A wins), `b` (system B wins), `n` (skip), `t` (tie)
 
 **FastAPI App** (`web/src/mwahahavote/__main__.py`):
 
-- Main routes: `/battles` (get comparison pairs), `/vote` (submit vote), `/l` (leaderboard)
-- Phase ID constant: `PHASE_ID = 15785` (CodaBench evaluation phase)
-- Session management via cookies
+- Main routes: `/battles` (get comparison pairs), `/vote` (submit vote), `/leaderboard` (live leaderboard), `/stats` (statistics), `/votes.csv` (CSV export)
+- Phase ID constant: `PHASE_ID = 1`
+- Uses Pydantic validators (`TaskParam`, `BatchSizeParam`) and models (`_VotePayload`) at API boundaries
+- Uses `httpx2` for async Cloudflare Turnstile verification
+- Session management via cookies and Fernet-encrypted battle tokens
 
 ### CORS Configuration
 
@@ -42,18 +44,17 @@ and the system uses FastChat's Elo ranking to score submissions.
 
 **Allowed Methods:** GET, POST only
 
-**Ingestion Pipeline** (`web/scripts/`):
+**Ingestion Pipeline** (`web/src/ingestion/` and `web/scripts/`):
 
 - `ingest_prompts.py`: Load prompts from TSV files in `web/prompts/`
-- `ingest_submissions.py`: Fetch from CodaBench API (requires `CODABENCH_SESSION_ID` env var)
-  or manual files in `web/submissions/`
+- `ingest_submissions.py`: Fetch from CodaBench API (`codabench.py`, validated with Pydantic `BaseModel` / `TypeAdapter` over `httpx2`) or manual `.tsv`/`.zip` files in `web/submissions/`
 - `ingest_baseline.py`: Load baseline from `web/baselines/baseline.zip`
 
 **Scoring Pipeline** (`web/scripts/compute_scores.sh`):
 
 1. `prepare_data_for_scoring.py`: Convert votes to FastChat format
 2. Run FastChat Elo analysis per task
-3. `postprocess_scores.py`: Generate final leaderboard JSON
+3. `postprocess_scores.py`: Generate final leaderboard JSON in `web/src/mwahahavote/static/scores/`
 
 ### Key Data Flow
 
@@ -78,7 +79,7 @@ DB_HOST=$(docker container inspect mwahaha-vote-webapp-database-1 | uv run jq -r
 # Place TSV files in web/prompts/ first
 ./scripts/ingest_prompts.py
 
-# Requires CODABENCH_SESSION_ID env var (from browser cookie)
+# Requires CODABENCH_SESSION_ID env var (from browser cookie) or TSV files in web/submissions/
 ./scripts/ingest_submissions.py
 
 # Place baseline.zip in web/baselines/ first
@@ -94,27 +95,26 @@ DB_HOST=$(docker container inspect mwahaha-vote-webapp-database-1 | uv run jq -r
 EXCLUDED_SESSION_IDS=session1,session2,session3 ./scripts/compute_scores.sh
 ```
 
-Runs for all tasks: `a-en`, `a-es`, `a-zh`, `b1`, `b2`. Skips tasks with no votes.
-
 **Session Exclusion**: Set `EXCLUDED_SESSION_IDS` (comma-separated) to exclude votes from specific sessions in score
 calculations.
 
-### Code Quality
+### Code Quality & Testing
 
 ```bash
 cd web/
 uv run ruff check --fix
 uv run ruff format
 uv run ty check
+uv run pytest --doctest-modules --cov=mwahahavote --cov=ingestion --cov-fail-under=90 --cov-report=term-missing
 ```
 
-Configuration in `pyproject.toml`: line length 120.
+Configuration in `pyproject.toml`: Python `>=3.15` (using PEP 810 `lazy import` checked by Ruff `TID255`, and PEP 814 `frozendict`), line length 120.
 
 ## Important Details
 
 - **Database name**: `mwahaha` (not `pghumor` from parent project)
 - **Container prefix**: `mwahaha-vote-webapp-` (not `clasificahumor-`)
-- **Python tool**: `uv` for dependency management
+- **Python tool**: `uv` for dependency management (`.python-version` pinned to `3.15`)
 - **All scripts** use shebang: `#!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env`
 - **Related repo**: Based on [pgHumor-clasificahumor](https://github.com/pln-fing-udelar/pghumor-clasificahumor)
 

@@ -23,6 +23,7 @@ dependencies = [
 [project.urls]
 homepage = "https://thefunnier.com/"
 repository = "https://github.com/pln-fing-udelar/mwahaha-vote-webapp"
+"Bug Tracker" = "https://github.com/pln-fing-udelar/mwahaha-vote-webapp/issues"
 
 [project.optional-dependencies]
 scripts = [
