@@ -113,3 +113,9 @@ To inspect the web logs:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f web
 ```
+
+After many docker build in production, if there's not enough storage available, you can run:
+
+```bash
+docker system prune
+```
