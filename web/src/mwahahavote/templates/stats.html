@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="description" content="Ayudá a clasificar tweets como humorísticos o no humorísticos, y si lo son, decí qué tan graciosos son. El objetivo es armar un conjunto de datos para investigar sobre Humor Computacional.">
   <meta name="author" content="Santiago Castro, Matías Cubero y el Grupo PLN, UdelaR">
-  <link rel="apple-touch-icon" href="img/favicon.png">
+  <link rel="apple-touch-icon" href="img/favicon.avif">
 
   <title>Estadísticas</title>
 
@@ -28,10 +28,8 @@
 
     <p>Cantidad total de votos: {{ stats['votes'] }}</p>
     <p>Cantidad de sesiones: {{ stats['sessions'] }}</p>
-    <p>Votos a los 3 tweets de prueba: {{ stats['test-tweets-vote-count'] }}</p>
-    <p>Votos que no fueron a los de prueba: {{ stats['votes-not-consider-test'] }}</p>
 
-    <p>Distribución de votos por tweet (sin los de prueba):</p>
+    <p>Distribución de votos por prompt:</p>
     <div id="chart-histogram" class="chart"></div>
 
     <p>Votos por categoría:</p>
@@ -41,13 +39,6 @@
 
     <p>Cantidad de votos: {{ stats['votes-without-skips'] }}</p>
     <p>Cantidad de sesiones: {{ stats['sessions-without-skips'] }}</p>
-
-    <h2>Votos que pasan los tweets de prueba y no son salteos</h2>
-
-    <p>Votos, que no son salteos, cuya sesión cumpla haber pasado los tweets de prueba.</p>
-
-    <p>Cantidad de votos: {{ stats['votes-pass-test'] }}</p>
-    <p>Cantidad de sesiones: {{ stats['sessions-pass-test'] }}</p>
   </div>
 
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>

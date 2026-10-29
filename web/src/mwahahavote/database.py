@@ -377,7 +377,7 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
         session_voted_prompts[prompt_id] += count
     # We fix the double-counting, because the original dict came from outputs,
     # which were counted based on battles (which have 2 outputs).
-    for prompt_id in session_voted_prompts.keys():
+    for prompt_id in session_voted_prompts:
         session_voted_prompts[prompt_id] //= 2
 
     # We consider the ignored output IDs as voted, as they are pending in the buffer of the client.
@@ -441,6 +441,8 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
                 batch_size -= 1
 
                 break
+        else:
+            break
 
 
 async def random_battles(
@@ -761,13 +763,13 @@ async def get_votes(engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int) -
 
 async def prolific_consent(engine: sqlalchemy.ext.asyncio.AsyncEngine, session_id: str) -> None:
     """Sets the current time as the consent date for the prolific session ID."""
-    async with engine.connect() as connection:
+    async with engine.begin() as connection:
         await connection.execute(STATEMENT_PROLIFIC_CONSENT, {"session_id": session_id})
 
 
 async def prolific_finish(engine: sqlalchemy.ext.asyncio.AsyncEngine, session_id: str, comments: str) -> None:
     """Sets the current time as the finish date and the given comments for the prolific session ID."""
-    async with engine.connect() as connection:
+    async with engine.begin() as connection:
         await connection.execute(
             STATEMENT_PROLIFIC_FINISH,
             {"session_id": session_id, "finish_date": datetime.datetime.now(), "comments": comments},

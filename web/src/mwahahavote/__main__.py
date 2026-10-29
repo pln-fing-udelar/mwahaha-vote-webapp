@@ -156,6 +156,7 @@ def _perturb_text(text: str) -> str:
 
     double_space_rate = random.uniform(0.02, 0.1)
     remove_space_rate = random.uniform(0.15, 0.3)
+    mt_state = random.getstate()[1]
 
     result: list[str] = []
     i = 0
@@ -167,7 +168,7 @@ def _perturb_text(text: str) -> str:
         if char == "." and i + 1 < len(text) and text[i + 1] == " ":
             result.append(".")
             # Use position-based seed for consistency
-            position_hash = (random.getstate()[1][i % 624] + i) / (2**32)
+            position_hash = (mt_state[i % 624] + i) / (2**32)
             if position_hash < remove_space_rate:
                 # Remove the space after a period
                 i += 1  # Skip the space
@@ -178,7 +179,7 @@ def _perturb_text(text: str) -> str:
         elif char in "!?,;:" and i + 1 < len(text) and text[i + 1] == " ":
             result.append(char)
             # Use position-based seed for consistency
-            position_hash = (random.getstate()[1][i % 624] + i) / (2**32)
+            position_hash = (mt_state[i % 624] + i) / (2**32)
             if position_hash < remove_space_rate * 0.5:  # Less aggressive for other punctuation
                 # Remove the space after punctuation
                 i += 1  # Skip the space
@@ -188,7 +189,7 @@ def _perturb_text(text: str) -> str:
         # Handle regular spaces:
         elif char == " ":
             # Use position-based seed for consistency
-            position_hash = (random.getstate()[1][i % 624] + i) / (2**32)
+            position_hash = (mt_state[i % 624] + i) / (2**32)
             if position_hash < double_space_rate:
                 result.append("  ")
             else:
