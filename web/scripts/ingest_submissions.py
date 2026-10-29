@@ -26,6 +26,7 @@ def available_tasks_in_file(path: str) -> Iterator[Task]:
         zip_file.extractall(dir_)
 
         for task in sorted(TASK_CHOICES):
+            task: Task
             task_file_path = os.path.join(dir_, f"task-{task}.tsv")
             if os.path.exists(task_file_path) and os.path.isfile(task_file_path):
                 yield task
@@ -101,7 +102,7 @@ async def async_main() -> None:
             path_or_url=path,
         )
         for i, filename in enumerate(os.listdir("submissions"))
-        if filename.endswith(".tsv") and os.path.isfile(path := os.path.join("submissions", filename))
+        if os.path.isfile(path := os.path.join("submissions", filename)) and filename.endswith(".tsv")
     ]
     print(f"Obtained {len(submissions_to_ingest)} manual submissions placed under `submissions/`.")
     print()
@@ -157,7 +158,7 @@ async def async_main() -> None:
         print(
             pd.DataFrame(
                 {"user": submission.user, **{task: (task in submission.tasks) for task in sorted(TASK_CHOICES)}}
-                for submission in sorted(submissions_to_ingest, key=lambda submission: submission.user)
+                for submission in sorted(submissions_to_ingest, key=lambda submission_: submission_.user)
             )
         )
 

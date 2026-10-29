@@ -17,7 +17,7 @@ import sqlalchemy.ext.asyncio
 import sqlalchemy.sql
 
 Task = Literal["t3"]
-TASK_CHOICES = frozenset(get_args(Task))
+TASK_CHOICES: frozenset[Task] = frozenset(get_args(Task))
 
 
 @dataclass(frozen=True)
