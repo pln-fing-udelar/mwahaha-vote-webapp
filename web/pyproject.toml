@@ -57,7 +57,10 @@ include = ["pyproject.toml", "scripts/**/*.py", "src/**/*.py"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["B", "C", "C90", "E", "F", "I", "N", "RUF", "UP", "W"]
+ignore = [
+    "ANN401", # Allow `Any` for function args.
+]
+select = ["ANN", "B", "C", "C90", "E", "F", "I", "N", "RUF", "UP", "W"]
 
 [tool.ty.src]
 include = ["scripts/**/*.py", "src/**/*.py"]
