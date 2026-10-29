@@ -4,7 +4,9 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any, Literal, get_args
 lazy import asyncio
+lazy import csv
 lazy import datetime
+lazy import io
 lazy import os
 lazy import random
 lazy from collections import defaultdict, deque
@@ -12,7 +14,6 @@ lazy from collections.abc import AsyncGenerator, AsyncIterator, Iterable, Mutabl
 
 import sqlalchemy.ext.asyncio
 import sqlalchemy.sql
-lazy import pandas as pd
 
 Task = Literal["t3"]
 TASK_CHOICES: frozenset[Task] = frozenset(get_args(Task))
@@ -723,30 +724,35 @@ async def vote_count_without_skips(engine: sqlalchemy.ext.asyncio.AsyncEngine) -
         return (await connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True})).one()[0]
 
 
-async def get_votes(engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int) -> pd.DataFrame:
-    """Returns the non-skip votes with all the associated information."""
+async def get_votes_csv(engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int) -> str:
+    """Returns the votes for a given phase ID with all associated information formatted as CSV."""
     async with engine.connect() as connection:
-        return pd.DataFrame(
-            iter(
-                await connection.execute(
-                    sqlalchemy.sql.text("""
-                        SELECT
-                          *
-                        FROM
-                          votes
-                          NATURAL JOIN prompts
-                          JOIN outputs o_a ON (votes.prompt_id = o_a.prompt_id AND votes.system_id_a = o_a.system_id)
-                          JOIN outputs o_b ON (votes.prompt_id = o_b.prompt_id AND votes.system_id_b = o_b.system_id)
-                        WHERE
-                          phase_id = :phase_id
-                        ORDER BY
-                          session_id,
-                          date
-                    """),
-                    {"phase_id": phase_id},
-                )
-            )
+        cursor = await connection.execute(
+            sqlalchemy.sql.text("""
+                SELECT
+                  *
+                FROM
+                  votes
+                  NATURAL JOIN prompts
+                  JOIN outputs o_a ON (votes.prompt_id = o_a.prompt_id AND votes.system_id_a = o_a.system_id)
+                  JOIN outputs o_b ON (votes.prompt_id = o_b.prompt_id AND votes.system_id_b = o_b.system_id)
+                WHERE
+                  phase_id = :phase_id
+                ORDER BY
+                  session_id,
+                  date
+            """),
+            {"phase_id": phase_id},
         )
+        rows = cursor.fetchall()
+        if not rows:
+            return os.linesep
+
+        buf = io.StringIO()
+        writer = csv.writer(buf, lineterminator=os.linesep)
+        writer.writerow(cursor.keys())
+        writer.writerows(rows)
+        return buf.getvalue()
 
 
 async def prolific_consent(engine: sqlalchemy.ext.asyncio.AsyncEngine, session_id: str) -> None:

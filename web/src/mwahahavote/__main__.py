@@ -378,7 +378,7 @@ async def get_votes_per_session_route(request: Request) -> dict[str, int]:
 @app.get("/votes.csv")
 async def get_votes_route(request: Request) -> Response:
     return Response(
-        content=(await database.get_votes(request.state.database_engine, PHASE_ID)).to_csv(index=False),
+        content=await database.get_votes_csv(request.state.database_engine, PHASE_ID),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=votes.csv"},
     )

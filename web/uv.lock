@@ -1141,7 +1141,6 @@ dependencies = [
     { name = "httptools" },
     { name = "httpx2" },
     { name = "jinja2" },
-    { name = "pandas" },
     { name = "pydantic" },
     { name = "python-multipart" },
     { name = "sentry-sdk" },
@@ -1157,6 +1156,7 @@ scripts = [
     { name = "fschat", extra = ["webui"] },
     { name = "fsspec", extra = ["http"] },
     { name = "huggingface-hub" },
+    { name = "pandas" },
     { name = "tqdm" },
 ]
 
@@ -1188,7 +1188,7 @@ requires-dist = [
     { name = "httpx2", specifier = ">=2,<3" },
     { name = "huggingface-hub", marker = "extra == 'scripts'", specifier = ">=0.34.0,<2" },
     { name = "jinja2", specifier = "<4" },
-    { name = "pandas", specifier = "<4" },
+    { name = "pandas", marker = "extra == 'scripts'", specifier = "<4" },
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "python-multipart", specifier = "<1" },
     { name = "sentry-sdk", specifier = "<3" },

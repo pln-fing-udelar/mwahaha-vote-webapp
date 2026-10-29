@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pandas as pd
 import pytest
 import sqlalchemy
 import sqlalchemy.ext.asyncio
@@ -329,8 +330,34 @@ async def test_votes_queries_and_stats(
     ]
     assert len(scoring_votes_excl) == 0
 
-    votes_df = await database.get_votes(seeded_db_engine, phase_id=1)
-    assert len(votes_df) == 4
+    votes_csv = await database.get_votes_csv(seeded_db_engine, phase_id=1)
+    async with seeded_db_engine.connect() as conn:
+        expected_csv = pd.DataFrame(
+            iter(
+                await conn.execute(
+                    sqlalchemy.sql.text("""
+                        SELECT
+                          *
+                        FROM
+                          votes
+                          NATURAL JOIN prompts
+                          JOIN outputs o_a ON (votes.prompt_id = o_a.prompt_id AND votes.system_id_a = o_a.system_id)
+                          JOIN outputs o_b ON (votes.prompt_id = o_b.prompt_id AND votes.system_id_b = o_b.system_id)
+                        WHERE
+                          phase_id = :phase_id
+                        ORDER BY
+                          session_id,
+                          date
+                    """),
+                    {"phase_id": 1},
+                )
+            )
+        ).to_csv(index=False)
+    assert votes_csv == expected_csv
+    assert len(votes_csv.strip().splitlines()) == 5  # 1 header + 4 rows
+
+    empty_csv = await database.get_votes_csv(seeded_db_engine, phase_id=999)
+    assert empty_csv == pd.DataFrame([]).to_csv(index=False)
 
     stats = await database.stats(seeded_db_engine)
     assert stats["votes"] == 4
