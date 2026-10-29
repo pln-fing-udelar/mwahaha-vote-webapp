@@ -6,6 +6,7 @@ lazy import os
 lazy from collections.abc import Iterable
 lazy from typing import Any
 
+from pydantic import BaseModel, TypeAdapter
 lazy import httpx2
 
 from mwahahavote.database import Task
@@ -18,6 +19,32 @@ COMPETITION_ID = 9719
 
 EVALUATION_TRIAL_PHASE_ID = 15784
 EVALUATION_PHASE_ID = 15785
+
+
+class _CodaBenchTask(BaseModel):
+    id: int
+
+
+class _CodaBenchScore(BaseModel):
+    score: float
+
+
+class _CodaBenchSubmission(BaseModel):
+    id: int
+    owner: str
+    created_when: datetime.datetime
+    is_soft_deleted: bool
+    parent: int | None = None
+    children: list[int] = []
+    task: _CodaBenchTask | None = None
+    scores: list[_CodaBenchScore] = []
+
+
+class _CodaBenchSubmissionDetail(BaseModel):
+    data_file: str
+
+
+_SUBMISSION_LIST_ADAPTER = TypeAdapter(list[_CodaBenchSubmission])
 
 
 def get_environ_session_id() -> str:
@@ -61,7 +88,7 @@ def get_submission_url(submission_id: int, session_id: str | None = None) -> str
     # noinspection SpellCheckingInspection
     response = httpx2.get(BASE_URL + f"submissions/{submission_id}/get_details", cookies={"sessionid": session_id})
     response.raise_for_status()
-    return response.json()["data_file"]
+    return _CodaBenchSubmissionDetail.model_validate(response.json()).data_file
 
 
 @functools.total_ordering
@@ -127,7 +154,9 @@ def list_submissions(
 ) -> Iterable[Submission]:
     """List all "parent" or single-task submissions for a competition."""
 
-    submission_dicts = _list_submission_dicts(competition_id=competition_id, phase_id=phase_id, session_id=session_id)
+    raw_submissions = _SUBMISSION_LIST_ADAPTER.validate_python(
+        _list_submission_dicts(competition_id=competition_id, phase_id=phase_id, session_id=session_id)
+    )
 
     # There's a concept of "parent" and "children" submissions.
     # It seems that if a submission is for multiple tasks,
@@ -140,34 +169,38 @@ def list_submissions(
 
     parentless_submissions: dict[int, Submission] = {}
 
-    for d in submission_dicts:
-        if not d["parent"]:  # If it's not a child submission.
-            id_ = d["id"]
-            user = d["owner"]
-            date = datetime.datetime.fromisoformat(d["created_when"].replace("Z", "+00:00"))
-            is_deleted = d["is_soft_deleted"]
-
-            if d["children"]:
+    for item in raw_submissions:
+        if not item.parent:  # If it's not a child submission.
+            if item.children:
                 # If it's a parent submission, we create it with an empty set of tasks.
                 # If it ends up having no tasks, it'll be discarded later.
-                parentless_submissions[id_] = Submission(id=id_, user=user, date=date, is_deleted=is_deleted)
+                parentless_submissions[item.id] = Submission(
+                    id=item.id, user=item.owner, date=item.created_when, is_deleted=item.is_soft_deleted
+                )
             else:  # If it's not a parent submission.
                 # If it's a single-task submission, we need to check that it passed the submission test.
-                task = task_id_to_task(d["task"]["id"])
+                assert item.task is not None, "Single-task submission must have a task."
+                task = task_id_to_task(item.task.id)
                 # For some reason, the "scores" field could be empty:
-                test_passed = bool((scores := d["scores"]) and bool(float(scores[0]["score"])))
-                parentless_submissions[id_] = Submission(
-                    id=id_, user=user, date=date, tasks=[task], tests_passed=[test_passed], is_deleted=is_deleted
+                test_passed = bool(item.scores and item.scores[0].score)
+                parentless_submissions[item.id] = Submission(
+                    id=item.id,
+                    user=item.owner,
+                    date=item.created_when,
+                    tasks=[task],
+                    tests_passed=[test_passed],
+                    is_deleted=item.is_soft_deleted,
                 )
 
-    for d in submission_dicts:
-        if parent_submission_id := d["parent"]:
+    for item in raw_submissions:
+        if parent_submission_id := item.parent:
             parent_submission = parentless_submissions[parent_submission_id]
-            parent_submission.tasks.append(task_id_to_task(d["task"]["id"]))
+            assert item.task is not None, "Child submission must have a task."
+            parent_submission.tasks.append(task_id_to_task(item.task.id))
             # For some reason, the "scores" field could be empty:
-            parent_submission.tests_passed.append(bool((scores := d["scores"]) and bool(float(scores[0]["score"]))))
+            parent_submission.tests_passed.append(bool(item.scores and item.scores[0].score))
 
-            assert parent_submission.is_deleted or not d["is_soft_deleted"], (
+            assert parent_submission.is_deleted or not item.is_soft_deleted, (
                 "If a parent submission is not deleted, its children cannot be deleted."
             )
 

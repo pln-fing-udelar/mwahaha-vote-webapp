@@ -12,6 +12,7 @@ from fastapi import BackgroundTasks, FastAPI, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ValidationError
 from sentry_sdk.integrations.logging import LoggingIntegration
 from starlette import status
 lazy import httpx2
@@ -22,9 +23,9 @@ lazy from starlette.datastructures import MutableHeaders
 lazy from starlette.responses import FileResponse
 lazy from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from mwahahavote.database import TASK_CHOICES, Task
+from mwahahavote.database import TASK_CHOICES, Task, VoteString
 lazy from mwahahavote import database
-lazy from mwahahavote.database import VOTE_CHOICES, Battle, VoteString
+lazy from mwahahavote.database import Battle
 
 logger = logging.getLogger(__name__)
 
@@ -273,20 +274,41 @@ async def _get_battle_objects(
             yield _simplify_battle_object(battle)
 
 
+def _normalize_task(v: Any) -> Task:
+    return cast(Task, v) if v in TASK_CHOICES else "t3"
+
+
+def _clamp_batch_size(v: int) -> int:
+    return max(min(v, REQUEST_BATTLE_BATCH_SIZE), 1)
+
+
+TaskParam = Annotated[Task, Query(), BeforeValidator(_normalize_task)]
+BatchSizeParam = Annotated[int, Query(), AfterValidator(_clamp_batch_size)]
+
+
+class _VotePayload(BaseModel):
+    token: str = ""
+    vote: VoteString
+    is_offensive_a: bool
+    is_offensive_b: bool
+
+    @property
+    def battle_id(self) -> BattleId:
+        if not self.token:
+            raise ValueError("Battle token required")
+        return _decrypt_battle_token(self.token)
+
+
 @app.get("/battles")
 async def battles_route(
     request: Request,
-    task: str = Query("t3"),
-    batch_size: int = Query(REQUEST_BATTLE_BATCH_SIZE),
+    task: TaskParam = "t3",
+    batch_size: BatchSizeParam = REQUEST_BATTLE_BATCH_SIZE,
     # Note that the length of the following list is limited by the maximum URL length,
     # which is typically around 2000 characters.
     # We should be good for up to length 16.
     ignored_tokens: Annotated[list[str] | None, Query(alias="ignored_tokens[]")] = None,
 ) -> list[SimplifiedBattleDict]:
-    task = task if task in TASK_CHOICES else "t3"
-
-    batch_size = max(min(batch_size, REQUEST_BATTLE_BATCH_SIZE), 1)
-
     ignored_output_ids: list[tuple[str, str]] = []
     for ignored_token in ignored_tokens or ():
         try:
@@ -312,18 +334,11 @@ async def vote_route(request: Request, background_tasks: BackgroundTasks) -> Res
         raise HTTPException(status_code=403, detail="Turnstile verification failed")
 
     if all(key in form_data for key in ("vote", "is_offensive_a", "is_offensive_b")):
-        vote_str = str(form_data["vote"])
-        if vote_str not in VOTE_CHOICES:
-            raise HTTPException(status_code=400, detail="Invalid vote")
-        vote = cast(VoteString, vote_str)
-
-        if not (battle_token := str(form_data.get("token", ""))):
-            raise HTTPException(status_code=400, detail="Battle token required")
-
         try:
-            prompt_id, system_id_a, system_id_b = _decrypt_battle_token(battle_token)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail="Invalid battle ID") from e
+            payload = _VotePayload.model_validate(form_data)
+            prompt_id, system_id_a, system_id_b = payload.battle_id
+        except (ValidationError, ValueError) as e:
+            raise HTTPException(status_code=400, detail="Invalid vote payload") from e
 
         background_tasks.add_task(
             database.add_vote,
@@ -332,9 +347,9 @@ async def vote_route(request: Request, background_tasks: BackgroundTasks) -> Res
             prompt_id,
             system_id_a,
             system_id_b,
-            vote,
-            is_offensive_a=str(form_data["is_offensive_a"]).lower() == "true",
-            is_offensive_b=str(form_data["is_offensive_b"]).lower() == "true",
+            payload.vote,
+            is_offensive_a=payload.is_offensive_a,
+            is_offensive_b=payload.is_offensive_b,
         )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
