@@ -2,6 +2,7 @@
 
 Website to crowd-annotate computer-generated jokes from
 [the MWAHAHA competition](https://pln-fing-udelar.github.io/semeval-2026-humor-gen/).
+It was also used to annotate for the [HAHA 2026 competition](https://www.fing.edu.uy/inco/grupos/pln/haha/).
 
 To use this repo, follow the instructions in the
 [pgHumor-clasificahumor repository](https://github.com/pln-fing-udelar/pghumor-clasificahumor) and replace the values
