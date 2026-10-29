@@ -3,7 +3,7 @@ name = "mwahahavote"
 version = "0.1.0.dev0"
 description = "A web app to crowd-annotate for the MWAHAHA competition."
 authors = [{ name = "Santiago Castro", email = "sacastro@fing.edu.uy" }]
-requires-python = ">=3.14"
+requires-python = ">=3.15"
 dependencies = [
     "cryptography", # Also required for the database authentication when using `asyncmy`.
     "fastapi<1",
