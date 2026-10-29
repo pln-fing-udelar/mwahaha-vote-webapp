@@ -362,10 +362,10 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
     prompt_id_to_outputs: MappingProxyType[str, list[tuple[str, str]]] = MappingProxyType(prompt_id_to_outputs)
 
     system_id_to_non_skip_vote_count: dict[str, int] = defaultdict(int)
-    system_id_to_non_skip_vote_count.update(iter(system_non_skip_vote_counts_cursor))  # ty: ignore[no-matching-overload]
+    system_id_to_non_skip_vote_count.update(iter(system_non_skip_vote_counts_cursor))
 
     prompt_id_to_non_skip_vote_count: dict[str, int] = defaultdict(int)
-    prompt_id_to_non_skip_vote_count.update(iter(prompt_non_skip_vote_counts_cursor))  # ty: ignore[no-matching-overload]
+    prompt_id_to_non_skip_vote_count.update(iter(prompt_non_skip_vote_counts_cursor))
 
     session_voted_outputs: dict[tuple[str, str], int] = defaultdict(int)
     session_voted_outputs.update(
@@ -489,7 +489,7 @@ async def battles_with_same_text(
                 """),
             {"task": task, "phase_id": phase_id},
         ):
-            yield _battle_row_to_object(row, randomly_swap_systems=False)  # ty: ignore[invalid-argument-type]
+            yield _battle_row_to_object(row, randomly_swap_systems=False)
 
 
 async def get_votes_for_battles_with_the_same_text(
@@ -682,7 +682,7 @@ async def _get_votes_per_system(
             """),
             {"task": task, "phase_id": phase_id, "excluded_session_ids": excluded_session_ids},
         ):
-            yield row  # ty:ignore[invalid-yield]
+            yield row
 
 
 async def get_votes_per_system(
@@ -716,7 +716,7 @@ async def get_votes_per_session(engine: sqlalchemy.ext.asyncio.AsyncEngine, phas
                     {"phase_id": phase_id},
                 )
             )
-        )  # ty:ignore[no-matching-overload]
+        )
 
 
 async def session_vote_count_without_skips(engine: sqlalchemy.ext.asyncio.AsyncEngine, session_id: str) -> int:
@@ -783,8 +783,8 @@ async def stats(engine: sqlalchemy.ext.asyncio.AsyncEngine) -> MutableMapping[st
         result: dict[str, Any] = {
             "votes": (await connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": False})).one()[0],
             "sessions": (await connection.execute(STATEMENT_SESSION_COUNT, {"without_skips": False})).one()[0],
-            "histogram": dict(iter(await connection.execute(STATEMENT_HISTOGRAM))),  # ty: ignore[no-matching-overload]
-            "votes-per-category": dict(iter(await connection.execute(STATEMENT_VOTE_COUNT_PER_CATEGORY))),  # ty: ignore[no-matching-overload]
+            "histogram": dict(iter(await connection.execute(STATEMENT_HISTOGRAM))),
+            "votes-per-category": dict(iter(await connection.execute(STATEMENT_VOTE_COUNT_PER_CATEGORY))),
             "votes-without-skips": (await connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True})).one()[0],
             "sessions-without-skips": (
                 await connection.execute(STATEMENT_SESSION_COUNT, {"without_skips": True})

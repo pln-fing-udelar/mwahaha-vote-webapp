@@ -41,7 +41,7 @@ dev = [
     "ipython>=2,<10",
     "jq<2",
     "mwahahavote[scripts]",
-    "mycli<2",
+    "mycli<3",
     "pandas-stubs",
     "ruff>=0.3,<1",
     "ty<1",

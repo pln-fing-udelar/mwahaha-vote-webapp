@@ -7,7 +7,7 @@ import pickle
 import pandas as pd
 
 import mwahahavote.database
-from mwahahavote.database import TASK_CHOICES
+from mwahahavote.database import TASK_CHOICES, Task
 
 PHASE_ID = 1
 
@@ -15,6 +15,7 @@ PHASE_ID = 1
 async def async_main() -> None:
     async with mwahahavote.database.create_engine() as engine:
         for task in sorted(TASK_CHOICES):
+            task: Task
             # Note we aren't excluding any session ID here,
             # but it's fine because these vote counts are only used when a system doesn't have a score yet.
             system_id_to_vote_count = await mwahahavote.database.get_votes_per_system(engine, PHASE_ID, task)
@@ -24,7 +25,7 @@ async def async_main() -> None:
                 with open(input_path, "rb") as file:
                     df: pd.DataFrame = pickle.load(file)["full"]["leaderboard_table_df"]
                     df.index.name = "system"
-                    df.sort_values(by=["rating"], ascending=False, inplace=True)
+                    df = df.sort_values(by=["rating"], ascending=False)
 
                     considered_system_ids = set(df.index)
                     for system_id, votes in system_id_to_vote_count.items():
