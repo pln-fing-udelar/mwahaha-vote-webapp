@@ -126,6 +126,18 @@ To save a database dump:
 docker exec clasificahumor-database-1 mysqldump -u root -p mwahaha > /opt/dump-mwahaha-DATE.sql
 ```
 
+To load a database dump:
+
+```bash
+docker exec -i clasificahumor-database-1 mysql -u root -p mwahaha < /opt/dump-mwahaha-DATE.sql
+```
+
+In development, you can load a dump using Docker Compose:
+
+```bash
+docker compose exec -T database mysql -u root -p mwahaha < /path/to/dump.sql
+```
+
 To inspect the web logs:
 
 ```bash
