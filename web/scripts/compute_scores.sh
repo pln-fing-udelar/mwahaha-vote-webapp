@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 
+set -e
 set -x
 
-./scripts/prepare_data_for_scoring.py
+COMPETITION="${1:-${COMPETITION:-mwahaha}}"
+export COMPETITION
 
-TASKS=$(uv run python -c "from mwahahavote.config import ACTIVE_COMPETITION; print(' '.join(ACTIVE_COMPETITION.task_ids))")
+./scripts/prepare_data_for_scoring.py --competition "$COMPETITION"
+
+TASKS=$(uv run python -c "from mwahahavote.config import get_competition; print(' '.join(get_competition('$COMPETITION').task_ids))")
 
 for task in $TASKS; do
   json_file="scoring/votes-$task.json"
@@ -17,4 +21,4 @@ for task in $TASKS; do
   fi
 done
 
-./scripts/postprocess_scores.py
+./scripts/postprocess_scores.py --competition "$COMPETITION"

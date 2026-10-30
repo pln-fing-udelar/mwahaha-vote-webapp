@@ -175,17 +175,31 @@ COMPETITIONS: dict[str, CompetitionConfig] = {
 }
 
 
+COMPETITION_CHOICES: tuple[str, ...] = tuple(COMPETITIONS.keys())
+
+
 def get_active_competition() -> CompetitionConfig:
     comp_name = os.getenv("COMPETITION", "mwahaha").lower()
     return COMPETITIONS.get(comp_name, COMPETITIONS["mwahaha"])
+
+
+def get_competition(comp_name: str | None = None) -> CompetitionConfig:
+    if comp_name is None:
+        return get_active_competition()
+    comp_name = comp_name.lower()
+    if comp_name not in COMPETITIONS:
+        raise ValueError(f"Unknown competition '{comp_name}'. Available competitions: {', '.join(COMPETITIONS.keys())}")
+    return COMPETITIONS[comp_name]
 
 
 ACTIVE_COMPETITION = get_active_competition()
 TASK_CHOICES: frozenset[Task] = ACTIVE_COMPETITION.task_choices
 
 
-def is_only_latest_submission_per_user() -> bool:
+def is_only_latest_submission_per_user(competition: CompetitionConfig | None = None) -> bool:
     env_val = os.getenv("ONLY_LATEST_SUBMISSION_PER_USER")
     if env_val is not None:
         return env_val.strip().lower() in ("1", "true", "yes", "on")
+    if competition is not None:
+        return competition.only_latest_submission_per_user
     return ACTIVE_COMPETITION.only_latest_submission_per_user

@@ -41,6 +41,17 @@ def test_get_active_competition(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.get_active_competition().id == "mwahaha"
 
 
+def test_get_competition(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert config.get_competition("haha").id == "haha"
+    assert config.get_competition("MWAHAHA").id == "mwahaha"
+
+    monkeypatch.setenv("COMPETITION", "haha")
+    assert config.get_competition().id == "haha"
+
+    with pytest.raises(ValueError, match="Unknown competition 'nonexistent'"):
+        config.get_competition("nonexistent")
+
+
 def test_prompt_id_to_task_mwahaha(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(database, "ACTIVE_COMPETITION", config.COMPETITIONS["mwahaha"])
 
@@ -152,9 +163,9 @@ def test_ingest_submissions_main_argparse(monkeypatch: pytest.MonkeyPatch) -> No
     with patch.object(ingest_submissions, "async_main", AsyncMock()) as mock_async:
         monkeypatch.setattr("sys.argv", ["ingest_submissions.py", "--all-submissions"])
         ingest_submissions.main()
-        mock_async.assert_awaited_once_with(only_latest_per_user=False)
+        mock_async.assert_awaited_once_with(only_latest_per_user=False, competition=None)
 
     with patch.object(ingest_submissions, "async_main", AsyncMock()) as mock_async:
         monkeypatch.setattr("sys.argv", ["ingest_submissions.py", "--only-latest"])
         ingest_submissions.main()
-        mock_async.assert_awaited_once_with(only_latest_per_user=True)
+        mock_async.assert_awaited_once_with(only_latest_per_user=True, competition=None)

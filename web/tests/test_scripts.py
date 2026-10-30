@@ -228,11 +228,13 @@ async def test_ingest_baseline(
         mock_ingest.assert_awaited_once()
 
 
-def test_script_entrypoints() -> None:
+def test_script_entrypoints(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.argv", ["script.py", "--competition", "haha"])
     for mod in (prepare_data_for_scoring, postprocess_scores, ingest_prompts, ingest_submissions, ingest_baseline):
         with patch.object(mod, "async_main", AsyncMock()) as mock_async_main:
             mod.main()
             mock_async_main.assert_awaited_once()
+            assert mock_async_main.call_args.kwargs["competition"].id == "haha"
 
 
 def test_print_submission_stats_and_pretty_table(

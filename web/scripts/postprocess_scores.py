@@ -1,4 +1,5 @@
 #!/usr/bin/env -S uv run --script --extra scripts --env-file ../.env
+lazy import argparse
 lazy import asyncio
 lazy import json
 lazy import os
@@ -6,19 +7,24 @@ lazy import pickle
 
 lazy import pandas as pd
 
-from mwahahavote.config import ACTIVE_COMPETITION, Task
+from mwahahavote.config import ACTIVE_COMPETITION, COMPETITION_CHOICES, CompetitionConfig, Task, get_competition
 lazy import mwahahavote.database
 
 PHASE_ID = ACTIVE_COMPETITION.phase_id
 
 
-async def async_main() -> None:
+async def async_main(competition: CompetitionConfig | None = None) -> None:
+    if competition is None:
+        competition = ACTIVE_COMPETITION
+
     async with mwahahavote.database.create_engine() as engine:
-        for task in sorted(ACTIVE_COMPETITION.task_choices):
+        for task in sorted(competition.task_choices):
             task: Task
             # Note we aren't excluding any session ID here,
             # but it's fine because these vote counts are only used when a system doesn't have a score yet.
-            system_id_to_vote_count = await mwahahavote.database.get_votes_per_system(engine, PHASE_ID, task)
+            system_id_to_vote_count = await mwahahavote.database.get_votes_per_system(
+                engine, competition.phase_id, task
+            )
 
             output_path = f"src/mwahahavote/static/scores/{task}.json"
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -63,7 +69,17 @@ async def async_main() -> None:
 
 
 def main() -> None:
-    asyncio.run(async_main())
+    parser = argparse.ArgumentParser(description="Postprocess FastChat Elo results into leaderboard JSON.")
+    parser.add_argument(
+        "--competition",
+        "-c",
+        choices=COMPETITION_CHOICES,
+        default=None,
+        help=f"Competition to target (default: {ACTIVE_COMPETITION.id}, or $COMPETITION env var).",
+    )
+    args, _ = parser.parse_known_args()
+    competition = get_competition(args.competition) if args.competition is not None else None
+    asyncio.run(async_main(competition=competition))
 
 
 if __name__ == "__main__":
