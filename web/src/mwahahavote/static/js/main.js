@@ -199,8 +199,7 @@ function main() {
   setupElements();
   setupPlaceload();
   setupEmojiConverter();
-  // getTask();
-  getBattles();
+  initTaskAndBattles();
   setUiListeners();
   setupProlificSessionIfNeeded();
 }
@@ -298,29 +297,49 @@ function setupEmojiConverter() {
   emoji.img_sets.twitter.path = "https://raw.githubusercontent.com/iamcal/emoji-data/" + "a97b2d2efa64535d6300660eb2cd15ecb584e79e/img-twitter-64/";
 }
 
-// function getTask() {
-//   const urlParams = new URLSearchParams(window.location.search);
-//
-//   task = urlParams.get("task");
-//
-//   if (task === null) {
-//     if (navigator.language.startsWith("es")) {
-//       task = "a-es";
-//     } else if (navigator.language.startsWith("zh")) {
-//       task = "a-zh";
-//     } else {
-//       task = "a-en";
-//     }
-//   }
-//
-//   urlParams.set("task", task);
-//
-//   $task.val(task);
-//
-//   // We set the query param in the URL without refreshing the page:
-//   const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + urlParams.toString();
-//   window.history.replaceState({}, "", newUrl);
-// }
+function initTaskAndBattles() {
+  $.getJSON("api/config", config => {
+    if (config.tasks && config.tasks.length > 1) {
+      $task.empty();
+      config.tasks.forEach(t => {
+        $task.append($("<option>", {value: t.id, text: t.label}));
+      });
+      $("#task-container").show();
+    } else {
+      $("#task-container").hide();
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedTask = urlParams.get("task");
+    const validTaskIds = config.tasks ? config.tasks.map(t => t.id) : [config.default_task];
+
+    if (requestedTask && validTaskIds.includes(requestedTask)) {
+      task = requestedTask;
+    } else if (config.tasks && config.tasks.length > 1 && !requestedTask) {
+      if (navigator.language.startsWith("es") && validTaskIds.includes("a-es")) {
+        task = "a-es";
+      } else if (navigator.language.startsWith("zh") && validTaskIds.includes("a-zh")) {
+        task = "a-zh";
+      } else {
+        task = config.default_task;
+      }
+    } else {
+      task = config.default_task || "a-en";
+    }
+
+    urlParams.set("task", task);
+    $task.val(task);
+
+    if (config.tasks && config.tasks.length > 1) {
+      const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + urlParams.toString();
+      window.history.replaceState({}, "", newUrl);
+    }
+
+    getBattles();
+  }).fail(() => {
+    getBattles();
+  });
+}
 
 function getBattles() {
   $.getJSON("battles", {task: task}, data => {

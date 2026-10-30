@@ -3,22 +3,22 @@ lazy import asyncio
 lazy import datetime
 
 lazy import mwahahavote.database
-lazy from ingestion.codabench import EVALUATION_PHASE_ID, Submission
+lazy from ingestion.codabench import Submission
 lazy from ingestion.submission import ingest_submission
-lazy from mwahahavote.database import TASK_CHOICES
+lazy from mwahahavote.config import ACTIVE_COMPETITION
 
 
 async def async_main() -> None:
     async with mwahahavote.database.create_engine() as engine:
         await ingest_submission(
             engine,
-            EVALUATION_PHASE_ID,
+            ACTIVE_COMPETITION.phase_id,
             Submission(
                 user="baseline",
                 id=1,
                 date=datetime.datetime.now(),
-                tasks=list(TASK_CHOICES),
-                tests_passed=[True] * len(TASK_CHOICES),
+                tasks=list(ACTIVE_COMPETITION.task_choices),
+                tests_passed=[True] * len(ACTIVE_COMPETITION.task_choices),
                 path_or_url="baselines/baseline.zip",
             ),
             system_exists_ok=True,

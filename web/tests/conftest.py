@@ -21,6 +21,8 @@ import sqlalchemy
 import sqlalchemy.event
 import sqlalchemy.ext.asyncio
 
+from mwahahavote.config import ACTIVE_COMPETITION
+
 sqlite3.register_adapter(datetime.datetime, lambda val: val.isoformat(" "))
 sqlite3.register_converter("TIMESTAMP", lambda val: datetime.datetime.fromisoformat(val.decode()))
 sqlite3.register_converter("BOOL", lambda val: bool(int(val)))
@@ -137,13 +139,15 @@ async def db_engine() -> AsyncGenerator[sqlalchemy.ext.asyncio.AsyncEngine]:
 async def seeded_db_engine(
     db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
 ) -> sqlalchemy.ext.asyncio.AsyncEngine:
+    task = ACTIVE_COMPETITION.default_task
+    phase = ACTIVE_COMPETITION.phase_id
     async with db_engine.begin() as conn:
         await conn.execute(
-            sqlalchemy.sql.text("""
+            sqlalchemy.sql.text(f"""
                 INSERT INTO prompts (prompt_id, word1, word2, headline, url, prompt, task, phase_id) VALUES
-                ('en_1', 'cat', 'dog', NULL, NULL, NULL, 't3', 1),
-                ('es_1', NULL, NULL, 'Un titular gracioso', NULL, NULL, 't3', 1),
-                ('zh_1', NULL, NULL, NULL, 'https://example.com/img.gif', 'Caption this', 't3', 1)
+                ('en_1', 'cat', 'dog', NULL, NULL, NULL, '{task}', {phase}),
+                ('es_1', NULL, NULL, 'Un titular gracioso', NULL, NULL, '{task}', {phase}),
+                ('zh_1', NULL, NULL, NULL, 'https://example.com/img.gif', 'Caption this', '{task}', {phase})
             """)
         )
         await conn.execute(

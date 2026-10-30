@@ -77,7 +77,7 @@ async def test_prepare_data_for_scoring_main(
     with patch("mwahahavote.database.create_engine", fake_create_engine):
         await prepare_data_for_scoring.async_main(only_prolific_sessions=True, include_ties=True)
 
-    output_file = tmp_path / "scoring" / "votes-t3.json"
+    output_file = tmp_path / "scoring" / "votes-a-en.json"
     assert output_file.exists()
     records = json.loads(output_file.read_text(encoding="utf-8"))
     assert len(records) >= 2
@@ -104,7 +104,7 @@ async def test_postprocess_scores(
     with patch("mwahahavote.database.create_engine", fake_create_engine):
         await postprocess_scores.async_main()
 
-    out_json = scores_dir / "t3.json"
+    out_json = scores_dir / "a-en.json"
     assert out_json.exists()
     data_no_pkl = json.loads(out_json.read_text(encoding="utf-8"))
     assert len(data_no_pkl) == 3
@@ -122,7 +122,7 @@ async def test_postprocess_scores(
         },
         index=["sys_a", "sys_b"],
     )
-    pkl_path = tmp_path / "scoring" / "elo_results_t3.pkl"
+    pkl_path = tmp_path / "scoring" / "elo_results_a-en.pkl"
     with pkl_path.open("wb") as f:
         pickle.dump({"full": {"leaderboard_table_df": df}}, f)
 
@@ -144,15 +144,15 @@ async def test_ingest_prompts(
     monkeypatch.chdir(tmp_path)
     prompts_dir = tmp_path / "prompts"
     prompts_dir.mkdir()
-    (prompts_dir / "task3_dev.tsv").write_text(
+    (prompts_dir / "a-en.tsv").write_text(
         "id\tword1\tword2\theadline\nen_10\tcat\tdog\t-\nen_11\t-\t-\tFunny headline\n",
         encoding="utf-8",
     )
 
     df = ingest_prompts.read_prompt_files(str(prompts_dir))
     assert len(df) == 2
-    assert list(df["task"]) == ["t3", "t3"]
-    assert list(df["phase_id"]) == [1, 1]
+    assert list(df["task"]) == ["a-en", "a-en"]
+    assert list(df["phase_id"]) == [15785, 15785]
 
     @asynccontextmanager
     async def fake_create_engine() -> Any:
@@ -173,18 +173,18 @@ async def test_ingest_submissions(
 ) -> None:
     monkeypatch.chdir(tmp_path)
 
-    # Test available_tasks_in_file with a zip containing task-t3.tsv
+    # Test available_tasks_in_file with a zip containing task-a-en.tsv
     zip_path = tmp_path / "test_sub.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.writestr("task-t3.tsv", "id\ttext\nen_1\tJoke\n")
-    assert list(ingest_submissions.available_tasks_in_file(str(zip_path))) == ["t3"]
+        zf.writestr("task-a-en.tsv", "id\ttext\nen_1\tJoke\n")
+    assert list(ingest_submissions.available_tasks_in_file(str(zip_path))) == ["a-en"]
 
     # Seed reference prompt and one already-ingested system
     async with db_engine.begin() as conn:
         await conn.execute(
             sqlalchemy.sql.text(
                 "INSERT INTO prompts (prompt_id, word1, word2, headline, url, prompt, task, phase_id)"
-                " VALUES ('en_1', NULL, NULL, 'H1', NULL, NULL, 't3', 1)"
+                " VALUES ('en_1', NULL, NULL, 'H1', NULL, NULL, 'a-en', 15785)"
             )
         )
         await conn.execute(sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES ('existing_user')"))
@@ -202,7 +202,10 @@ async def test_ingest_submissions(
     async def fake_create_engine() -> Any:
         yield db_engine
 
-    with patch("mwahahavote.database.create_engine", fake_create_engine):
+    with (
+        patch("mwahahavote.database.create_engine", fake_create_engine),
+        patch("ingest_submissions._collect_codabench_submissions", return_value=[]),
+    ):
         await ingest_submissions.async_main()
 
     async with db_engine.connect() as conn:

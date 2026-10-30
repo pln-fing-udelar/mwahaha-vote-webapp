@@ -33,7 +33,7 @@ def test_is_session_id_valid() -> None:
 
 
 def test_task_id_to_task_and_get_submission_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert codabench.task_id_to_task(21358) == "t3"
+    assert codabench.task_id_to_task(21358) == "a-en"
 
     monkeypatch.setenv("CODABENCH_SESSION_ID", "env-sid")
     mock_resp = MagicMock()
@@ -81,7 +81,7 @@ def test_list_submission_dicts_and_list_submissions() -> None:
             "owner": "alice",
             "created_when": "2026-01-10T12:00:00Z",
             "is_soft_deleted": False,
-            "task": {"id": 1},
+            "task": {"id": 21358},
             "scores": [{"score": "1.0"}],
         },
         # Single-task submission with empty scores
@@ -92,7 +92,7 @@ def test_list_submission_dicts_and_list_submissions() -> None:
             "owner": "bob",
             "created_when": "2026-01-11T12:00:00Z",
             "is_soft_deleted": True,
-            "task": {"id": 1},
+            "task": {"id": 21358},
             "scores": [],
         },
         # Parent submission with a child
@@ -112,7 +112,7 @@ def test_list_submission_dicts_and_list_submissions() -> None:
             "owner": "charlie",
             "created_when": "2026-01-12T12:00:00Z",
             "is_soft_deleted": False,
-            "task": {"id": 1},
+            "task": {"id": 21358},
             "scores": [{"score": "0.0"}],
         },
     ]
@@ -137,7 +137,7 @@ def test_list_submission_dicts_and_list_submissions() -> None:
         assert by_id[100].tests_passed == [True]
         assert by_id[101].is_deleted is True
         assert by_id[101].tests_passed == [False]
-        assert by_id[200].tasks == ["t3"]
+        assert by_id[200].tasks == ["a-en"]
         assert by_id[200].tests_passed == [False]
 
     # Invalid API schema raises Pydantic ValidationError

@@ -6,10 +6,11 @@ lazy from typing import Literal
 
 lazy import aioitertools
 
+from mwahahavote.config import ACTIVE_COMPETITION
 lazy import mwahahavote.database
-lazy from mwahahavote.database import TASK_CHOICES, Vote
+lazy from mwahahavote.database import Vote
 
-PHASE_ID = 1
+PHASE_ID = ACTIVE_COMPETITION.phase_id
 
 # With few votes, we learned that it destabilizes the score calculation for all the systems.
 MIN_VOTES_PER_SYSTEM = 20
@@ -47,7 +48,7 @@ def vote_to_fastchat_language(vote: Vote) -> Literal["Chinese", "English", "Span
 
 async def async_main(only_prolific_sessions: bool = False, include_ties: bool = True) -> None:
     async with mwahahavote.database.create_engine() as engine:
-        for task in sorted(TASK_CHOICES):
+        for task in sorted(ACTIVE_COMPETITION.task_choices):
             excluded_session_ids = (
                 [
                     session_id

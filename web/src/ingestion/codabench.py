@@ -2,23 +2,18 @@ import dataclasses
 import datetime
 import functools
 from dataclasses import dataclass
+from typing import Any
 lazy import os
 lazy from collections.abc import Iterable
-lazy from typing import Any
 
 from pydantic import BaseModel, TypeAdapter
 lazy import httpx2
 
-from mwahahavote.database import Task
+from mwahahavote.config import ACTIVE_COMPETITION, Task, is_only_latest_submission_per_user
 
 # Reference API (old?): https://qtim-challenges.southcentralus.cloudapp.azure.com/api/docs/
 
 BASE_URL = "https://www.codabench.org/api/"
-
-COMPETITION_ID = 9719
-
-EVALUATION_TRIAL_PHASE_ID = 15784
-EVALUATION_PHASE_ID = 15785
 
 
 class _CodaBenchTask(BaseModel):
@@ -66,20 +61,11 @@ def is_session_id_valid(session_id: str) -> bool:
 
 def task_id_to_task(task_id: int) -> Task:
     """Converts a CodaBench task ID to our internal string representation."""
-    # match task_id:
-    # case 21359:
-    #     return "a-es"
-    # case 21358:
-    #     return "a-en"
-    # case 21360:
-    #     return "a-zh"
-    # case 21361:
-    #     return "b1"
-    # case 22992:
-    #     return "b2"
-    # case _:
-    #     raise ValueError(f"Unknown task ID: {task_id}")
-    return "t3"
+    if task_id in ACTIVE_COMPETITION.codabench_task_map:
+        return ACTIVE_COMPETITION.codabench_task_map[task_id]
+    if not ACTIVE_COMPETITION.codabench_task_map:
+        return ACTIVE_COMPETITION.default_task
+    raise ValueError(f"Unknown task ID: {task_id}")
 
 
 def get_submission_url(submission_id: int, session_id: str | None = None) -> str:
@@ -103,10 +89,15 @@ class Submission:
     tests_passed: list[bool] = dataclasses.field(default_factory=list)
     is_deleted: bool = False
     path_or_url: str | None = None
+    system_id_override: str | None = None
 
     @property
     def system_id(self) -> str:
-        return self.user  # For the dev phase, it was: f"{self.user}-{self.id}"
+        if self.system_id_override is not None:
+            return self.system_id_override
+        if is_only_latest_submission_per_user():
+            return self.user
+        return f"{self.user}-{self.id}"
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -123,8 +114,8 @@ class Submission:
 
 
 def _list_submission_dicts(
-    competition_id: int | None = COMPETITION_ID,
-    phase_id: int | None = EVALUATION_PHASE_ID,
+    competition_id: int | None = None,
+    phase_id: int | None = None,
     session_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """List all submission dicts for a competition or phase."""
@@ -133,6 +124,10 @@ def _list_submission_dicts(
         raise ValueError("The provided session ID is not valid.")
 
     query_params: dict[str, Any] = {"show_is_soft_deleted": True}
+
+    if phase_id is None and competition_id is None:
+        phase_id = ACTIVE_COMPETITION.phase_id
+        competition_id = ACTIVE_COMPETITION.codabench_competition_id
 
     if phase_id is None:
         query_params["phase__competition"] = competition_id
@@ -148,8 +143,8 @@ def _list_submission_dicts(
 
 
 def list_submissions(
-    competition_id: int | None = COMPETITION_ID,
-    phase_id: int | None = EVALUATION_PHASE_ID,
+    competition_id: int | None = None,
+    phase_id: int | None = None,
     session_id: str | None = None,
 ) -> Iterable[Submission]:
     """List all "parent" or single-task submissions for a competition."""

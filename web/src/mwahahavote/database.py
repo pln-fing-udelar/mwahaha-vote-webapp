@@ -18,8 +18,7 @@ import sqlalchemy.sql
 from cachetools import TTLCache
 from cachetools.keys import hashkey
 
-Task = Literal["t3"]
-TASK_CHOICES: frozenset[Task] = frozenset(get_args(Task))
+from mwahahavote.config import ACTIVE_COMPETITION, Task
 
 
 @dataclass(frozen=True)
@@ -34,15 +33,16 @@ class System:
 
 
 def prompt_id_to_task(prompt_id: str) -> Task:
-    # if prompt_id.startswith(("en_", "es_", "zh_")):
-    #     return cast(Task, f"a-{prompt_id[:2]}")
-    # elif prompt_id.startswith("img_2_"):
-    #     return "b2"
-    # elif prompt_id.startswith("img_"):
-    #     return "b1"
-    # else:
-    #     raise ValueError(f"Cannot determine the task for prompt ID '{prompt_id}'")
-    return "t3"
+    for task_cfg in sorted(
+        ACTIVE_COMPETITION.tasks,
+        key=lambda t: max((len(p) for p in t.prompt_id_prefix), default=0),
+        reverse=True,
+    ):
+        if task_cfg.prompt_id_prefix and prompt_id.startswith(task_cfg.prompt_id_prefix):
+            return task_cfg.id
+    if not any(t.prompt_id_prefix for t in ACTIVE_COMPETITION.tasks):
+        return ACTIVE_COMPETITION.default_task
+    raise ValueError(f"Cannot determine the task for prompt ID '{prompt_id}'")
 
 
 @dataclass(frozen=True)
@@ -79,8 +79,12 @@ class Prompt:
             return "es"
         elif self.id.startswith("zh_"):
             return "zh"
-        else:
+        elif self.id.startswith("en_"):
             return "en"
+        task_cfg = ACTIVE_COMPETITION.task_by_id.get(self.task)
+        if task_cfg:
+            return task_cfg.language
+        return "en"
 
     @property
     def verbalized(self) -> str | None:

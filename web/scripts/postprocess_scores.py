@@ -6,15 +6,15 @@ lazy import pickle
 
 lazy import pandas as pd
 
+from mwahahavote.config import ACTIVE_COMPETITION, Task
 lazy import mwahahavote.database
-lazy from mwahahavote.database import TASK_CHOICES, Task
 
-PHASE_ID = 1
+PHASE_ID = ACTIVE_COMPETITION.phase_id
 
 
 async def async_main() -> None:
     async with mwahahavote.database.create_engine() as engine:
-        for task in sorted(TASK_CHOICES):
+        for task in sorted(ACTIVE_COMPETITION.task_choices):
             task: Task
             # Note we aren't excluding any session ID here,
             # but it's fine because these vote counts are only used when a system doesn't have a score yet.

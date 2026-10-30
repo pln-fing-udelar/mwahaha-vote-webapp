@@ -2,7 +2,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from typing import Annotated, Any, NamedTuple, TypedDict, cast
+from typing import Annotated, Any, NamedTuple, TypedDict
 lazy import random
 lazy from collections.abc import AsyncGenerator, AsyncIterator, Iterable
 
@@ -20,25 +20,19 @@ lazy import sqlalchemy.ext.asyncio
 lazy from cryptography.fernet import InvalidToken
 lazy from fastapi import HTTPException
 lazy from starlette.datastructures import MutableHeaders
-lazy from starlette.responses import FileResponse
+lazy from starlette.responses import FileResponse, RedirectResponse
 lazy from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from mwahahavote.database import TASK_CHOICES, Task, VoteString
+from mwahahavote.config import ACTIVE_COMPETITION, Task
+from mwahahavote.database import VoteString
 lazy from mwahahavote import database
 lazy from mwahahavote.database import Battle
 
 logger = logging.getLogger(__name__)
 
-PHASE_ID = 1
-
-# noinspection SpellCheckingInspection
-# PROLIFIC_COMPLETION_CODES: dict[Task, str] = {
-#     "a-en": "CC4WY7K5",
-#     "a-es": "C5SU1Q6U",
-#     "a-zh": "C11V5NNR",
-#     "b1": "CCI5PILX",
-#     "b2": "C13AY54S",
-# }
+PHASE_ID = ACTIVE_COMPETITION.phase_id
+PROLIFIC_COMPLETION_CODES = ACTIVE_COMPETITION.prolific_completion_codes
+DEFAULT_TASK: Task = ACTIVE_COMPETITION.default_task
 
 TURNSTILE_SECRET_KEY = os.environ["TURNSTILE_SECRET_KEY"]
 IS_LOCAL_DEVELOPMENT = "VIRTUAL_HOST" not in os.environ
@@ -276,7 +270,7 @@ async def _get_battle_objects(
 
 
 def _normalize_task(v: Any) -> Task:
-    return cast(Task, v) if v in TASK_CHOICES else "t3"
+    return v if v in ACTIVE_COMPETITION.task_choices else ACTIVE_COMPETITION.default_task
 
 
 def _clamp_batch_size(v: int) -> int:
@@ -303,7 +297,7 @@ class _VotePayload(BaseModel):
 @app.get("/battles")
 async def battles_route(
     request: Request,
-    task: TaskParam = "t3",
+    task: TaskParam = DEFAULT_TASK,
     batch_size: BatchSizeParam = REQUEST_BATTLE_BATCH_SIZE,
     # Note that the length of the following list is limited by the maximum URL length,
     # which is typically around 2000 characters.
@@ -385,29 +379,48 @@ async def get_votes_route(request: Request) -> Response:
     )
 
 
-# @app.post("/prolific-consent")
-# async def prolific_consent_route(request: Request, background_tasks: BackgroundTasks) -> Response:
-#     background_tasks.add_task(database.prolific_consent, request.state.database_engine, request.state.session_id)
-#     return Response(status_code=status.HTTP_204_NO_CONTENT)
-#
-#
-# @app.post("/prolific-finish")
-# async def prolific_finish_route(request: Request, background_tasks: BackgroundTasks) -> Response:
-#     form_data = await request.form()
-#
-#     comments = str(form_data.get("comments", ""))
-#
-#     task_str = str(form_data.get("task", "a-en"))
-#     task: Task = cast(Task, task_str if task_str in TASK_CHOICES else "a-en")
-#
-#     background_tasks.add_task(
-#         database.prolific_finish, request.state.database_engine, request.state.session_id, comments
-#     )
-#
-#     return RedirectResponse(
-#         url=f"https://app.prolific.co/submissions/complete?cc={PROLIFIC_COMPLETION_CODES[task]}",
-#         status_code=status.HTTP_303_SEE_OTHER,
-#     )
+@app.get("/api/config")
+async def config_route() -> dict[str, Any]:
+    return {
+        "competition": ACTIVE_COMPETITION.id,
+        "title": ACTIVE_COMPETITION.title,
+        "tasks": [
+            {
+                "id": t.id,
+                "label": t.label,
+                "language": t.language,
+                "is_multimodal": t.is_multimodal,
+            }
+            for t in ACTIVE_COMPETITION.tasks
+        ],
+        "default_task": ACTIVE_COMPETITION.default_task,
+    }
+
+
+@app.post("/prolific-consent")
+async def prolific_consent_route(request: Request, background_tasks: BackgroundTasks) -> Response:
+    background_tasks.add_task(database.prolific_consent, request.state.database_engine, request.state.session_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.post("/prolific-finish")
+async def prolific_finish_route(request: Request, background_tasks: BackgroundTasks) -> Response:
+    form_data = await request.form()
+
+    comments = str(form_data.get("comments", ""))
+
+    task_str = str(form_data.get("task", ACTIVE_COMPETITION.default_task))
+    task: Task = _normalize_task(task_str)
+
+    background_tasks.add_task(
+        database.prolific_finish, request.state.database_engine, request.state.session_id, comments
+    )
+
+    completion_code = PROLIFIC_COMPLETION_CODES.get(task, "")
+    return RedirectResponse(
+        url=f"https://app.prolific.co/submissions/complete?cc={completion_code}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @app.get("/stats")

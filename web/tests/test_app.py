@@ -342,6 +342,26 @@ async def test_routes_end_to_end(
         assert resp_lb.status_code == 200
         assert "MWAHAHA Humor Gen Comp Leaderboard" in resp_lb.text
 
+        # GET /api/config
+        resp_config = await client.get("/api/config")
+        assert resp_config.status_code == 200
+        config_data = resp_config.json()
+        assert "competition" in config_data
+        assert "tasks" in config_data
+        assert "default_task" in config_data
+
+        # POST /prolific-consent & /prolific-finish
+        resp_consent = await client.post("/prolific-consent")
+        assert resp_consent.status_code == 204
+
+        resp_finish = await client.post(
+            "/prolific-finish",
+            data={"comments": "Nice jokes!", "task": "t3"},
+            follow_redirects=False,
+        )
+        assert resp_finish.status_code == 303
+        assert "app.prolific.co" in resp_finish.headers["location"]
+
         # GET /stats
         resp_stats = await client.get("/stats")
         assert resp_stats.status_code == 200

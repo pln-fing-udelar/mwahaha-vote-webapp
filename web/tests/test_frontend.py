@@ -432,7 +432,7 @@ async def test_leaderboard_page(browser: Browser, live_server_url: str) -> None:
     ]
 
     await page.route(
-        "**/scores/t3.json",
+        "**/scores/a-en.json",
         lambda route: route.fulfill(
             status=200,
             content_type="application/json",
@@ -491,12 +491,12 @@ async def test_leaderboard_empty_404_and_zero_ci_range(browser: Browser, live_se
     page = await context.new_page()
     await _stub_external_trackers(page)
 
-    # First test 404 from scores/t3.json and invalid ?task=invalid_task URL normalization
-    await page.route("**/scores/t3.json", lambda route: route.fulfill(status=404, body="Not Found"))
+    # First test 404 from scores/a-en.json and invalid ?task=invalid_task URL normalization
+    await page.route("**/scores/a-en.json", lambda route: route.fulfill(status=404, body="Not Found"))
 
     await page.goto(f"{live_server_url}/leaderboard?task=invalid_task")
     await page.wait_for_selector("text=No data available for this task.")
-    assert page.url.endswith("?task=t3")
+    assert page.url.endswith("?task=a-en")
     assert await page.locator("#total-votes").text_content() == "Total Votes: 0"
 
     # Now test range === 0 guard when all systems have identical CI bounds
@@ -511,9 +511,9 @@ async def test_leaderboard_empty_404_and_zero_ci_range(browser: Browser, live_se
             "final_ranking": 1,
         }
     ]
-    await page.unroute("**/scores/t3.json")
+    await page.unroute("**/scores/a-en.json")
     await page.route(
-        "**/scores/t3.json",
+        "**/scores/a-en.json",
         lambda route: route.fulfill(
             status=200,
             content_type="application/json",

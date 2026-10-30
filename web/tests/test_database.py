@@ -6,8 +6,8 @@ import sqlalchemy
 import sqlalchemy.ext.asyncio
 
 from mwahahavote import database
+from mwahahavote.config import ACTIVE_COMPETITION, TASK_CHOICES
 from mwahahavote.database import (
-    TASK_CHOICES,
     VOTE_CHOICES,
     Battle,
     Output,
@@ -18,10 +18,9 @@ from mwahahavote.database import (
 
 
 def test_task_and_vote_constants() -> None:
-    assert "t3" in TASK_CHOICES
+    assert ACTIVE_COMPETITION.default_task in TASK_CHOICES
     assert VOTE_CHOICES == frozenset({"a", "b", "n", "t"})
-    assert prompt_id_to_task("en_1") == "t3"
-    assert prompt_id_to_task("anything") == "t3"
+    assert prompt_id_to_task("en_1") == ACTIVE_COMPETITION.default_task
 
 
 def test_system_equality_and_hash() -> None:
@@ -84,7 +83,7 @@ def test_prompt_validation() -> None:
 
 def test_prompt_properties_and_verbalized() -> None:
     p_en_words = Prompt(id="en_1", word1="apple", word2="banana")
-    assert p_en_words.task == "t3"
+    assert p_en_words.task == ACTIVE_COMPETITION.default_task
     assert p_en_words.language == "en"
     assert p_en_words.verbalized == "The outputs must contain the words <b>apple</b> and <b>banana</b>."
 
@@ -204,9 +203,9 @@ async def test_random_least_voted_unseen_battles(
         b
         async for b in database.random_least_voted_unseen_battles(
             seeded_db_engine,
-            phase_id=1,
+            phase_id=ACTIVE_COMPETITION.phase_id,
             session_id="session_1",
-            task="t3",
+            task=ACTIVE_COMPETITION.default_task,
             batch_size=3,
             ignored_output_ids=[("es_1", "sys_a")],
         )
@@ -222,12 +221,14 @@ async def test_random_least_voted_unseen_battles_skips_unpartnerable_outputs(
 ) -> None:
     # Prompt p1 has only identical texts across systems (no valid partner with text != text_a),
     # while p2 has distinct texts. The algorithm should skip p1 candidates and yield from p2.
+    task = ACTIVE_COMPETITION.default_task
+    phase = ACTIVE_COMPETITION.phase_id
     async with db_engine.begin() as conn:
         await conn.execute(
-            sqlalchemy.sql.text("""
+            sqlalchemy.sql.text(f"""
                 INSERT INTO prompts (prompt_id, word1, word2, headline, url, prompt, task, phase_id) VALUES
-                ('en_1', NULL, NULL, 'Prompt 1', NULL, NULL, 't3', 1),
-                ('en_2', NULL, NULL, 'Prompt 2', NULL, NULL, 't3', 1)
+                ('en_1', NULL, NULL, 'Prompt 1', NULL, NULL, '{task}', {phase}),
+                ('en_2', NULL, NULL, 'Prompt 2', NULL, NULL, '{task}', {phase})
             """)
         )
         await conn.execute(sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES ('s1'), ('s2')"))
@@ -241,7 +242,9 @@ async def test_random_least_voted_unseen_battles_skips_unpartnerable_outputs(
             """)
         )
 
-    battles = [b async for b in database.random_least_voted_unseen_battles(db_engine, 1, "sess", "t3", batch_size=1)]
+    battles = [
+        b async for b in database.random_least_voted_unseen_battles(db_engine, phase, "sess", task, batch_size=1)
+    ]
     assert len(battles) == 1
     assert battles[0].prompt.id == "en_2"
 
@@ -250,29 +253,49 @@ async def test_random_least_voted_unseen_battles_empty_db(
     db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
 ) -> None:
     # When no valid partner exists for any candidate (or the DB is empty), it should terminate cleanly.
-    battles = [b async for b in database.random_least_voted_unseen_battles(db_engine, 1, "sess", "t3", batch_size=4)]
+    battles = [
+        b
+        async for b in database.random_least_voted_unseen_battles(
+            db_engine, ACTIVE_COMPETITION.phase_id, "sess", ACTIVE_COMPETITION.default_task, batch_size=4
+        )
+    ]
     assert battles == []
 
 
 async def test_random_least_voted_unseen_battles_caching_and_ttl(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
 ) -> None:
-    cache_key = database.hashkey(seeded_db_engine, 1, "t3")
+    cache_key = database.hashkey(seeded_db_engine, ACTIVE_COMPETITION.phase_id, ACTIVE_COMPETITION.default_task)
     database._task_outputs_cache.pop(cache_key, None)
 
     # Cold cache -> populates _task_outputs_cache
-    first = [b async for b in database.random_least_voted_unseen_battles(seeded_db_engine, 1, "s1", "t3", 2)]
+    first = [
+        b
+        async for b in database.random_least_voted_unseen_battles(
+            seeded_db_engine, ACTIVE_COMPETITION.phase_id, "s1", ACTIVE_COMPETITION.default_task, 2
+        )
+    ]
     assert len(first) == 2
     first_entry = database._task_outputs_cache[cache_key]
 
     # Warm cache hit -> reuses the same cached entry
-    second = [b async for b in database.random_least_voted_unseen_battles(seeded_db_engine, 1, "s1", "t3", 2)]
+    second = [
+        b
+        async for b in database.random_least_voted_unseen_battles(
+            seeded_db_engine, ACTIVE_COMPETITION.phase_id, "s1", ACTIVE_COMPETITION.default_task, 2
+        )
+    ]
     assert len(second) == 2
     assert database._task_outputs_cache[cache_key] is first_entry
 
     # Evicted/expired cache -> refreshes the cached entry
     database._task_outputs_cache.pop(cache_key)
-    third = [b async for b in database.random_least_voted_unseen_battles(seeded_db_engine, 1, "s1", "t3", 2)]
+    third = [
+        b
+        async for b in database.random_least_voted_unseen_battles(
+            seeded_db_engine, ACTIVE_COMPETITION.phase_id, "s1", ACTIVE_COMPETITION.default_task, 2
+        )
+    ]
     assert len(third) == 2
     assert database._task_outputs_cache[cache_key] is not first_entry
 
@@ -280,15 +303,18 @@ async def test_random_least_voted_unseen_battles_caching_and_ttl(
 async def test_same_text_battles(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
 ) -> None:
+    phase = ACTIVE_COMPETITION.phase_id
+    task = ACTIVE_COMPETITION.default_task
+
     # In seeded_db_engine, en_1 has identical text for sys_a and sys_c
-    same_b = [b async for b in database.battles_with_same_text(seeded_db_engine, phase_id=1, task="t3")]
+    same_b = [b async for b in database.battles_with_same_text(seeded_db_engine, phase_id=phase, task=task)]
     assert len(same_b) == 1
     assert same_b[0].prompt.id == "en_1"
     assert same_b[0].output_a.system.id == "sys_a"
     assert same_b[0].output_b.system.id == "sys_c"
 
     tie_votes = [
-        v async for v in database.get_votes_for_battles_with_the_same_text(seeded_db_engine, phase_id=1, task="t3")
+        v async for v in database.get_votes_for_battles_with_the_same_text(seeded_db_engine, phase_id=phase, task=task)
     ]
     assert len(tie_votes) == 1
     assert tie_votes[0].vote == "t"
@@ -298,6 +324,9 @@ async def test_same_text_battles(
 async def test_votes_queries_and_stats(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
 ) -> None:
+    phase = ACTIVE_COMPETITION.phase_id
+    task = ACTIVE_COMPETITION.default_task
+
     # Add votes across sessions and systems so sys_a and sys_b appear on both sides A and B
     await database.add_vote(seeded_db_engine, "s1", "en_1", "sys_a", "sys_b", "a", True, False)
     # Duplicate key should be ignored gracefully
@@ -311,10 +340,10 @@ async def test_votes_queries_and_stats(
     assert await database.session_vote_count_without_skips(seeded_db_engine, "s2") == 0
     assert await database.vote_count_without_skips(seeded_db_engine) == 3
 
-    session_ids = {s async for s in database.get_session_ids(seeded_db_engine, phase_id=1, task="t3")}
+    session_ids = {s async for s in database.get_session_ids(seeded_db_engine, phase_id=phase, task=task)}
     assert session_ids == {"s1", "s2", "s3"}
 
-    systems = {s async for s in database.get_systems(seeded_db_engine, phase_id=1, task="t3")}
+    systems = {s async for s in database.get_systems(seeded_db_engine, phase_id=phase, task=task)}
     assert systems == {"sys_a", "sys_b", "sys_c"}
 
     # Add a 4th system with an output on en_1 but 0 votes to test 0-vote system inclusion
@@ -324,33 +353,33 @@ async def test_votes_queries_and_stats(
             sqlalchemy.sql.text("INSERT INTO outputs (prompt_id, system_id, text) VALUES ('en_1', 'sys_d', 'Zero')")
         )
 
-    votes_per_sys = await database.get_votes_per_system(seeded_db_engine, phase_id=1, task="t3")
+    votes_per_sys = await database.get_votes_per_system(seeded_db_engine, phase_id=phase, task=task)
     assert votes_per_sys["sys_a"] == 3
     assert votes_per_sys["sys_b"] == 2
     assert votes_per_sys["sys_c"] == 1
     assert votes_per_sys["sys_d"] == 0
 
     votes_per_sys_excl = await database.get_votes_per_system(
-        seeded_db_engine, phase_id=1, task="t3", excluded_session_ids=["s3"]
+        seeded_db_engine, phase_id=phase, task=task, excluded_session_ids=["s3"]
     )
     assert votes_per_sys_excl["sys_c"] == 0
 
-    votes_per_session = await database.get_votes_per_session(seeded_db_engine, phase_id=1)
+    votes_per_session = await database.get_votes_per_session(seeded_db_engine, phase_id=phase)
     assert votes_per_session == {"s1": 2, "s3": 1}
 
-    scoring_votes = [v async for v in database.get_votes_for_scoring(seeded_db_engine, phase_id=1, task="t3")]
+    scoring_votes = [v async for v in database.get_votes_for_scoring(seeded_db_engine, phase_id=phase, task=task)]
     assert len(scoring_votes) == 2
     assert {v.vote for v in scoring_votes} == {"a", "b"}
 
     scoring_votes_excl = [
         v
         async for v in database.get_votes_for_scoring(
-            seeded_db_engine, phase_id=1, task="t3", excluded_session_ids=["s1"]
+            seeded_db_engine, phase_id=phase, task=task, excluded_session_ids=["s1"]
         )
     ]
     assert len(scoring_votes_excl) == 0
 
-    votes_csv = await database.get_votes_csv(seeded_db_engine, phase_id=1)
+    votes_csv = await database.get_votes_csv(seeded_db_engine, phase_id=phase)
     async with seeded_db_engine.connect() as conn:
         expected_csv = pd.DataFrame(
             iter(
@@ -369,7 +398,7 @@ async def test_votes_queries_and_stats(
                           session_id,
                           date
                     """),
-                    {"phase_id": 1},
+                    {"phase_id": phase},
                 )
             )
         ).to_csv(index=False)

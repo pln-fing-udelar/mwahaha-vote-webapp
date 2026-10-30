@@ -1,8 +1,11 @@
 lazy import logging
 lazy import os
+lazy import tempfile
+lazy import zipfile
 lazy from collections.abc import AsyncIterable, Iterable
 lazy from typing import Any
 
+lazy import fsspec
 lazy import pandas as pd
 lazy import sqlalchemy
 lazy import sqlalchemy.dialects.mysql
@@ -10,7 +13,7 @@ lazy import sqlalchemy.ext.asyncio
 lazy from pandas.io.sql import SQLTable
 
 lazy from ingestion.codabench import Submission
-lazy from mwahahavote.database import TASK_CHOICES
+lazy from mwahahavote.config import ACTIVE_COMPETITION
 
 
 def print_stats(submissions: list[Submission]) -> None:
@@ -43,7 +46,7 @@ def print_stats(submissions: list[Submission]) -> None:
     )
     print()
 
-    for task in sorted(TASK_CHOICES):
+    for task in sorted(ACTIVE_COMPETITION.task_choices):
         valid_task_submissions = sum(
             1
             for submission in non_deleted_submissions_that_passed_a_test
@@ -91,6 +94,43 @@ def _read_submission_file(path: str) -> pd.DataFrame:
     return df
 
 
+def _extract_submission_archive(path_or_url: str, extract_dir: str) -> bool:
+    is_url = path_or_url.startswith(("http://", "https://"))
+    if is_url:
+        is_zip = path_or_url.endswith(".zip")
+    else:
+        if not os.path.exists(path_or_url):
+            raise ValueError(f"The file that corresponds to the submission doesn't exist: {path_or_url}")
+        if not os.path.isfile(path_or_url):
+            raise ValueError(f"The path that corresponds to the submission isn't a file: {path_or_url}")
+        is_zip = path_or_url.endswith(".zip") or zipfile.is_zipfile(path_or_url)
+
+    if is_zip:
+        with fsspec.open(path_or_url, "rb") as file, zipfile.ZipFile(file) as zip_file:
+            zip_file.extractall(extract_dir)
+
+    return is_zip
+
+
+def _resolve_task_file_path(task: str, path_or_url: str, extract_dir: str, is_zip: bool) -> str:
+    if is_zip:
+        path = os.path.join(extract_dir, f"task-{task}.tsv")
+        if not os.path.exists(path):
+            alt_path = os.path.join(extract_dir, f"{task}.tsv")
+            if os.path.exists(alt_path):
+                path = alt_path
+    else:
+        path = path_or_url
+
+    if not os.path.exists(path):
+        raise ValueError(f"The file that corresponds to the task '{task}' doesn't exist: {path}")
+
+    if not os.path.isfile(path):
+        raise ValueError(f"The file that corresponds to the task '{task}' isn't a file: {path}")
+
+    return path
+
+
 async def ingest_submission(
     engine: sqlalchemy.ext.asyncio.AsyncEngine,
     phase_id: int,
@@ -100,7 +140,6 @@ async def ingest_submission(
 ) -> int:
     """Ingest a submission into the database. Returns the number of affected rows."""
     async with engine.begin() as connection:
-        # with tempfile.TemporaryDirectory() as dir_:
         try:
             await connection.execute(
                 sqlalchemy.sql.text("INSERT INTO systems (system_id) VALUES (:system_id)"),
@@ -112,56 +151,52 @@ async def ingest_submission(
             else:
                 raise
 
-        # with fsspec.open(submission.compute_path_or_url()) as file, zipfile.ZipFile(file) as zip_file:
-        #     zip_file.extractall(dir_)
+        path_or_url = submission.compute_path_or_url()
 
-        affected_rows = 0
+        with tempfile.TemporaryDirectory() as dir_:
+            is_zip = _extract_submission_archive(path_or_url, dir_)
+            affected_rows = 0
 
-        assert submission.tasks
+            assert submission.tasks
 
-        for task in submission.tasks:
-            path = submission.compute_path_or_url()
+            for task in submission.tasks:
+                path = _resolve_task_file_path(task, path_or_url, dir_, is_zip)
+                submission_df = _read_submission_file(path)
 
-            if not os.path.exists(path):
-                raise ValueError(f"The file that corresponds to the task '{task}' doesn't exist: {path}")
-
-            if not os.path.isfile(path):
-                raise ValueError(f"The file that corresponds to the task '{task}' isn't a file: {path}")
-
-            submission_df = _read_submission_file(path)
-
-            reference_prompt_ids = frozenset(
-                row[0]
-                for row in await connection.execute(
-                    sqlalchemy.sql.text("SELECT prompt_id FROM prompts WHERE phase_id = :phase_id AND task = :task"),
-                    {"phase_id": phase_id, "task": task},
+                reference_prompt_ids = frozenset(
+                    row[0]
+                    for row in await connection.execute(
+                        sqlalchemy.sql.text(
+                            "SELECT prompt_id FROM prompts WHERE phase_id = :phase_id AND task = :task"
+                        ),
+                        {"phase_id": phase_id, "task": task},
+                    )
                 )
-            )
-            submitted_prompt_ids = frozenset(submission_df.index)
+                submitted_prompt_ids = frozenset(submission_df.index)
 
-            if submitted_prompt_ids != reference_prompt_ids:
-                raise ValueError(
-                    f"The submitted prompt IDs for the file from the submission '{submission}'"
-                    f" do not match the reference IDs for the task '{task}'."
-                    f" Missing IDs: {sorted(reference_prompt_ids - submitted_prompt_ids)}."
-                    f" Extra IDs: {sorted(submitted_prompt_ids - reference_prompt_ids)}."
-                )
-
-            if accept_null_texts:
-                if nan_prompt_ids := submission_df.index[submission_df["text"].isna()].tolist():
-                    logging.warning(
-                        f"Null 'text' values for the submission '{submission}' and task '{task}',"
-                        f" for the following prompt IDs: {nan_prompt_ids}."
+                if submitted_prompt_ids != reference_prompt_ids:
+                    raise ValueError(
+                        f"The submitted prompt IDs for the file from the submission '{submission}'"
+                        f" do not match the reference IDs for the task '{task}'."
+                        f" Missing IDs: {sorted(reference_prompt_ids - submitted_prompt_ids)}."
+                        f" Extra IDs: {sorted(submitted_prompt_ids - reference_prompt_ids)}."
                     )
 
-                    submission_df["text"] = submission_df["text"].fillna("-")
+                if accept_null_texts:
+                    if nan_prompt_ids := submission_df.index[submission_df["text"].isna()].tolist():
+                        logging.warning(
+                            f"Null 'text' values for the submission '{submission}' and task '{task}',"
+                            f" for the following prompt IDs: {nan_prompt_ids}."
+                        )
 
-            submission_df["system_id"] = submission.system_id
+                        submission_df["text"] = submission_df["text"].fillna("-")
 
-            affected_rows += await connection.run_sync(
-                lambda sync_connection, submission_df=submission_df: (
-                    submission_df.to_sql("outputs", sync_connection, if_exists="append") or 0
+                submission_df["system_id"] = submission.system_id
+
+                affected_rows += await connection.run_sync(
+                    lambda sync_connection, submission_df=submission_df: (
+                        submission_df.to_sql("outputs", sync_connection, if_exists="append") or 0
+                    )
                 )
-            )
 
-        return affected_rows
+            return affected_rows

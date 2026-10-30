@@ -386,10 +386,11 @@
 
 <script>
   // --- STATE & CONFIG ---
+  let defaultTask = "t3";
   let activeTab = "t3";
   const dataSets = {};
   let sortConfig = {key: 'rating', direction: 'desc'};
-  const TASKS = ["t3"];
+  let TASKS = ["t3"];
   let taskLastModified = {}; // Stores date strings per task
 
   // --- DOM ELEMENTS ---
@@ -410,8 +411,8 @@
     alertCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto text-gray-300 mb-3 dark:text-gray-600"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`
   };
 
-  const tabs = [
-    {id: "t3", label: "Task 3", icon: icons.fileText},
+  let tabs = [
+      {id: "a-en", label: "Task A: Joke in English", icon: icons.fileText},
   ];
 
   // --- DARK MODE LOGIC ---
@@ -451,8 +452,31 @@
   });
 
   // --- INIT LOGIC (Language & Params) ---
-  function initApp() {
+  async function initApp() {
     initTheme();
+
+      try {
+          const res = await fetch("api/config");
+          if (res.ok) {
+              const config = await res.json();
+              if (config.title) {
+                  document.title = `${config.title} Leaderboard`;
+                  const heading = document.querySelector("header h1");
+                  if (heading) heading.textContent = config.title;
+              }
+              if (config.tasks && config.tasks.length > 0) {
+                  TASKS = config.tasks.map(t => t.id);
+                  tabs = config.tasks.map(t => ({
+                      id: t.id,
+                      label: t.label,
+                      icon: t.is_multimodal ? icons.image : icons.fileText
+                  }));
+                  defaultTask = config.default_task || TASKS[0];
+              }
+          }
+      } catch (e) {
+          console.warn("Could not load api/config, falling back to defaults", e);
+      }
 
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get("task");
@@ -460,7 +484,7 @@
     if (tabParam && TASKS.includes(tabParam)) {
       activeTab = tabParam;
     } else {
-      activeTab = "t3";
+        activeTab = defaultTask;
       // Update URL to reflect default
       updateUrlParam(activeTab);
     }
@@ -470,6 +494,15 @@
     dayjs.extend(window.dayjs_plugin_utc);
     dayjs.extend(window.dayjs_plugin_timezone);
     dayjs.extend(window.dayjs_plugin_relativeTime);
+
+      if (tabs.length <= 1) {
+          tabsContainer.parentElement.style.display = "none";
+      } else {
+          tabsContainer.parentElement.style.display = "";
+      }
+
+      renderTabs();
+      await loadInitialData();
   }
 
   function updateUrlParam(tabId) {
@@ -728,8 +761,6 @@
 
   // --- START ---
   initApp();
-  renderTabs();
-  loadInitialData();
 </script>
 </body>
 </html>

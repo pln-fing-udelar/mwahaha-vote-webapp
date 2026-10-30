@@ -22,8 +22,28 @@ from httpx import ASGITransport, AsyncClient
 
 import mwahahavote.__main__ as main_mod
 from ingestion import codabench, submission
-from mwahahavote import database
+from mwahahavote import config, database
 from mwahahavote.__main__ import app
+
+
+@pytest.fixture(autouse=True)
+def setup_competition(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("COMPETITION", "haha")
+    monkeypatch.setattr(config, "ACTIVE_COMPETITION", config.COMPETITIONS["haha"])
+    monkeypatch.setattr(config, "TASK_CHOICES", config.COMPETITIONS["haha"].task_choices)
+    monkeypatch.setattr(main_mod, "ACTIVE_COMPETITION", config.COMPETITIONS["haha"])
+    monkeypatch.setattr(main_mod, "DEFAULT_TASK", "t3")
+    monkeypatch.setattr(main_mod, "PHASE_ID", 1)
+    monkeypatch.setattr(database, "ACTIVE_COMPETITION", config.COMPETITIONS["haha"])
+    monkeypatch.setattr(ingest_prompts, "ACTIVE_COMPETITION", config.COMPETITIONS["haha"])
+    monkeypatch.setattr(ingest_submissions, "ACTIVE_COMPETITION", config.COMPETITIONS["haha"])
+    monkeypatch.setattr(prepare_data_for_scoring, "ACTIVE_COMPETITION", config.COMPETITIONS["haha"])
+    monkeypatch.setattr(prepare_data_for_scoring, "PHASE_ID", 1)
+    monkeypatch.setattr(postprocess_scores, "ACTIVE_COMPETITION", config.COMPETITIONS["haha"])
+    monkeypatch.setattr(postprocess_scores, "PHASE_ID", 1)
+    monkeypatch.setattr(codabench, "ACTIVE_COMPETITION", config.COMPETITIONS["haha"])
+    monkeypatch.setattr(submission, "ACTIVE_COMPETITION", config.COMPETITIONS["haha"])
+
 
 PROMPT_ROWS = [
     ("en_1", "coffee", "monday", "-", "-", "-"),
@@ -145,6 +165,7 @@ async def test_full_mwhaha_competition_e2e_pipeline(
     6. Postprocess leaderboard JSON (`postprocess_scores.py`) and pretty-print (`scores_json_to_pretty_text_table.py`)
     7. Serve the final leaderboard JSON and `/votes.csv` through the FastAPI app
     """
+    orig_dir = Path.cwd()
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(database, "create_engine", _mock_create_engine(db_engine))
     monkeypatch.setattr(main_mod, "IS_LOCAL_DEVELOPMENT", True)
@@ -246,8 +267,7 @@ async def test_full_mwhaha_competition_e2e_pipeline(
         assert sys_name in table_out
 
     # Verify `/votes.csv` and `/stats` reflect the tournament data
-    monkeypatch.undo()
-    monkeypatch.setattr(main_mod, "IS_LOCAL_DEVELOPMENT", True)
+    monkeypatch.chdir(orig_dir)
     async with AsyncClient(transport=ASGITransport(app=wrapped_app), base_url="http://test") as client:
         csv_resp = await client.get("/votes.csv")
         assert csv_resp.status_code == 200
@@ -280,7 +300,7 @@ async def test_mwhaha_codabench_filtering_and_prolific_only_scoring_e2e(
             "owner": "alice",
             "created_when": "2026-01-10T10:00:00Z",
             "is_soft_deleted": False,
-            "task": {"id": 21358},
+            "task": {"id": 1},
             "scores": [{"score": "1.0"}],
         },
         # Alice's latest valid submission (id=105) -> kept
@@ -291,7 +311,7 @@ async def test_mwhaha_codabench_filtering_and_prolific_only_scoring_e2e(
             "owner": "alice",
             "created_when": "2026-01-12T10:00:00Z",
             "is_soft_deleted": False,
-            "task": {"id": 21358},
+            "task": {"id": 1},
             "scores": [{"score": "1.0"}],
         },
         # Alice's even later soft-deleted submission (id=106) -> ignored because is_soft_deleted=True
@@ -302,7 +322,7 @@ async def test_mwhaha_codabench_filtering_and_prolific_only_scoring_e2e(
             "owner": "alice",
             "created_when": "2026-01-13T10:00:00Z",
             "is_soft_deleted": True,
-            "task": {"id": 21358},
+            "task": {"id": 1},
             "scores": [{"score": "1.0"}],
         },
         # Bob's submission that failed the validation test (score 0.0) -> ignored
@@ -313,7 +333,7 @@ async def test_mwhaha_codabench_filtering_and_prolific_only_scoring_e2e(
             "owner": "bob",
             "created_when": "2026-01-11T10:00:00Z",
             "is_soft_deleted": False,
-            "task": {"id": 21358},
+            "task": {"id": 1},
             "scores": [{"score": "0.0"}],
         },
         # Dave's parent + child submission that passed the test -> kept
@@ -332,7 +352,7 @@ async def test_mwhaha_codabench_filtering_and_prolific_only_scoring_e2e(
             "owner": "dave",
             "created_when": "2026-01-14T10:00:00Z",
             "is_soft_deleted": False,
-            "task": {"id": 21358},
+            "task": {"id": 1},
             "scores": [{"score": "1.0"}],
         },
     ]
