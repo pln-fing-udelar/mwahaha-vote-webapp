@@ -1,16 +1,16 @@
-let $star;
-let $homeContent;
-let $task;
-let $prompt;
-let $outputA;
-let $outputB;
-let $answerButtons;
-let $isOffensiveLeft;
-let $voteLeft;
-let $tie;
-let $skip;
-let $voteRight;
-let $isOffensiveRight;
+let taskSelect;
+let promptText;
+let outputA;
+let outputAText;
+let outputB;
+let outputBText;
+let answerButtons;
+let isOffensiveLeft;
+let voteLeft;
+let tie;
+let skip;
+let voteRight;
+let isOffensiveRight;
 let emoji;
 
 let task = "t3";
@@ -27,8 +27,8 @@ const prolificId = (new URLSearchParams(window.location.search)).get("PROLIFIC_P
 const isAProlificSession = Boolean(prolificId);
 let prolificVoteCount = 0;
 
-let $prolificConsent;
-let $prolificVoteCount;
+let prolificConsent;
+let prolificVoteCountEl;
 
 const translations = {
   en: {
@@ -43,31 +43,31 @@ const translations = {
       intro: "Please read the following information carefully. We recommend that you save a screenshot of this page.",
       researchers: {
         title: "Who are the researchers?",
-        text: "The researchers behind this work are Santiago Castro, Luis Chiruzzo, Naihao Deng, Julie-Anne Meaney, Santiago Góngora, Ignacio Sastre, Victoria Amoroso, Guillermo Rey, Salar Rahili, Guillermo Moncecchi, Juan José Prada, Aiala Rosá, and Rada Mihalcea."
+        text: "The researchers behind this work are Santiago Castro, Luis Chiruzzo, Naihao Deng, Julie-Anne Meaney, Santiago Góngora, Ignacio Sastre, Victoria Amoroso, Guillermo Rey, Salar Rahili, Guillermo Moncecchi, Juan José Prada, Aiala Rosá, and Rada Mihalcea.",
       },
       purpose: {
         title: "What is the purpose of this study?",
-        text: "The purpose of this annotation process is to determine which texts are considered funnier by people."
+        text: "The purpose of this annotation process is to determine which texts are considered funnier by people.",
       },
       why: {
         title: "Why have I been asked to be part of this study?",
-        text: "This research is looking for annotators who are native speakers of the language from the texts."
+        text: "This research is looking for annotators who are native speakers of the language from the texts.",
       },
       required: {
         title: "Am I required to participate?",
-        text: 'No. Participation in this study is entirely voluntary. You may withdraw from the study at any time, without giving any explanation. Your rights will not be affected. If you wish to withdraw from the study, please contact us at <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. We will not use your data in any publications or presentations if you have withdrawn from the study. However, we will keep a copy of the original consent form and your request to withdraw.'
+        text: 'No. Participation in this study is entirely voluntary. You may withdraw from the study at any time, without giving any explanation. Your rights will not be affected. If you wish to withdraw from the study, please contact us at <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. We will not use your data in any publications or presentations if you have withdrawn from the study. However, we will keep a copy of the original consent form and your request to withdraw.',
       },
       risk: {
         title: "Is there any risk associated with being part of this study?",
-        text: "There are no significant risks associated with participation. However, some texts may be offensive. You are also welcome to flag any text as offensive using the checkboxes in the annotation form. If at any time you wish to withdraw, please do not hesitate to do so."
+        text: "There are no significant risks associated with participation. However, some texts may be offensive. You are also welcome to flag any text as offensive using the checkboxes in the annotation form. If at any time you wish to withdraw, please do not hesitate to do so.",
       },
       benefit: {
         title: "Is there any benefit associated with being part of this study?",
-        text: "There are no significant benefits associated with being part of the study, but you might find some texts funny."
+        text: "There are no significant benefits associated with being part of the study, but you might find some texts funny.",
       },
       contact: {
         title: "How can I contact you?",
-        text: 'If you have further questions about the study or wish to make a complaint about it, please contact <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. When contacting us, please indicate the title of the study and the nature of your complaint.'
+        text: 'If you have further questions about the study or wish to make a complaint about it, please contact <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. When contacting us, please indicate the title of the study and the nature of your complaint.',
       },
       checkbox1: "I confirm that I have read and understood the information indicated above, that I have had the opportunity to ask questions, and that the questions I have had have been answered satisfactorily.",
       checkbox2: "I confirm that I am not a participant of this competition (i.e., I have not submitted a system to the 2025-2026 MWAHAHA competition on Humor Generation). Participants can't participate in the annotation process.",
@@ -76,15 +76,16 @@ const translations = {
       checkbox5: "I understand that my anonymized data may be stored for at least 2 years.",
       checkbox6: "I allow my data to be used ethically in future research.",
       checkbox7: "I agree to be part of this study.",
-      continue: "Continue"
+      continue: "Continue",
     },
     finished: {
       title: "You finished annotating!",
       prompt: "Do you have any suggestion, comment, or complaint?",
       commentsLabel: "Comments",
-      finish: "Finish"
-    }
-  }, es: {
+      finish: "Finish",
+    },
+  },
+  es: {
     voteLeft: "El de la izquierda es más gracioso. ¡Gracias!",
     voteRight: "El de la derecha es más gracioso. ¡Gracias!",
     voteTie: "Es un empate. ¡Gracias!",
@@ -96,31 +97,31 @@ const translations = {
       intro: "Por favor, lea la siguiente información cuidadosamente. Le recomendamos guardar una captura de pantalla de esta página.",
       researchers: {
         title: "¿Quiénes son los investigadores?",
-        text: "Los investigadores detrás de este trabajo son Santiago Castro, Luis Chiruzzo, Naihao Deng, Julie-Anne Meaney, Santiago Góngora, Ignacio Sastre, Victoria Amoroso, Guillermo Rey, Salar Rahili, Guillermo Moncecchi, Juan José Prada, Aiala Rosá y Rada Mihalcea."
+        text: "Los investigadores detrás de este trabajo son Santiago Castro, Luis Chiruzzo, Naihao Deng, Julie-Anne Meaney, Santiago Góngora, Ignacio Sastre, Victoria Amoroso, Guillermo Rey, Salar Rahili, Guillermo Moncecchi, Juan José Prada, Aiala Rosá y Rada Mihalcea.",
       },
       purpose: {
         title: "¿Cuál es el propósito de este estudio?",
-        text: "El propósito de este proceso de anotación es determinar qué textos se consideran más graciosos por las personas."
+        text: "El propósito de este proceso de anotación es determinar qué textos se consideran más graciosos por las personas.",
       },
       why: {
         title: "¿Por qué me han pedido que participe en este estudio?",
-        text: "Esta investigación busca anotadores que sean hablantes nativos del idioma de los textos."
+        text: "Esta investigación busca anotadores que sean hablantes nativos del idioma de los textos.",
       },
       required: {
         title: "¿Estoy obligado a participar?",
-        text: 'No. La participación en este estudio es completamente voluntaria. Usted puede retirarse del estudio en cualquier momento, sin dar ninguna explicación. Sus derechos no se verán afectados. Si desea retirarse del estudio, por favor contáctenos en <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. No usaremos sus datos en ninguna publicación o presentación si se ha retirado del estudio. Sin embargo, conservaremos una copia del formulario de consentimiento original y su solicitud de retiro.'
+        text: 'No. La participación en este estudio es completamente voluntaria. Usted puede retirarse del estudio en cualquier momento, sin dar ninguna explicación. Sus derechos no se verán afectados. Si desea retirarse del estudio, por favor contáctenos en <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. No usaremos sus datos en ninguna publicación o presentación si se ha retirado del estudio. Sin embargo, conservaremos una copia del formulario de consentimiento original y su solicitud de retiro.',
       },
       risk: {
         title: "¿Hay algún riesgo asociado con formar parte de este estudio?",
-        text: "No hay riesgos significativos asociados con la participación. Sin embargo, algunos textos pueden ser ofensivos. También puede marcar cualquier texto como ofensivo usando las casillas de verificación en el formulario de anotación. Si en algún momento desea retirarse, no dude en hacerlo."
+        text: "No hay riesgos significativos asociados con la participación. Sin embargo, algunos textos pueden ser ofensivos. También puede marcar cualquier texto como ofensivo usando las casillas de verificación en el formulario de anotación. Si en algún momento desea retirarse, no dude en hacerlo.",
       },
       benefit: {
         title: "¿Hay algún beneficio asociado con formar parte de este estudio?",
-        text: "No hay beneficios significativos asociados con formar parte del estudio, pero puede encontrar algunos textos graciosos."
+        text: "No hay beneficios significativos asociados con formar parte del estudio, pero puede encontrar algunos textos graciosos.",
       },
       contact: {
         title: "¿Cómo puedo contactarlos?",
-        text: 'Si tiene más preguntas sobre el estudio o desea presentar una queja, por favor contacte a <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. Al contactarnos, por favor indique el título del estudio y la naturaleza de su queja.'
+        text: 'Si tiene más preguntas sobre el estudio o desea presentar una queja, por favor contacte a <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>. Al contactarnos, por favor indique el título del estudio y la naturaleza de su queja.',
       },
       checkbox1: "Confirmo que he leído y comprendido la información indicada anteriormente, que he tenido la oportunidad de hacer preguntas, y que las preguntas que he tenido han sido respondidas satisfactoriamente.",
       checkbox2: "Confirmo que no soy participante de esta competencia (es decir, no he enviado un sistema a la competencia MWAHAHA 2025-2026 sobre Generación de Humor). Los participantes no pueden participar en el proceso de anotación.",
@@ -129,15 +130,16 @@ const translations = {
       checkbox5: "Entiendo que mis datos anonimizados pueden ser almacenados durante al menos 2 años.",
       checkbox6: "Permito que mis datos sean utilizados éticamente en futuras investigaciones.",
       checkbox7: "Acepto formar parte de este estudio.",
-      continue: "Continuar"
+      continue: "Continuar",
     },
     finished: {
       title: "¡Terminaste de anotar!",
       prompt: "¿Tienes alguna sugerencia, comentario o queja?",
       commentsLabel: "Comentarios",
-      finish: "Finalizar"
-    }
-  }, zh: {
+      finish: "Finalizar",
+    },
+  },
+  zh: {
     voteLeft: "左边更有趣。",
     voteRight: "右边更有趣。",
     voteTie: "平局。",
@@ -149,28 +151,31 @@ const translations = {
       intro: "请仔细阅读以下信息。建议您保存或截图本页面以备参考。",
       researchers: {
         title: "研究人员",
-        text: "本研究的研究人员包括：Santiago Castro、Luis Chiruzzo、Naihao Deng、Julie-Anne Meaney、Santiago Góngora、Ignacio Sastre、Victoria Amoroso、Guillermo Rey、Salar Rahili、Guillermo Moncecchi、Juan José Prada、Aiala Rosá 和 Rada Mihalcea。"
+        text: "本研究的研究人员包括：Santiago Castro、Luis Chiruzzo、Naihao Deng、Julie-Anne Meaney、Santiago Góngora、Ignacio Sastre、Victoria Amoroso、Guillermo Rey、Salar Rahili、Guillermo Moncecchi、Juan José Prada、Aiala Rosá 和 Rada Mihalcea。",
       },
       purpose: {
-        title: "本研究的目的是什么？", text: "本次标注旨在确定人们认为哪些文本更具幽默性。"
+        title: "本研究的目的是什么？",
+        text: "本次标注旨在确定人们认为哪些文本更具幽默性。",
       },
       why: {
-        title: "为什么邀请我参加本研究？", text: "本研究正在招募母语者参与文本标注。"
+        title: "为什么邀请我参加本研究？",
+        text: "本研究正在招募母语者参与文本标注。",
       },
       required: {
         title: "我必须参加吗？",
-        text: '不必须。参与本研究完全出于自愿。您可以在任何时候退出研究，无需说明理由，且不会对您的权利产生任何影响。如您希望退出，请通过 <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a> 与我们联系。如果您退出研究，我们将不会在任何出版物或展示中使用您的数据。但我们将保留原始同意书及您的退出请求记录。'
+        text: '不必须。参与本研究完全出于自愿。您可以在任何时候退出研究，无需说明理由，且不会对您的权利产生任何影响。如您希望退出，请通过 <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a> 与我们联系。如果您退出研究，我们将不会在任何出版物或展示中使用您的数据。但我们将保留原始同意书及您的退出请求记录。',
       },
       risk: {
         title: "参与本研究是否存在任何风险？",
-        text: "参与本研究不存在重大风险。但部分文本可能包含冒犯性内容。您可以通过标注表单中的复选框将相关文本标记为冒犯性内容。如感到不适，您可随时退出研究。"
+        text: "参与本研究不存在重大风险。但部分文本可能包含冒犯性内容。您可以通过标注表单中的复选框将相关文本标记为冒犯性内容。如感到不适，您可随时退出研究。",
       },
       benefit: {
-        title: "参与本研究是否有任何益处？", text: "参与本研究不会带来直接的个人收益，但部分文本内容可能具有一定的趣味性。"
+        title: "参与本研究是否有任何益处？",
+        text: "参与本研究不会带来直接的个人收益，但部分文本内容可能具有一定的趣味性。",
       },
       contact: {
         title: "如何联系我们？",
-        text: '如您对本研究有任何疑问或希望提出投诉，请联系 <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>。联系时请注明研究标题及问题或投诉的具体内容。'
+        text: '如您对本研究有任何疑问或希望提出投诉，请联系 <a href="mailto:sacastro@fing.edu.uy">sacastro@fing.edu.uy</a>。联系时请注明研究标题及问题或投诉的具体内容。',
       },
       checkbox1: "我确认已阅读并理解上述信息，并有机会提出问题（如有疑问），且已获得满意的答复。",
       checkbox2: "我确认我不是本次竞赛的参与者（即未参与 2025–2026 年 MWAHAHA 幽默生成竞赛）。参赛者不得参与本次标注。",
@@ -179,15 +184,252 @@ const translations = {
       checkbox5: "我理解我的匿名数据可能至少保存2年。",
       checkbox6: "我同意在符合伦理规范的前提下，将我的数据用于未来的相关研究。",
       checkbox7: "我同意参加本研究。",
-      continue: "继续"
+      continue: "继续",
     },
     finished: {
-      title: "您已完成标注！", prompt: "您有任何建议、评论或投诉吗？", commentsLabel: "评论", finish: "完成"
-    }
-  }
+      title: "您已完成标注！",
+      prompt: "您有任何建议、评论或投诉吗？",
+      commentsLabel: "评论",
+      finish: "完成",
+    },
+  },
 };
 
-$(document).ready(main);
+// Vanilla JS Modal Management
+function showModal(modalEl) {
+  if (typeof modalEl === "string") {
+    modalEl = document.querySelector(modalEl);
+  }
+  if (!modalEl || modalEl.classList.contains("in")) return;
+
+  document.body.classList.add("modal-open");
+
+  let backdrop = document.querySelector(".modal-backdrop");
+  if (!backdrop) {
+    backdrop = document.createElement("div");
+    backdrop.className = "modal-backdrop fade";
+    document.body.appendChild(backdrop);
+    // Force reflow for CSS transition
+    void backdrop.offsetHeight;
+    backdrop.classList.add("in");
+  }
+
+  modalEl.style.display = "block";
+  void modalEl.offsetHeight;
+  modalEl.classList.add("in");
+  modalEl.setAttribute("aria-hidden", "false");
+}
+
+function hideModal(modalEl) {
+  if (typeof modalEl === "string") {
+    modalEl = document.querySelector(modalEl);
+  }
+  if (!modalEl) return;
+
+  modalEl.classList.remove("in");
+
+  const backdrop = document.querySelector(".modal-backdrop");
+  if (backdrop) {
+    backdrop.classList.remove("in");
+  }
+
+  setTimeout(() => {
+    modalEl.style.display = "none";
+    modalEl.setAttribute("aria-hidden", "true");
+
+    const openModals = document.querySelectorAll(".modal.in");
+    if (openModals.length === 0) {
+      document.body.classList.remove("modal-open");
+      if (backdrop && backdrop.parentNode) {
+        backdrop.parentNode.removeChild(backdrop);
+      }
+    }
+  }, 150);
+}
+
+function setupModalDelegation() {
+  document.addEventListener("click", e => {
+    const toggleBtn = e.target.closest("[data-toggle='modal']");
+    if (toggleBtn) {
+      e.preventDefault();
+      const targetSelector = toggleBtn.getAttribute("data-target") || toggleBtn.getAttribute("href");
+      if (targetSelector && targetSelector !== "#") {
+        showModal(targetSelector);
+      }
+      return;
+    }
+
+    const dismissBtn = e.target.closest("[data-dismiss='modal']");
+    if (dismissBtn) {
+      e.preventDefault();
+      const modal = dismissBtn.closest(".modal");
+      if (modal) {
+        hideModal(modal);
+      }
+      return;
+    }
+
+    if (e.target.classList.contains("modal")) {
+      const modal = e.target;
+      if (modal.getAttribute("data-backdrop") !== "static") {
+        hideModal(modal);
+      }
+    }
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      const openModals = document.querySelectorAll(".modal.in");
+      if (openModals.length > 0) {
+        const topModal = openModals[openModals.length - 1];
+        if (topModal.getAttribute("data-keyboard") !== "false") {
+          hideModal(topModal);
+        }
+      }
+    }
+  });
+}
+
+// Lightweight compatibility helper for existing tests or console scripts
+function $(selector) {
+  if (typeof selector === "function") {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", selector);
+    } else {
+      selector();
+    }
+    return;
+  }
+
+  let elements;
+  if (typeof selector === "string") {
+    elements = Array.from(document.querySelectorAll(selector));
+  } else if (selector instanceof NodeList || Array.isArray(selector)) {
+    elements = Array.from(selector);
+  } else if (selector instanceof Node || selector === window || selector === document) {
+    elements = [selector];
+  } else {
+    elements = [];
+  }
+
+  return {
+    get length() {
+      return elements.length;
+    },
+    [Symbol.iterator]: function* () {
+      yield* elements;
+    },
+    text(value) {
+      if (value !== undefined) {
+        elements.forEach(el => (el.textContent = value));
+        return this;
+      }
+      return elements.map(el => el.textContent || "").join("");
+    },
+    html(value) {
+      if (value !== undefined) {
+        elements.forEach(el => (el.innerHTML = value));
+        return this;
+      }
+      return elements[0] ? elements[0].innerHTML : "";
+    },
+    val(value) {
+      if (value !== undefined) {
+        elements.forEach(el => (el.value = value));
+        return this;
+      }
+      return elements[0] ? elements[0].value : "";
+    },
+    prop(name, value) {
+      if (value !== undefined) {
+        elements.forEach(el => (el[name] = value));
+        return this;
+      }
+      return elements[0] ? elements[0][name] : undefined;
+    },
+    hasClass(className) {
+      return elements.some(el => el.classList && el.classList.contains(className));
+    },
+    addClass(className) {
+      elements.forEach(el => el.classList && el.classList.add(...className.split(/\s+/).filter(Boolean)));
+      return this;
+    },
+    removeClass(className) {
+      elements.forEach(el => el.classList && el.classList.remove(...className.split(/\s+/).filter(Boolean)));
+      return this;
+    },
+    modal(action) {
+      elements.forEach(el => {
+        if (action === "show") showModal(el);
+        else if (action === "hide") hideModal(el);
+      });
+      return this;
+    },
+    submit() {
+      elements.forEach(el => {
+        if (typeof el.requestSubmit === "function") {
+          el.requestSubmit();
+        } else if (typeof el.submit === "function") {
+          el.submit();
+        } else {
+          el.dispatchEvent(new Event("submit", {bubbles: true, cancelable: true}));
+        }
+      });
+      return this;
+    },
+    find(subSelector) {
+      const matched = [];
+      elements.forEach(el => {
+        if (el.querySelectorAll) {
+          matched.push(...el.querySelectorAll(subSelector));
+        }
+      });
+      return $(matched);
+    },
+    each(fn) {
+      elements.forEach((el, i) => fn.call(el, i, el));
+      return this;
+    },
+    on(event, handler) {
+      const events = event.split(/\s+/).filter(Boolean);
+      elements.forEach(el => {
+        events.forEach(ev => el.addEventListener(ev, handler));
+      });
+      return this;
+    },
+    click(handler) {
+      if (handler) {
+        elements.forEach(el => el.addEventListener("click", handler));
+      } else {
+        elements.forEach(el => el.click());
+      }
+      return this;
+    },
+    data(key) {
+      return elements[0] && elements[0].dataset ? elements[0].dataset[key] : undefined;
+    },
+    css(prop, val) {
+      if (val !== undefined) {
+        elements.forEach(el => (el.style[prop] = val));
+        return this;
+      }
+      return elements[0] ? window.getComputedStyle(elements[0])[prop] : undefined;
+    },
+  };
+}
+
+if (typeof window !== "undefined") {
+  window.$ = $;
+  if (typeof window.mdtoast !== "undefined") {
+    $.mdtoast = window.mdtoast;
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", main);
+} else {
+  main();
+}
 
 // noinspection JSUnusedGlobalSymbols
 function onTurnstileSuccess(token) {
@@ -197,6 +439,7 @@ function onTurnstileSuccess(token) {
 function main() {
   setupSentry();
   setupElements();
+  setupModalDelegation();
   setupPlaceload();
   setupEmojiConverter();
   initTaskAndBattles();
@@ -206,240 +449,313 @@ function main() {
 
 function setupSentry() {
   // The following key is public.
-  window.sentryOnLoad = () => Sentry.init({
-    dsn: "https://85c805830c8feb48a02488382cecd1a5@o134888.ingest.us.sentry.io/4510338807627776",
-    sendDefaultPii: true, // Alternatively, use `process.env.npm_package_version` for a dynamic release version
-    // if your build tool supports it.
-    release: "mwahahavote@0.1.0",
-    denyUrls: [/https?:\/\/localhost/, /https?:\/\/127\.0\.0\.1/, /https?:\/\/\[::1?]/],
-  });
+  window.sentryOnLoad = () =>
+      Sentry.init({
+        dsn: "https://85c805830c8feb48a02488382cecd1a5@o134888.ingest.us.sentry.io/4510338807627776",
+        sendDefaultPii: true,
+        release: "mwahahavote@0.1.0",
+        denyUrls: [/https?:\/\/localhost/, /https?:\/\/127\.0\.0\.1/, /https?:\/\/\[::1?]/],
+      });
 }
 
 function setupElements() {
-  $star = $("*");
-  $homeContent = $("#home-content");
-  $task = $("#task");
-  $prompt = $("#prompt-text");
-  $outputA = $("#output-a-text");
-  $outputB = $("#output-b-text");
-  $answerButtons = $("#answers button");
-  $isOffensiveLeft = $("#is-offensive-left");
-  $voteLeft = $("#vote-left");
-  $tie = $("#tie");
-  $skip = $("#skip");
-  $voteRight = $("#vote-right");
-  $isOffensiveRight = $("#is-offensive-right");
-  $prolificConsent = $("#prolific-consent")
-  $prolificVoteCount = $("#prolific-vote-count");
+  taskSelect = document.getElementById("task");
+  promptText = document.getElementById("prompt-text");
+  outputA = document.getElementById("output-a");
+  outputAText = document.getElementById("output-a-text");
+  outputB = document.getElementById("output-b");
+  outputBText = document.getElementById("output-b-text");
+  answerButtons = document.querySelectorAll("#answers button");
+  isOffensiveLeft = document.getElementById("is-offensive-left");
+  voteLeft = document.getElementById("vote-left");
+  tie = document.getElementById("tie");
+  skip = document.getElementById("skip");
+  voteRight = document.getElementById("vote-right");
+  isOffensiveRight = document.getElementById("is-offensive-right");
+  prolificConsent = document.getElementById("prolific-consent");
+  prolificVoteCountEl = document.getElementById("prolific-vote-count");
+}
+
+function fadeTransition(element, updateFn, duration = 100) {
+  element.style.transition = `opacity ${duration}ms ease-in-out`;
+  element.style.opacity = "0";
+  setTimeout(() => {
+    updateFn();
+    element.style.opacity = "1";
+  }, duration);
 }
 
 function showBattle() {
+  const promptEl = document.getElementById("prompt");
+  const outputsEl = document.getElementById("outputs");
+  const answersEl = document.getElementById("answers");
+
   if (battles.length === 0) {
-    $("#prompt").fadeOut(0);
-    $("#output-a").fadeOut(0);
-    $("#output-b").fadeOut(0);
-    $("#outputs").append("<p class=\"col-xs-12\" style=\"padding: 10px\">There are no battles to display for this task.</p>");
-    $("#answers").fadeOut(0);
-  } else {
-    $prompt.fadeOut(100, () => {
-      const prompt_image_url = battles[index].prompt_image_url;
-      let imageHtml = "";
-      if (prompt_image_url) {
-        imageHtml = '<img id="prompt-image" src="' + prompt_image_url + '" alt="Prompt image"><br/>';
+    if (promptEl) promptEl.style.display = "none";
+    if (outputA) outputA.style.display = "none";
+    if (outputB) outputB.style.display = "none";
+    if (outputsEl) {
+      const existingNotice = outputsEl.querySelector(".no-battles-notice");
+      if (!existingNotice) {
+        const notice = document.createElement("p");
+        notice.className = "col-xs-12 no-battles-notice";
+        notice.style.padding = "10px";
+        notice.textContent = "There are no battles to display for this task.";
+        outputsEl.appendChild(notice);
       }
-      $prompt.html(imageHtml + emoji.replace_unified(battles[index].prompt || "").replace(/\n/mg, "<br/>")).text();
-      $prompt.fadeIn(100);
+    }
+    if (answersEl) answersEl.style.display = "none";
+  } else {
+    fadeTransition(promptText, () => {
+      const promptImageUrl = battles[index].prompt_image_url;
+      let imageHtml = "";
+      if (promptImageUrl) {
+        imageHtml = '<img id="prompt-image" src="' + promptImageUrl + '" alt="Prompt image"><br/>';
+      }
+      promptText.innerHTML = imageHtml + emoji.replace_unified(battles[index].prompt || "").replace(/\n/mg, "<br/>");
     });
-    $outputA.fadeOut(100, () => {
-      $outputA.html(emoji.replace_unified(battles[index].output_a.replace(/\n/mg, "<br/>"))).text();
-      $outputA.fadeIn(100);
+    fadeTransition(outputAText, () => {
+      outputAText.innerHTML = emoji.replace_unified(battles[index].output_a.replace(/\n/mg, "<br/>"));
     });
-    $outputB.fadeOut(100, () => {
-      $outputB.html(emoji.replace_unified(battles[index].output_b.replace(/\n/mg, "<br/>"))).text();
-      $outputB.fadeIn(100);
+    fadeTransition(outputBText, () => {
+      outputBText.innerHTML = emoji.replace_unified(battles[index].output_b.replace(/\n/mg, "<br/>"));
     });
   }
 }
 
 function setupPlaceload() {
-  Placeload
-      .$("#prompt-text")
-      .config({speed: "1s"})
-      .line(element => element.width(100).height(15)).fold(() => {
-  }, () => {
-  });
-  Placeload
-      .$("#output-a-text")
+  Placeload.$("#prompt-text")
       .config({speed: "1s"})
       .line(element => element.width(100).height(15))
-      .config({spaceBetween: "7px"})
-      .line(element => element.width(100).height(15))
-      .config({spaceBetween: "7px"})
-      .line(element => element.width(40).height(15)).fold(() => {
-  }, () => {
-  });
-  Placeload
-      .$("#output-b-text")
+      .fold(
+          () => {
+          },
+          () => {
+          }
+      );
+  Placeload.$("#output-a-text")
       .config({speed: "1s"})
       .line(element => element.width(100).height(15))
       .config({spaceBetween: "7px"})
       .line(element => element.width(100).height(15))
       .config({spaceBetween: "7px"})
-      .line(element => element.width(40).height(15)).fold(() => {
-  }, () => {
-  });
+      .line(element => element.width(40).height(15))
+      .fold(
+          () => {
+          },
+          () => {
+          }
+      );
+  Placeload.$("#output-b-text")
+      .config({speed: "1s"})
+      .line(element => element.width(100).height(15))
+      .config({spaceBetween: "7px"})
+      .line(element => element.width(100).height(15))
+      .config({spaceBetween: "7px"})
+      .line(element => element.width(40).height(15))
+      .fold(
+          () => {
+          },
+          () => {
+          }
+      );
 }
 
 function setupEmojiConverter() {
   // noinspection JSUnresolvedFunction
   emoji = new EmojiConvertor();
   emoji.img_set = "twitter";
-  emoji.img_sets.twitter.path = "https://raw.githubusercontent.com/iamcal/emoji-data/" + "a97b2d2efa64535d6300660eb2cd15ecb584e79e/img-twitter-64/";
+  emoji.img_sets.twitter.path =
+      "https://raw.githubusercontent.com/iamcal/emoji-data/a97b2d2efa64535d6300660eb2cd15ecb584e79e/img-twitter-64/";
 }
 
 function initTaskAndBattles() {
-  $.getJSON("api/config", config => {
-    if (config.tasks && config.tasks.length > 1) {
-      $task.empty();
-      config.tasks.forEach(t => {
-        $task.append($("<option>", {value: t.id, text: t.label}));
+  fetch("api/config")
+      .then(resp => {
+        if (!resp.ok) throw new Error("Config response not ok");
+        return resp.json();
+      })
+      .then(config => {
+        const taskContainer = document.getElementById("task-container");
+        if (config.tasks && config.tasks.length > 1) {
+          taskSelect.innerHTML = "";
+          config.tasks.forEach(t => {
+            const opt = document.createElement("option");
+            opt.value = t.id;
+            opt.textContent = t.label;
+            taskSelect.appendChild(opt);
+          });
+          if (taskContainer) taskContainer.style.display = "";
+        } else {
+          if (taskContainer) taskContainer.style.display = "none";
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const requestedTask = urlParams.get("task");
+        const validTaskIds = config.tasks ? config.tasks.map(t => t.id) : [config.default_task];
+
+        if (requestedTask && validTaskIds.includes(requestedTask)) {
+          task = requestedTask;
+        } else if (config.tasks && config.tasks.length > 1 && !requestedTask) {
+          if (navigator.language.startsWith("es") && validTaskIds.includes("a-es")) {
+            task = "a-es";
+          } else if (navigator.language.startsWith("zh") && validTaskIds.includes("a-zh")) {
+            task = "a-zh";
+          } else {
+            task = config.default_task;
+          }
+        } else {
+          task = config.default_task || "a-en";
+        }
+
+        urlParams.set("task", task);
+        taskSelect.value = task;
+
+        if (config.tasks && config.tasks.length > 1) {
+          const newUrl =
+              window.location.protocol +
+              "//" +
+              window.location.host +
+              window.location.pathname +
+              "?" +
+              urlParams.toString();
+          window.history.replaceState({}, "", newUrl);
+        }
+
+        getBattles();
+      })
+      .catch(() => {
+        getBattles();
       });
-      $("#task-container").show();
-    } else {
-      $("#task-container").hide();
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const requestedTask = urlParams.get("task");
-    const validTaskIds = config.tasks ? config.tasks.map(t => t.id) : [config.default_task];
-
-    if (requestedTask && validTaskIds.includes(requestedTask)) {
-      task = requestedTask;
-    } else if (config.tasks && config.tasks.length > 1 && !requestedTask) {
-      if (navigator.language.startsWith("es") && validTaskIds.includes("a-es")) {
-        task = "a-es";
-      } else if (navigator.language.startsWith("zh") && validTaskIds.includes("a-zh")) {
-        task = "a-zh";
-      } else {
-        task = config.default_task;
-      }
-    } else {
-      task = config.default_task || "a-en";
-    }
-
-    urlParams.set("task", task);
-    $task.val(task);
-
-    if (config.tasks && config.tasks.length > 1) {
-      const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + urlParams.toString();
-      window.history.replaceState({}, "", newUrl);
-    }
-
-    getBattles();
-  }).fail(() => {
-    getBattles();
-  });
 }
 
 function getBattles() {
-  $.getJSON("battles", {task: task}, data => {
-    battles = data;
-    showBattle();
-  });
+  fetch("battles?task=" + encodeURIComponent(task))
+      .then(resp => {
+        if (!resp.ok) throw new Error("Battles response not ok");
+        return resp.json();
+      })
+      .then(data => {
+        battles = data;
+        showBattle();
+      })
+      .catch(err => {
+        console.error("Error fetching battles:", err);
+      });
 }
 
 function setUiListeners() {
-  $task.change(() => changeTask());
+  taskSelect.addEventListener("change", () => changeTask());
 
-  $answerButtons.mouseup(e => {
-    $(e.currentTarget).blur();
-    $(e.currentTarget).addClass("no-hover");
+  answerButtons.forEach(btn => {
+    btn.addEventListener("mouseup", () => {
+      btn.blur();
+      btn.classList.add("no-hover");
+    });
+    btn.addEventListener("mousemove", () => btn.classList.remove("no-hover"));
+    btn.addEventListener("mousedown", () => btn.classList.remove("no-hover"));
   });
-  $answerButtons.on("mousemove mousedown", e => $(e.currentTarget).removeClass("no-hover"));
 
-  $voteLeft.click(() => vote("a"));
-  $tie.click(() => vote("t"));
-  $skip.click(() => vote("n"));
-  $voteRight.click(() => vote("b"));
+  voteLeft.addEventListener("click", () => vote("a"));
+  tie.addEventListener("click", () => vote("t"));
+  skip.addEventListener("click", () => vote("n"));
+  voteRight.addEventListener("click", () => vote("b"));
 
-  $("#cookie-settings-link").click(() => {
-    window.showCookieSettings();
-    return false;
-  });
+  const cookieSettingsLink = document.getElementById("cookie-settings-link");
+  if (cookieSettingsLink) {
+    cookieSettingsLink.addEventListener("click", e => {
+      e.preventDefault();
+      window.showCookieSettings();
+    });
+  }
 }
 
 function changeTask() {
-  window.location.href = "?task=" + encodeURIComponent($task.val());
+  window.location.href = "?task=" + encodeURIComponent(taskSelect.value);
 }
 
 function resetTurnstile() {
-  if (typeof turnstile !== 'undefined') {
+  if (typeof turnstile !== "undefined") {
     turnstile.reset();
   }
   turnstileToken = null;
 }
 
 function vote(voteOption) {
+  const toastFn = window.mdtoast || (window.$ && window.$.mdtoast);
   if (!turnstileToken) {
-    $.mdtoast("Please complete the verification challenge (CAPTCHA)", {duration: 3000});
+    if (toastFn) {
+      toastFn("Please complete the verification challenge (CAPTCHA)", {duration: 3000});
+    }
     return;
   }
 
-  $.post("vote", {
+  const payload = new URLSearchParams({
     token: battles[index].token,
     vote: voteOption,
-    is_offensive_a: $isOffensiveLeft.prop("checked"),
-    is_offensive_b: $isOffensiveRight.prop("checked"),
+    is_offensive_a: isOffensiveLeft.checked.toString(),
+    is_offensive_b: isOffensiveRight.checked.toString(),
     turnstile_token: turnstileToken,
-  }, () => resetTurnstile()).fail(() => {
-    $.mdtoast(translations[getLanguageFromTask()].error, {duration: 3000});
-    resetTurnstile();
   });
 
-  // There are potential race conditions in the following code,
-  // but we don't use locks or anything because it'd be complicated, the race conditions seem unlikely,
-  // and the consequences aren't severe.
-  // I can identify that at least the following code blocks should occur atomically:
-  // 1. From increasing the index to the if condition.
-  // 2. The previous one plus the `ignoreTokens` calculation if we enter inside the if condition
-  //    (so the whole code block should be atomic actually...).
-  // 3. The callback from calling /battles.
+  fetch("vote", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+    },
+    body: payload.toString(),
+  })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("Vote post failed");
+        }
+        resetTurnstile();
+      })
+      .catch(() => {
+        if (toastFn) {
+          toastFn(translations[getLanguageFromTask()].error, {duration: 3000});
+        }
+        resetTurnstile();
+      });
 
   index = (index + 1) % battles.length;
-
-  // console.log("Vote option: " + voteOption);
-  // console.log(`  Index: ${index}, nextReplaceIndex: ${nextReplaceIndex}`);
 
   const usedCount = (index - nextReplaceIndex + battles.length) % battles.length;
   const remainingCount = battles.length - usedCount;
 
-  // console.log(`  Used count: ${usedCount}, remaining count: ${remainingCount}, battles length: ${battles.length}`);
-  // console.log();
-
   if (remainingCount <= Math.floor(battles.length / 2)) {
-    // We ignore all battles in the buffer (both used and remaining ones), as opposed to just the remaining ones,
-    // which should be the logical thing to do.
-    // We do this because it may be the case that the used ones weren't processed as voted yet,
-    // especially for the battle that was just voted.
     const ignoredTokens = battles.map(battle => battle.token);
+    const params = new URLSearchParams();
+    params.set("task", task);
+    params.set("batch_size", usedCount.toString());
+    for (const tok of ignoredTokens) {
+      params.append("ignored_tokens[]", tok);
+    }
 
-    $.getJSON("battles", {task: task, batch_size: usedCount, ignored_tokens: ignoredTokens}, data => {
-      for (let i = 0; i < Math.min(data.length, usedCount); i++) {
-        battles[nextReplaceIndex] = data[i];
-        nextReplaceIndex = (nextReplaceIndex + 1) % battles.length;
-      }
-      console.log("Battles replaced. New battles length: " + battles.length);
-      console.log(`  Index: ${index}, nextReplaceIndex: ${nextReplaceIndex}`);
-      console.log();
-    });
+    fetch("battles?" + params.toString())
+        .then(resp => {
+          if (!resp.ok) throw new Error("Battles prefetch failed");
+          return resp.json();
+        })
+        .then(data => {
+          for (let i = 0; i < Math.min(data.length, usedCount); i++) {
+            battles[nextReplaceIndex] = data[i];
+            nextReplaceIndex = (nextReplaceIndex + 1) % battles.length;
+          }
+        })
+        .catch(err => {
+          console.error("Error prefetching battles:", err);
+        });
   }
 
   showBattle();
 
-  $.mdtoast(toastText(voteOption), {duration: 3000});
+  if (toastFn) {
+    toastFn(toastText(voteOption), {duration: 3000});
+  }
 
-  $isOffensiveLeft.prop("checked", false);
-  $isOffensiveRight.prop("checked", false);
+  isOffensiveLeft.checked = false;
+  isOffensiveRight.checked = false;
 
   if (isAProlificSession && voteOption !== "n") {
     prolificVoteCount++;
@@ -452,24 +768,28 @@ function getLanguageFromTask() {
 }
 
 function translateModal(lang) {
-  $("[data-i18n]").each(function () {
-    const key = $(this).data("i18n");
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
     const keys = key.split(".");
     let value = translations[lang];
     for (let i = 0; i < keys.length; i++) {
-      value = value[keys[i]];
+      value = value ? value[keys[i]] : undefined;
     }
-    $(this).text(value);
+    if (value !== undefined) {
+      el.textContent = value;
+    }
   });
 
-  $("[data-i18n-html]").each(function () {
-    const key = $(this).data("i18n-html");
+  document.querySelectorAll("[data-i18n-html]").forEach(el => {
+    const key = el.getAttribute("data-i18n-html");
     const keys = key.split(".");
     let value = translations[lang];
     for (let i = 0; i < keys.length; i++) {
-      value = value[keys[i]];
+      value = value ? value[keys[i]] : undefined;
     }
-    $(this).html(value);
+    if (value !== undefined) {
+      el.innerHTML = value;
+    }
   });
 }
 
@@ -490,17 +810,17 @@ function toastText(voteOption) {
 }
 
 function updateProlificVoteCount() {
-  // The same person may annotate multiple times.
-  // So we should only stop when they reach exactly the max (and not greater than the max).
-  // And we should keep a modulo counter until they reach the max.
   if (prolificVoteCount === PROLIFIC_MAX_BATTLES) {
-    $("#prolific-task").val(task);
-    $("#prolific-finished").modal("show");
+    const prolificTask = document.getElementById("prolific-task");
+    if (prolificTask) {
+      prolificTask.value = task;
+    }
+    showModal(document.getElementById("prolific-finished"));
   } else {
     prolificVoteCount %= PROLIFIC_MAX_BATTLES;
     const lang = getLanguageFromTask();
     const t = translations[lang];
-    $prolificVoteCount.text(`${t.progress}: ${prolificVoteCount}/${PROLIFIC_MAX_BATTLES}`);
+    prolificVoteCountEl.textContent = `${t.progress}: ${prolificVoteCount}/${PROLIFIC_MAX_BATTLES}`;
   }
 }
 
@@ -510,29 +830,46 @@ function setupProlificSessionIfNeeded() {
 
     translateModal(lang);
 
-    $prolificConsent.find("form").submit(e => {
-      localStorage.setItem(`consent-prolific-id-${prolificId}`, "done");
-      $prolificConsent.modal("hide");
-
-      $("#helpModal").modal("show");
-
-      e.preventDefault();
-      e.stopPropagation();
-    });
-
-    $task.prop("disabled", "disabled");
-
-    if (localStorage.getItem(`consent-prolific-id-${prolificId}`) !== "done") {
-      $("#prolific-id").val(prolificId);
-      $prolificConsent.modal("show");
-      $("#prolific-consent-continue").click(() => $.post("prolific-consent"));
+    const consentForm = prolificConsent.querySelector("form");
+    if (consentForm) {
+      consentForm.addEventListener("submit", e => {
+        localStorage.setItem(`consent-prolific-id-${prolificId}`, "done");
+        hideModal(prolificConsent);
+        showModal(document.getElementById("helpModal"));
+        e.preventDefault();
+        e.stopPropagation();
+      });
     }
 
-    $.getJSON("session-vote-count", count => {
-      prolificVoteCount = count;
-      updateProlificVoteCount();
-      $prolificVoteCount.css("display", "block");
-    });
+    taskSelect.disabled = true;
+
+    if (localStorage.getItem(`consent-prolific-id-${prolificId}`) !== "done") {
+      const prolificIdInput = document.getElementById("prolific-id");
+      if (prolificIdInput) {
+        prolificIdInput.value = prolificId;
+      }
+      showModal(prolificConsent);
+      const consentContinueBtn = document.getElementById("prolific-consent-continue");
+      if (consentContinueBtn) {
+        consentContinueBtn.addEventListener("click", () => {
+          fetch("prolific-consent", {method: "POST"});
+        });
+      }
+    }
+
+    fetch("session-vote-count")
+        .then(resp => {
+          if (!resp.ok) throw new Error("session-vote-count failed");
+          return resp.json();
+        })
+        .then(count => {
+          prolificVoteCount = count;
+          updateProlificVoteCount();
+          prolificVoteCountEl.style.display = "block";
+        })
+        .catch(err => {
+          console.error("Error fetching session vote count:", err);
+        });
   }
 }
 
@@ -541,7 +878,7 @@ function setupProlificSessionIfNeeded() {
  * Handles cookie consent banner display and user preferences.
  */
 (() => {
-  'use strict';
+  "use strict";
 
   const CONSENT_KEY = "cookie-consent-v1";
   const GA_TRACKING_ID = "G-40699CQRM6";
@@ -566,7 +903,10 @@ function setupProlificSessionIfNeeded() {
    */
   function saveConsentPreference(analytics) {
     try {
-      localStorage.setItem(CONSENT_KEY, JSON.stringify({essential: true, analytics: analytics, timestamp: Date.now()}));
+      localStorage.setItem(
+          CONSENT_KEY,
+          JSON.stringify({essential: true, analytics: analytics, timestamp: Date.now()})
+      );
     } catch (e) {
       console.error("Error saving consent preference:", e);
     }
@@ -579,7 +919,7 @@ function setupProlificSessionIfNeeded() {
   function applyConsent(preferences) {
     window["ga-disable-" + GA_TRACKING_ID] = !preferences.analytics;
     if (typeof gtag === "function") {
-      gtag("consent", "update", {"analytics_storage": preferences.analytics ? "granted" : "denied"});
+      gtag("consent", "update", {analytics_storage: preferences.analytics ? "granted" : "denied"});
     }
   }
 
@@ -695,7 +1035,7 @@ function setupProlificSessionIfNeeded() {
     if (consent) {
       applyConsent(consent);
     } else {
-      setTimeout(showBanner, 500);  // First visit - show banner after a slight delay
+      setTimeout(showBanner, 500); // First visit - show banner after a slight delay
     }
   }
 

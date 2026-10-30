@@ -81,9 +81,12 @@ async def test_voting_page_flow(browser: Browser, live_server_url: str) -> None:
 
     await page.goto(live_server_url)
     assert await page.title() == "Which Computer Program Output is Funnier?"
+    assert await page.evaluate("() => typeof window.jQuery === 'undefined'")
 
     # Wait for initial battles to load and populate #output-a-text
-    await page.wait_for_function("() => battles.length > 0 && $('#output-a-text').text().trim().length > 0")
+    await page.wait_for_function(
+        "() => battles.length > 0 && document.querySelector('#output-a-text')?.textContent.trim().length > 0"
+    )
 
     # Voting without Turnstile token shows CAPTCHA toast and does not post to /vote
     await page.click("#vote-left")
@@ -214,7 +217,7 @@ async def test_voting_page_circular_buffer_wraparound(browser: Browser, live_ser
     await page.route("**/vote", lambda route: route.fulfill(status=204, body=""))
 
     await page.goto(live_server_url)
-    await page.wait_for_function("() => $('#output-a-text').text().includes('InitA_0')")
+    await page.wait_for_function("() => document.querySelector('#output-a-text')?.textContent.includes('InitA_0')")
 
     # Vote 4 times to wrap index around from 0 -> 1 -> 2 -> 3 -> 0
     for i in range(4):
@@ -224,7 +227,7 @@ async def test_voting_page_circular_buffer_wraparound(browser: Browser, live_ser
         await page.wait_for_function(f"() => index === {(i + 1) % 4}")
 
     # At index 0 after 4 votes, battle 0 should have been replaced by ReplA_2_0
-    await page.wait_for_function("() => $('#output-a-text').text().includes('ReplA_2_0')")
+    await page.wait_for_function("() => document.querySelector('#output-a-text')?.textContent.includes('ReplA_2_0')")
     assert await page.evaluate("nextReplaceIndex") == 0
 
     await context.close()
@@ -238,15 +241,18 @@ async def test_voting_page_vote_post_failure(browser: Browser, live_server_url: 
     await page.route("**/vote", lambda route: route.fulfill(status=500, body="Internal Server Error"))
 
     await page.goto(live_server_url)
-    await page.wait_for_function("() => battles.length > 0 && $('#output-a-text').text().trim().length > 0")
+    await page.wait_for_function(
+        "() => battles.length > 0 && document.querySelector('#output-a-text')?.textContent.trim().length > 0"
+    )
 
     await page.evaluate("onTurnstileSuccess('tok-fail')")
     async with page.expect_response(lambda resp: resp.url.endswith("/vote") and resp.status == 500):
         await page.click("#vote-left")
 
-    # Wait for the .fail() callback to show the error toast and reset turnstileToken
+    # Wait for the post failure to show the error toast and reset turnstileToken
     await page.wait_for_function(
-        "() => $('.md-toast').text().includes('Sorry, an error occurred!') && turnstileToken === null"
+        "() => document.querySelector('.md-toast')?.textContent.includes('Sorry, an error occurred!')"
+        " && turnstileToken === null"
     )
     await context.close()
 
@@ -260,12 +266,12 @@ async def test_voting_page_help_modal(browser: Browser, live_server_url: str) ->
     await page.wait_for_function("() => battles.length > 0")
 
     await page.click("#help-link")
-    await page.wait_for_function("() => $('#helpModal').hasClass('in')")
+    await page.wait_for_function("() => document.querySelector('#helpModal')?.classList.contains('in')")
     modal_text = await page.locator("#helpModal").text_content()
     assert modal_text is not None and "Frequently Asked Questions (FAQ)" in modal_text
 
     await page.click("#helpModal .modal-footer button[data-dismiss='modal']")
-    await page.wait_for_function("() => !$('#helpModal').hasClass('in')")
+    await page.wait_for_function("() => !document.querySelector('#helpModal')?.classList.contains('in')")
     await context.close()
 
 
@@ -321,7 +327,9 @@ async def test_prolific_session_flow(browser: Browser, live_server_url: str) -> 
     assert await page.locator("[data-i18n='consent.title']").text_content() == "Information and Consent Form"
 
     # Wait for session-vote-count to initialize prolificVoteCount
-    await page.wait_for_function("() => $('#prolific-vote-count').text().includes('Progress: 0/100')")
+    await page.wait_for_function(
+        "() => document.querySelector('#prolific-vote-count')?.textContent.includes('Progress: 0/100')"
+    )
 
     # Submit consent form and dismiss help modal
     await page.evaluate(
@@ -337,7 +345,7 @@ async def test_prolific_session_flow(browser: Browser, live_server_url: str) -> 
 
     # Cast a non-skip vote at count 99 to trigger the finished modal at 100
     await page.evaluate("prolificVoteCount = 99; onTurnstileSuccess('tok'); vote('a');")
-    await page.wait_for_function("() => $('#prolific-finished').hasClass('in')")
+    await page.wait_for_function("() => document.querySelector('#prolific-finished')?.classList.contains('in')")
 
     # Test Spanish and Chinese modal translations
     await page.evaluate("translateModal('es')")
@@ -362,10 +370,12 @@ async def test_prolific_returning_user_and_modulo_count(browser: Browser, live_s
     )
 
     await page.goto(f"{live_server_url}/?PROLIFIC_PID=retuser&SESSION_ID=sess123")
-    await page.wait_for_function("() => $('#prolific-vote-count').text().includes('Progress: 5/100')")
+    await page.wait_for_function(
+        "() => document.querySelector('#prolific-vote-count')?.textContent.includes('Progress: 5/100')"
+    )
 
     # Consent modal should not be shown for returning user
-    assert await page.evaluate("$('#prolific-consent').hasClass('in')") is False
+    assert await page.evaluate("() => document.querySelector('#prolific-consent')?.classList.contains('in')") is False
     await context.close()
 
 
@@ -546,5 +556,19 @@ async def test_stats_page(
     assert "Cantidad de sesiones: 1" in content
     assert await page.locator("#chart-histogram").count() == 1
     assert await page.locator("#chart-votes-per-category").count() == 1
+
+    await context.close()
+
+
+async def test_no_jquery_loaded(browser: Browser, live_server_url: str) -> None:
+    context = await browser.new_context()
+    page = await context.new_page()
+    await _stub_external_trackers(page)
+
+    await page.goto(live_server_url)
+    assert await page.evaluate("() => typeof window.jQuery === 'undefined'")
+    assert await page.evaluate("() => typeof window.mdtoast === 'function'")
+    # Also verify that window.$ exists for backward compatibility
+    assert await page.evaluate("() => typeof window.$ === 'function'")
 
     await context.close()
