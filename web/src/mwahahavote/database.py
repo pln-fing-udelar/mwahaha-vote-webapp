@@ -81,7 +81,11 @@ class Prompt:
             return "zh"
         elif self.id.startswith("en_"):
             return "en"
-        task_cfg = ACTIVE_COMPETITION.task_by_id.get(self.task)
+        try:
+            task = self.task
+        except ValueError:
+            return "en"
+        task_cfg = ACTIVE_COMPETITION.task_by_id.get(task)
         if task_cfg:
             return task_cfg.language
         return "en"
@@ -506,7 +510,7 @@ async def get_votes_for_battles_with_the_same_text(
             battle,
             session_id="<placeholder>",
             vote="t",
-            date=datetime.datetime(2025, 1, 1),
+            date=datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC),
             is_offensive_a=False,
             is_offensive_b=False,
         )
@@ -770,7 +774,7 @@ async def prolific_finish(engine: sqlalchemy.ext.asyncio.AsyncEngine, session_id
     async with engine.begin() as connection:
         await connection.execute(
             STATEMENT_PROLIFIC_FINISH,
-            {"session_id": session_id, "finish_date": datetime.datetime.now(), "comments": comments},
+            {"session_id": session_id, "finish_date": datetime.datetime.now(datetime.UTC), "comments": comments},
         )
 
 

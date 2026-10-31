@@ -246,6 +246,9 @@ async def test_routes_end_to_end(
         )
         assert resp_battles.status_code == 200
         assert resp_battles.headers["cache-control"] == "max-age=0, no-cache"
+        assert resp_battles.headers["x-content-type-options"] == "nosniff"
+        assert resp_battles.headers["x-frame-options"] == "SAMEORIGIN"
+        assert resp_battles.headers["referrer-policy"] == "strict-origin-when-cross-origin"
         assert "id=" in resp_battles.headers["set-cookie"]
         battles_data = resp_battles.json()
         assert len(battles_data) == 2

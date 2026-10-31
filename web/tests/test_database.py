@@ -116,6 +116,24 @@ def test_prompt_properties_and_verbalized() -> None:
     with pytest.raises(ValueError, match="The prompt is not properly defined"):
         _ = p_corrupted.verbalized
 
+    # Non-standard prompt IDs fall back to task language or "en"
+    p_custom = Prompt(id="custom_1", headline="Custom headline")
+    assert p_custom.language == "en"
+
+    with patch.object(Prompt, "task", new_callable=lambda: property(lambda _self: "a-es")):
+        p_mock_task = Prompt(id="custom_2", headline="Custom headline")
+        assert p_mock_task.language == "es"
+
+    # Unknown language in verbalized raises ValueError
+    with patch.object(Prompt, "language", new_callable=lambda: property(lambda _self: "fr")):
+        p_fr_words = Prompt(id="fr_1", word1="chat", word2="chien")
+        with pytest.raises(ValueError, match="Unknown language: fr"):
+            _ = p_fr_words.verbalized
+
+        p_fr_hl = Prompt(id="fr_2", headline="Un titre")
+        with pytest.raises(ValueError, match="Unknown language: fr"):
+            _ = p_fr_hl.verbalized
+
 
 def test_prompt_equality_and_hash() -> None:
     p1 = Prompt(id="en_1", headline="Headline A")

@@ -7,7 +7,7 @@ lazy import pickle
 
 lazy import pandas as pd
 
-from mwahahavote.config import ACTIVE_COMPETITION, COMPETITION_CHOICES, CompetitionConfig, Task, get_competition
+from mwahahavote.config import ACTIVE_COMPETITION, COMPETITION_CHOICES, CompetitionConfig, get_competition
 lazy import mwahahavote.database
 
 PHASE_ID = ACTIVE_COMPETITION.phase_id
@@ -19,7 +19,6 @@ async def async_main(competition: CompetitionConfig | None = None) -> None:
 
     async with mwahahavote.database.create_engine() as engine:
         for task in sorted(competition.task_choices):
-            task: Task
             # Note we aren't excluding any session ID here,
             # but it's fine because these vote counts are only used when a system doesn't have a score yet.
             system_id_to_vote_count = await mwahahavote.database.get_votes_per_system(

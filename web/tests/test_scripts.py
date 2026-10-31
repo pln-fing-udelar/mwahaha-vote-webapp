@@ -83,6 +83,16 @@ async def test_prepare_data_for_scoring_main(
     assert len(records) >= 2
     assert {r["winner"] for r in records}.issuperset({"model_a", "model_b"})
 
+    # Test exclusion of session IDs (excluding ties removes synthetic tie votes as well)
+    with patch("mwahahavote.database.create_engine", fake_create_engine):
+        await prepare_data_for_scoring.async_main(
+            only_prolific_sessions=False,
+            include_ties=False,
+            excluded_session_ids=["prolific-id-1-1", "prolific-id-2-1", "regular-sess"],
+        )
+    records_excluded = json.loads(output_file.read_text(encoding="utf-8"))
+    assert len(records_excluded) == 0
+
 
 async def test_postprocess_scores(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
@@ -164,6 +174,18 @@ async def test_ingest_prompts(
     async with db_engine.connect() as conn:
         count = (await conn.execute(sqlalchemy.sql.text("SELECT COUNT(*) FROM prompts"))).one()[0]
         assert count == 2
+
+    # Empty prompts dir raises ValueError
+    empty_prompts = tmp_path / "empty_prompts"
+    empty_prompts.mkdir()
+    with pytest.raises(ValueError, match=r"No \.tsv prompt files found"):
+        ingest_prompts.read_prompt_files(str(empty_prompts))
+
+    # _extract_task_from_path handles various path formats
+    assert ingest_prompts._extract_task_from_path("task-a-en.tsv") == "a-en"
+    assert ingest_prompts._extract_task_from_path("a-en.tsv") == "a-en"
+    assert ingest_prompts._extract_task_from_path("prompts_a-es.tsv") == "a-es"
+    assert ingest_prompts._extract_task_from_path("unrelated.tsv") == "a-en"
 
 
 async def test_ingest_submissions(

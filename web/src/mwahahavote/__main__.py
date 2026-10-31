@@ -42,7 +42,7 @@ REQUEST_BATTLE_BATCH_SIZE = 4
 SESSION_ID_MAX_AGE = int(timedelta(weeks=1000).total_seconds())
 
 sentry_sdk.init(
-    send_default_pii=True,
+    data_collection={"user_info": True},
     traces_sample_rate=1.0,
     integrations=[LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)],
 )
@@ -88,6 +88,9 @@ class CacheControlMiddleware:
                 headers = MutableHeaders(scope=message)
                 headers.append("Cache-Control", "max-age=0, no-cache")
                 headers.append("Set-Cookie", f"id={session_id}; Max-Age={SESSION_ID_MAX_AGE}; Path=/; SameSite=lax")
+                headers.append("X-Content-Type-Options", "nosniff")
+                headers.append("X-Frame-Options", "SAMEORIGIN")
+                headers.append("Referrer-Policy", "strict-origin-when-cross-origin")
             await send(message)
 
         await self.app(scope, receive, send_with_headers)
@@ -248,8 +251,8 @@ def _simplify_battle_object(battle: Battle) -> SimplifiedBattleDict:
     """Removes redundant fields and simplifies the battle representation for JSON serialization."""
     return {
         "token": _encrypt_as_battle_token(battle.prompt.id, battle.output_a.system.id, battle.output_b.system.id),
-        "prompt": _perturb_text(battle.prompt.verbalized) if battle.prompt.verbalized else battle.prompt.verbalized,
-        "prompt_image_url": _perturb_url(battle.prompt.url) if battle.prompt.url else battle.prompt.url,
+        "prompt": _perturb_text(battle.prompt.verbalized) if battle.prompt.verbalized else None,
+        "prompt_image_url": _perturb_url(battle.prompt.url) if battle.prompt.url else None,
         "output_a": _perturb_text(battle.output_a.text),
         "output_b": _perturb_text(battle.output_b.text),
     }

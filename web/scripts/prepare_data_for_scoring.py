@@ -51,23 +51,26 @@ async def async_main(
     only_prolific_sessions: bool = False,
     include_ties: bool = True,
     competition: CompetitionConfig | None = None,
+    excluded_session_ids: list[str] | set[str] | None = None,
 ) -> None:
     if competition is None:
         competition = ACTIVE_COMPETITION
 
+    base_excluded = set(excluded_session_ids) if excluded_session_ids is not None else EXCLUDED_SESSION_IDS
+
     async with mwahahavote.database.create_engine() as engine:
         for task in sorted(competition.task_choices):
-            excluded_session_ids = (
-                [
+            task_excluded = (
+                {
                     session_id
                     async for session_id in mwahahavote.database.get_session_ids(engine, competition.phase_id, task)
                     if not session_id.startswith("prolific-id-")
-                ]
+                }
                 if only_prolific_sessions
-                else []
-            )
+                else set()
+            ) | base_excluded
 
-            excluded_session_ids += EXCLUDED_SESSION_IDS
+            excluded_session_ids = list(task_excluded)
 
             system_id_to_vote_count = await mwahahavote.database.get_votes_per_system(
                 engine, competition.phase_id, task, excluded_session_ids
