@@ -1,4 +1,6 @@
 import datetime
+import io
+import zipfile
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -250,3 +252,67 @@ async def test_ingest_submission_and_list_systems(
     )
     with pytest.raises(ValueError, match="do not match the reference IDs"):
         await submission.ingest_submission(db_engine, phase_id=1, submission=sub_bad_ids, system_exists_ok=True)
+
+
+def test_print_stats_empty(capsys: pytest.CaptureFixture[str]) -> None:
+    submission.print_stats([])
+    out = capsys.readouterr().out
+    assert "0 submissions." in out
+
+
+def test_read_submission_file_missing_id(tmp_path: Path) -> None:
+    bad_file = tmp_path / "no_id.tsv"
+    bad_file.write_text("text\nsome joke\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="missing the required 'id' column"):
+        submission._read_submission_file(str(bad_file))
+
+
+def test_safe_extract_zip_path_traversal(tmp_path: Path) -> None:
+    zip_bytes = io.BytesIO()
+    with zipfile.ZipFile(zip_bytes, "w") as zf:
+        zf.writestr("../../etc/passwd", "root:x:0:0")
+    zip_bytes.seek(0)
+    with zipfile.ZipFile(zip_bytes) as zf:
+        with pytest.raises(ValueError, match="Path traversal detected"):
+            submission._safe_extract_zip(zf, str(tmp_path / "dest"))
+
+
+async def test_ingest_submission_zip_and_nested_resolution(
+    db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    tmp_path: Path,
+) -> None:
+    async with db_engine.begin() as conn:
+        await conn.execute(
+            sqlalchemy.sql.text(
+                "INSERT INTO prompts (prompt_id, word1, word2, headline, url, prompt, task, phase_id) VALUES"
+                " ('p_sub_1', 'a', 'b', NULL, NULL, NULL, 't3', 1)"
+            )
+        )
+
+    nested_zip = tmp_path / "nested_sub.zip"
+    with zipfile.ZipFile(nested_zip, "w") as zf:
+        zf.writestr("my_archive/task-t3.tsv", "id\ttext\np_sub_1\tNested zip joke\n")
+
+    dt = datetime.datetime(2026, 1, 15, tzinfo=datetime.UTC)
+    sub = Submission(id=50, user="zip_system", date=dt, tasks=["t3"], tests_passed=[True], path_or_url=str(nested_zip))
+
+    affected = await submission.ingest_submission(db_engine, phase_id=1, submission=sub)
+    assert affected == 1
+
+    async with db_engine.connect() as conn:
+        row = (
+            await conn.execute(
+                sqlalchemy.sql.text("SELECT text FROM outputs WHERE system_id = 'zip_system' AND prompt_id = 'p_sub_1'")
+            )
+        ).scalar()
+        assert row == "Nested zip joke"
+
+    empty_zip = tmp_path / "empty_sub.zip"
+    with zipfile.ZipFile(empty_zip, "w") as zf:
+        zf.writestr("unrelated.tsv", "id\ttext\n")
+
+    sub_empty_zip = Submission(
+        id=51, user="empty_zip_sys", date=dt, tasks=["t3"], tests_passed=[True], path_or_url=str(empty_zip)
+    )
+    with pytest.raises(ValueError, match="corresponds to the task 't3' doesn't exist"):
+        await submission.ingest_submission(db_engine, phase_id=1, submission=sub_empty_zip)

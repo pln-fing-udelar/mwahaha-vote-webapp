@@ -13,14 +13,21 @@ lazy import sqlalchemy.ext.asyncio
 lazy from pandas.io.sql import SQLTable
 
 lazy from ingestion.codabench import Submission
-lazy from mwahahavote.config import ACTIVE_COMPETITION
+lazy from mwahahavote.config import ACTIVE_COMPETITION, CompetitionConfig
 
 
-def print_stats(submissions: list[Submission]) -> None:
+def print_stats(submissions: list[Submission], competition: CompetitionConfig | None = None) -> None:
     """Prints statistics about the submissions."""
+    if competition is None:
+        competition = ACTIVE_COMPETITION
+
     print()
     print("Submission stats:")
     print()
+
+    if not submissions:
+        print("  0 submissions.")
+        return
 
     print(f"{len(submissions):>3} submissions.")
 
@@ -46,7 +53,7 @@ def print_stats(submissions: list[Submission]) -> None:
     )
     print()
 
-    for task in sorted(ACTIVE_COMPETITION.task_choices):
+    for task in sorted(competition.task_choices):
         valid_task_submissions = sum(
             1
             for submission in non_deleted_submissions_that_passed_a_test
@@ -89,9 +96,22 @@ def _mysql_insert_on_conflict_update(
 
 
 def _read_submission_file(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path, delimiter="\t", index_col="id")
-    df.index.rename("prompt_id", inplace=True)
+    df = pd.read_csv(path, delimiter="\t", encoding="utf-8-sig")
+    df.columns = df.columns.str.strip()
+    if "id" not in df.columns:
+        raise ValueError(f"Submission file '{path}' is missing the required 'id' column.")
+    df = df.set_index("id")
+    df.index.name = "prompt_id"
     return df
+
+
+def _safe_extract_zip(zip_file: zipfile.ZipFile, extract_dir: str) -> None:
+    target_dir = os.path.abspath(extract_dir)
+    for member in zip_file.infolist():
+        dest_path = os.path.abspath(os.path.join(target_dir, member.filename))
+        if not (dest_path == target_dir or dest_path.startswith(target_dir + os.sep)):
+            raise ValueError(f"Path traversal detected in zip archive member: {member.filename}")
+    zip_file.extractall(target_dir)
 
 
 def _extract_submission_archive(path_or_url: str, extract_dir: str) -> bool:
@@ -107,7 +127,7 @@ def _extract_submission_archive(path_or_url: str, extract_dir: str) -> bool:
 
     if is_zip:
         with fsspec.open(path_or_url, "rb") as file, zipfile.ZipFile(file) as zip_file:
-            zip_file.extractall(extract_dir)
+            _safe_extract_zip(zip_file, extract_dir)
 
     return is_zip
 
@@ -119,6 +139,15 @@ def _resolve_task_file_path(task: str, path_or_url: str, extract_dir: str, is_zi
             alt_path = os.path.join(extract_dir, f"{task}.tsv")
             if os.path.exists(alt_path):
                 path = alt_path
+            else:
+                # Search nested subdirectories in case the participant zipped a folder
+                for root, _, files in os.walk(extract_dir):
+                    if f"task-{task}.tsv" in files:
+                        path = os.path.join(root, f"task-{task}.tsv")
+                        break
+                    if f"{task}.tsv" in files:
+                        path = os.path.join(root, f"{task}.tsv")
+                        break
     else:
         path = path_or_url
 

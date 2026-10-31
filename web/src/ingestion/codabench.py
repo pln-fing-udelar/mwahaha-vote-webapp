@@ -9,7 +9,7 @@ lazy from collections.abc import Iterable
 from pydantic import BaseModel, TypeAdapter
 lazy import httpx2
 
-from mwahahavote.config import ACTIVE_COMPETITION, Task, is_only_latest_submission_per_user
+from mwahahavote.config import ACTIVE_COMPETITION, CompetitionConfig, Task, is_only_latest_submission_per_user
 
 # Reference API (old?): https://qtim-challenges.southcentralus.cloudapp.azure.com/api/docs/
 
@@ -59,12 +59,14 @@ def is_session_id_valid(session_id: str) -> bool:
     return "user_dropdown" in response.text  # If it's logged in fine, the user dropdown will appear.
 
 
-def task_id_to_task(task_id: int) -> Task:
+def task_id_to_task(task_id: int, competition: CompetitionConfig | None = None) -> Task:
     """Converts a CodaBench task ID to our internal string representation."""
-    if task_id in ACTIVE_COMPETITION.codabench_task_map:
-        return ACTIVE_COMPETITION.codabench_task_map[task_id]
-    if not ACTIVE_COMPETITION.codabench_task_map:
-        return ACTIVE_COMPETITION.default_task
+    if competition is None:
+        competition = ACTIVE_COMPETITION
+    if task_id in competition.codabench_task_map:
+        return competition.codabench_task_map[task_id]
+    if not competition.codabench_task_map:
+        return competition.default_task
     raise ValueError(f"Unknown task ID: {task_id}")
 
 
@@ -146,8 +148,15 @@ def list_submissions(
     competition_id: int | None = None,
     phase_id: int | None = None,
     session_id: str | None = None,
+    competition: CompetitionConfig | None = None,
 ) -> Iterable[Submission]:
     """List all "parent" or single-task submissions for a competition."""
+    if competition is None:
+        competition = ACTIVE_COMPETITION
+
+    if phase_id is None and competition_id is None:
+        phase_id = competition.phase_id
+        competition_id = competition.codabench_competition_id
 
     raw_submissions = _SUBMISSION_LIST_ADAPTER.validate_python(
         _list_submission_dicts(competition_id=competition_id, phase_id=phase_id, session_id=session_id)
@@ -175,7 +184,7 @@ def list_submissions(
             else:  # If it's not a parent submission.
                 # If it's a single-task submission, we need to check that it passed the submission test.
                 assert item.task is not None, "Single-task submission must have a task."
-                task = task_id_to_task(item.task.id)
+                task = task_id_to_task(item.task.id, competition=competition)
                 # For some reason, the "scores" field could be empty:
                 test_passed = bool(item.scores and item.scores[0].score)
                 parentless_submissions[item.id] = Submission(
@@ -191,7 +200,7 @@ def list_submissions(
         if parent_submission_id := item.parent:
             parent_submission = parentless_submissions[parent_submission_id]
             assert item.task is not None, "Child submission must have a task."
-            parent_submission.tasks.append(task_id_to_task(item.task.id))
+            parent_submission.tasks.append(task_id_to_task(item.task.id, competition=competition))
             # For some reason, the "scores" field could be empty:
             parent_submission.tests_passed.append(bool(item.scores and item.scores[0].score))
 

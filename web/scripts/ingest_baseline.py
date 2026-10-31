@@ -20,7 +20,7 @@ async def async_main(competition: CompetitionConfig | None = None) -> None:
             Submission(
                 user="baseline",
                 id=1,
-                date=datetime.datetime.now(),
+                date=datetime.datetime.now(datetime.UTC),
                 tasks=list(competition.task_choices),
                 tests_passed=[True] * len(competition.task_choices),
                 path_or_url="baselines/baseline.zip",

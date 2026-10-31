@@ -10,7 +10,6 @@ lazy import dataclasses
 lazy import datetime
 lazy import logging
 lazy import os
-lazy import tempfile
 lazy import zipfile
 lazy from collections.abc import Iterator
 
@@ -33,16 +32,10 @@ lazy from mwahahavote.database import Task
 def available_tasks_in_file(path: str, competition: CompetitionConfig | None = None) -> Iterator[Task]:
     if competition is None:
         competition = ACTIVE_COMPETITION
-    with tempfile.TemporaryDirectory() as dir_, zipfile.ZipFile(path) as zip_file:
-        zip_file.extractall(dir_)
-
+    with zipfile.ZipFile(path) as zip_file:
+        basenames = {os.path.basename(name) for name in zip_file.namelist()}
         for task in sorted(competition.task_choices):
-            task: Task
-            task_file_path = os.path.join(dir_, f"task-{task}.tsv")
-            alt_task_file_path = os.path.join(dir_, f"{task}.tsv")
-            if (os.path.exists(task_file_path) and os.path.isfile(task_file_path)) or (
-                os.path.exists(alt_task_file_path) and os.path.isfile(alt_task_file_path)
-            ):
+            if f"task-{task}.tsv" in basenames or f"{task}.tsv" in basenames:
                 yield task
 
 
@@ -51,11 +44,15 @@ def _collect_codabench_submissions(competition: CompetitionConfig | None = None)
         competition = ACTIVE_COMPETITION
     print("Obtaining the list of all CodaBench submissions so far… ", end="")
     all_submissions = sorted(
-        list_submissions(competition_id=competition.codabench_competition_id, phase_id=competition.phase_id)
+        list_submissions(
+            competition_id=competition.codabench_competition_id,
+            phase_id=competition.phase_id,
+            competition=competition,
+        )
     )
     print("✅")
 
-    print_stats(all_submissions)
+    print_stats(all_submissions, competition=competition)
 
     return [
         dataclasses.replace(
@@ -165,7 +162,7 @@ def _print_ingestion_results(
         print()
 
     print("Final stats after ingestion:")
-    print_stats(submissions_to_ingest)
+    print_stats(submissions_to_ingest, competition=competition)
 
     print(
         pd.DataFrame(

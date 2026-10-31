@@ -29,8 +29,8 @@ def _extract_task_from_path(path: str, competition: CompetitionConfig | None = N
 def read_prompt_file(path: str, competition: CompetitionConfig | None = None) -> pd.DataFrame:
     if competition is None:
         competition = ACTIVE_COMPETITION
-    df = pd.read_csv(path, delimiter="\t", quoting=csv.QUOTE_NONE, index_col="id", na_values="-")
-    df.index.rename("prompt_id", inplace=True)
+    df = pd.read_csv(path, delimiter="\t", quoting=csv.QUOTE_NONE, index_col="id", na_values="-", encoding="utf-8-sig")
+    df.index.name = "prompt_id"
 
     df["task"] = _extract_task_from_path(path, competition)
     df["phase_id"] = competition.phase_id
@@ -41,11 +41,10 @@ def read_prompt_file(path: str, competition: CompetitionConfig | None = None) ->
 def read_prompt_files(dir_: str, competition: CompetitionConfig | None = None) -> pd.DataFrame:
     if competition is None:
         competition = ACTIVE_COMPETITION
-    return pd.concat(
-        read_prompt_file(os.path.join(dir_, filename), competition)
-        for filename in sorted(os.listdir(dir_))
-        if filename.endswith(".tsv")
-    )
+    tsv_files = [filename for filename in sorted(os.listdir(dir_)) if filename.endswith(".tsv")]
+    if not tsv_files:
+        raise ValueError(f"No .tsv prompt files found in '{dir_}'.")
+    return pd.concat(read_prompt_file(os.path.join(dir_, filename), competition) for filename in tsv_files)
 
 
 async def async_main(competition: CompetitionConfig | None = None) -> None:

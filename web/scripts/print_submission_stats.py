@@ -23,11 +23,12 @@ def main() -> None:
         list_submissions(
             competition_id=competition.codabench_competition_id,
             phase_id=competition.phase_id,
+            competition=competition,
         )
     )
     print("✅")
 
-    print_stats(submissions)
+    print_stats(submissions, competition=competition)
 
     print()
     print("Submissions:")
