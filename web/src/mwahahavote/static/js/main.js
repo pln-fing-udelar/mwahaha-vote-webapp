@@ -196,12 +196,15 @@ const translations = {
 };
 
 // Vanilla JS Modal Management
+let previouslyFocusedElement = null;
+
 function showModal(modalEl) {
   if (typeof modalEl === "string") {
     modalEl = document.querySelector(modalEl);
   }
   if (!modalEl || modalEl.classList.contains("in")) return;
 
+  previouslyFocusedElement = document.activeElement;
   document.body.classList.add("modal-open");
 
   let backdrop = document.querySelector(".modal-backdrop");
@@ -218,6 +221,14 @@ function showModal(modalEl) {
   void modalEl.offsetHeight;
   modalEl.classList.add("in");
   modalEl.setAttribute("aria-hidden", "false");
+  modalEl.setAttribute("aria-modal", "true");
+
+  const focusable = modalEl.querySelector("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
+  if (focusable && typeof focusable.focus === "function") {
+    focusable.focus();
+  } else if (typeof modalEl.focus === "function") {
+    modalEl.focus();
+  }
 }
 
 function hideModal(modalEl) {
@@ -227,6 +238,7 @@ function hideModal(modalEl) {
   if (!modalEl) return;
 
   modalEl.classList.remove("in");
+  modalEl.removeAttribute("aria-modal");
 
   const backdrop = document.querySelector(".modal-backdrop");
   if (backdrop) {
@@ -242,6 +254,10 @@ function hideModal(modalEl) {
       document.body.classList.remove("modal-open");
       if (backdrop && backdrop.parentNode) {
         backdrop.parentNode.removeChild(backdrop);
+      }
+      if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === "function") {
+        previouslyFocusedElement.focus();
+        previouslyFocusedElement = null;
       }
     }
   }, 150);
@@ -476,7 +492,19 @@ function setupElements() {
   prolificVoteCountEl = document.getElementById("prolific-vote-count");
 }
 
+function escapeHtml(text) {
+  if (text == null) return "";
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+window.escapeHtml = escapeHtml;
+
 function fadeTransition(element, updateFn, duration = 100) {
+  if (!element) return;
   element.style.transition = `opacity ${duration}ms ease-in-out`;
   element.style.opacity = "0";
   setTimeout(() => {
@@ -515,10 +543,10 @@ function showBattle() {
       promptText.innerHTML = imageHtml + emoji.replace_unified(battles[index].prompt || "").replace(/\n/mg, "<br/>");
     });
     fadeTransition(outputAText, () => {
-      outputAText.innerHTML = emoji.replace_unified(battles[index].output_a.replace(/\n/mg, "<br/>"));
+      outputAText.innerHTML = emoji.replace_unified(escapeHtml(battles[index].output_a).replace(/\n/mg, "<br/>"));
     });
     fadeTransition(outputBText, () => {
-      outputBText.innerHTML = emoji.replace_unified(battles[index].output_b.replace(/\n/mg, "<br/>"));
+      outputBText.innerHTML = emoji.replace_unified(escapeHtml(battles[index].output_b).replace(/\n/mg, "<br/>"));
     });
   }
 }
@@ -652,8 +680,13 @@ function setUiListeners() {
       btn.blur();
       btn.classList.add("no-hover");
     });
+    btn.addEventListener("touchend", () => {
+      btn.blur();
+      btn.classList.add("no-hover");
+    });
     btn.addEventListener("mousemove", () => btn.classList.remove("no-hover"));
     btn.addEventListener("mousedown", () => btn.classList.remove("no-hover"));
+    btn.addEventListener("touchstart", () => btn.classList.remove("no-hover"));
   });
 
   voteLeft.addEventListener("click", () => vote("a"));

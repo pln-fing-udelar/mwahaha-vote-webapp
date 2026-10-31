@@ -535,6 +535,33 @@ async def test_leaderboard_empty_404_and_zero_ci_range(browser: Browser, live_se
     body_html = await page.locator("#leaderboard-body").inner_html()
     assert "NaN" not in body_html
 
+    # Test XSS escaping for system names in leaderboard
+    xss_scores = [
+        {
+            "system": "<b id='xss-target'>injected</b>",
+            "rating": 1000.0,
+            "variance": 0.0,
+            "rating_q975": 1000.0,
+            "rating_q025": 1000.0,
+            "num_battles": 20,
+            "final_ranking": 1,
+        }
+    ]
+    await page.unroute("**/scores/a-en.json")
+    await page.route(
+        "**/scores/a-en.json",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(xss_scores),
+        ),
+    )
+    await page.evaluate("loadInitialData()")
+    await page.wait_for_selector("text=[1000, 1000]")
+    assert await page.locator("#xss-target").count() == 0
+    body_text = await page.locator("#leaderboard-body").text_content()
+    assert "<b id='xss-target'>injected</b>" in (body_text or "")
+
     await context.close()
 
 
@@ -570,5 +597,8 @@ async def test_no_jquery_loaded(browser: Browser, live_server_url: str) -> None:
     assert await page.evaluate("() => typeof window.mdtoast === 'function'")
     # Also verify that window.$ exists for backward compatibility
     assert await page.evaluate("() => typeof window.$ === 'function'")
+    assert await page.evaluate(
+        "() => window.escapeHtml('<script>alert(1)</script>') === '&lt;script&gt;alert(1)&lt;/script&gt;'"
+    )
 
     await context.close()
