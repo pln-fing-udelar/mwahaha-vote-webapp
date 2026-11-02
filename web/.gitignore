@@ -4,6 +4,7 @@
 /submissions
 /test-reports
 
-/src/mwahahavote/static/scores
+/src/mwahahavote/static/scores/*
+!/src/mwahahavote/static/scores/team_map.json
 
 uv.toml
