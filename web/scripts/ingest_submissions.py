@@ -33,9 +33,9 @@ def available_tasks_in_file(path: str, competition: CompetitionConfig | None = N
     if competition is None:
         competition = ACTIVE_COMPETITION
     with zipfile.ZipFile(path) as zip_file:
-        basenames = {os.path.basename(name) for name in zip_file.namelist()}
+        base_names = {os.path.basename(name) for name in zip_file.namelist()}
         for task in sorted(competition.task_choices):
-            if f"task-{task}.tsv" in basenames or f"{task}.tsv" in basenames:
+            if f"task-{task}.tsv" in base_names or f"{task}.tsv" in base_names:
                 yield task
 
 
