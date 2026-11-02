@@ -112,7 +112,11 @@ def _collect_manual_submissions(competition: CompetitionConfig | None = None) ->
 def _filter_submissions_to_ingest(
     submissions: list[Submission],
     only_latest_per_user: bool,
+    ignored_users: frozenset[str] = frozenset(),
 ) -> list[Submission]:
+    if ignored_users:
+        submissions = [s for s in submissions if s.user not in ignored_users and s.system_id not in ignored_users]
+
     if only_latest_per_user:
         submissions_to_ingest: list[Submission] = []
         users: set[str] = set()
@@ -197,7 +201,9 @@ async def async_main(
     valid_submissions.extend(manual_submissions)
     print(f"Obtained {len(manual_submissions)} manual submissions placed under `submissions/`.\n")
 
-    submissions_to_ingest = _filter_submissions_to_ingest(valid_submissions, only_latest_per_user)
+    submissions_to_ingest = _filter_submissions_to_ingest(
+        valid_submissions, only_latest_per_user, competition.ignored_users
+    )
 
     async with mwahahavote.database.create_engine() as engine:
         already_ingested_system_ids = frozenset({system_id async for system_id in list_ingested_system_ids(engine)})

@@ -29,6 +29,7 @@ class CompetitionConfig:
     codabench_competition_id: int | None = None
     only_latest_submission_per_user: bool = True
     prolific_completion_codes: dict[Task, str] = field(default_factory=dict)
+    ignored_users: frozenset[str] = frozenset()
 
     @property
     def allow_codabench(self) -> bool:
@@ -64,6 +65,7 @@ COMPETITIONS: dict[str, CompetitionConfig] = {
         phase_id=EVALUATION_PHASE_ID,
         default_task="a-en",
         codabench_competition_id=CODABENCH_COMPETITION_ID,
+        ignored_users=frozenset({"dangnt"}),
         prolific_completion_codes={
             "a-en": "CC4WY7K5",
             "a-es": "C5SU1Q6U",
@@ -118,6 +120,7 @@ COMPETITIONS: dict[str, CompetitionConfig] = {
         default_task="a-en",
         codabench_competition_id=CODABENCH_COMPETITION_ID,
         only_latest_submission_per_user=False,
+        ignored_users=frozenset({"dangnt"}),
         prolific_completion_codes={
             "a-en": "CC4WY7K5",
             "a-es": "C5SU1Q6U",

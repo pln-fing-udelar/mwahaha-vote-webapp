@@ -1,3 +1,4 @@
+import dataclasses
 import datetime
 import json
 import pickle
@@ -20,7 +21,7 @@ import sqlalchemy
 import sqlalchemy.ext.asyncio
 
 from ingestion.codabench import Submission
-from mwahahavote import database
+from mwahahavote import config, database
 from mwahahavote.database import Battle, Output, Prompt, System, Vote, VoteString
 
 
@@ -144,6 +145,14 @@ async def test_postprocess_scores(
     assert by_sys["sys_a"]["rating"] == 1050.0
     assert by_sys["sys_b"]["rating"] == 950.0
     assert by_sys["sys_c"]["rating"] is None
+
+    # Case 3: Ignored user in competition is excluded from output
+    comp_with_ignored = dataclasses.replace(config.COMPETITIONS["mwahaha"], ignored_users=frozenset({"sys_b"}))
+    with patch("mwahahavote.database.create_engine", fake_create_engine):
+        await postprocess_scores.async_main(competition=comp_with_ignored)
+
+    data_with_ignored = json.loads(out_json.read_text(encoding="utf-8"))
+    assert "sys_b" not in {row["system"] for row in data_with_ignored}
 
 
 async def test_ingest_prompts(
