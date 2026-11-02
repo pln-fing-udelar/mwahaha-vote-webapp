@@ -256,7 +256,7 @@ def main() -> None:
     elif args.only_latest:
         only_latest = True
 
-    competition = get_competition(args.competition) if args.competition is not None else None
+    competition = None if args.competition is None else get_competition(args.competition)
     asyncio.run(async_main(only_latest_per_user=only_latest, competition=competition))
 
 
