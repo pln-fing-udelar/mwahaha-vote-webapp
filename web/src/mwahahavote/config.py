@@ -167,7 +167,7 @@ COMPETITIONS: dict[str, CompetitionConfig] = {
     ),
     "haha": CompetitionConfig(
         id="haha",
-        title="HAHA 2026",
+        title="HAHA 2026 task 3",
         phase_id=1,
         default_task="t3",
         tasks=(TaskConfig("t3", "Task 3", language="es"),),

@@ -18,7 +18,8 @@ and the system uses FastChat's Bradley-Terry / Elo ranking to score submissions.
 - Five tables: `prompts`, `systems`, `outputs`, `votes`, `prolific`
 - `random_least_voted_unseen_battles` implements the battle selection algorithm in Python using `frozendict` (PEP 814):
   prioritizes systems/prompts with fewer non-skip votes, ensures users don't see duplicates or identical texts
-- Task types: currently `"t3"` (HAHA 2026); previously `"a-en"`, `"a-es"`, `"a-zh"` (text-based), `"b1"`, `"b2"` (image-based)
+- Task types: currently `"t3"` (HAHA 2026 task 3); previously `"a-en"`, `"a-es"`, `"a-zh"` (text-based), `"b1"`,
+  `"b2"` (image-based)
 - Vote types: `a` (system A wins), `b` (system B wins), `n` (skip), `t` (tie)
 
 **FastAPI App** (`web/src/mwahahavote/__main__.py`):
