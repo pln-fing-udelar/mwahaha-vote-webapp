@@ -30,6 +30,7 @@ class CompetitionConfig:
     only_latest_submission_per_user: bool = True
     prolific_completion_codes: dict[Task, str] = field(default_factory=dict)
     ignored_users: frozenset[str] = frozenset()
+    excluded_session_ids: frozenset[str] = frozenset()
 
     @property
     def allow_codabench(self) -> bool:
@@ -57,6 +58,22 @@ CODABENCH_COMPETITION_ID = 9719
 EVALUATION_TRIAL_PHASE_ID = 15784
 EVALUATION_PHASE_ID = 15785
 
+MWAHAHA_EXCLUDED_SESSION_IDS = frozenset(
+    {
+        "8F53VDMDMBLZ1W8HTNR4K4GVKJSHD1XLM9WX0B1YKFWN45NR3U34XO3JFB0DBTL7XSUDDUYW2G2AYANTVG6HYTSJCP2S06S2USG1",
+        "3SDVXMOG9IYX4MK8FCEM76TUYL6HFOTKY23Q04WHIYNQ1KLQWHXQ3RG2XAN8SZYAORXBV9HLLC3I7QDR95U5UGQUPGOH0Q9IEH5D",
+        "J9KI4RXWOXHNK0SAW059NWJKTUUFNFZ77209AKM9V0EOXWN8RM1S1QPFT09IIBRM8EBOQ160GRKCWW46WI86MNB9W3J4OU7ZC71G",
+        "DMJ2P6KG0QV0GK06VH8C11JVOJLV74JHFEJYTE9M1NK80ZLM958ERVOYL8WTHNOCL5W3ZTN5OFZZBHCFHHK2OHR43NQNPD0X4YWZ",
+        "LLYBSKNFT8UBK4UNJSLI3FAHZ73HH6D065RCSBERTYIPMJCG4QU5VO5Y5EHVVSQVA1FOIBHY5S7VHNZERDVFWVBA7WQ190T6AASQ",
+        "3NBGJ6ZWZHET45IXK751318KO8GEZVPHQTL2UHTN58H9V1S9R44Q9XZN97XRLP2IB7MDWX6CRHY8KUN4PNB0QWN1FVNVD6553TQX",
+        "XK4N66WNIBB47NROSDBLL3LK6PJJ83EGX86HL3TT4WLDYRLF64IPO4C8SRDTK4RTJHIMDT7QKHCIDD4GXSR4UW8ZBWHRAVIBXCFN",
+        "9e178843cf32f691",
+        "f6dda751c9aca2ef",
+        "71f4642d66ff397f",
+        # "37037172e24bfe0e",
+    }
+)
+
 
 COMPETITIONS: dict[str, CompetitionConfig] = {
     "mwahaha": CompetitionConfig(
@@ -66,6 +83,7 @@ COMPETITIONS: dict[str, CompetitionConfig] = {
         default_task="a-en",
         codabench_competition_id=CODABENCH_COMPETITION_ID,
         ignored_users=frozenset({"dangnt"}),
+        excluded_session_ids=MWAHAHA_EXCLUDED_SESSION_IDS,
         prolific_completion_codes={
             "a-en": "CC4WY7K5",
             "a-es": "C5SU1Q6U",
@@ -121,6 +139,7 @@ COMPETITIONS: dict[str, CompetitionConfig] = {
         codabench_competition_id=CODABENCH_COMPETITION_ID,
         only_latest_submission_per_user=False,
         ignored_users=frozenset({"dangnt"}),
+        excluded_session_ids=MWAHAHA_EXCLUDED_SESSION_IDS,
         prolific_completion_codes={
             "a-en": "CC4WY7K5",
             "a-es": "C5SU1Q6U",

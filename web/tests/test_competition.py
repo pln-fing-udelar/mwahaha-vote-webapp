@@ -12,12 +12,15 @@ def test_competition_configs() -> None:
     assert haha.task_ids == ("t3",)
     assert haha.allow_codabench is False
     assert haha.ignored_users == frozenset()
+    assert haha.excluded_session_ids == frozenset()
 
     mwahaha = config.COMPETITIONS["mwahaha"]
     assert mwahaha.id == "mwahaha"
     assert mwahaha.phase_id == 15785
     assert mwahaha.default_task == "a-en"
     assert mwahaha.ignored_users == frozenset({"dangnt"})
+    assert mwahaha.excluded_session_ids == config.MWAHAHA_EXCLUDED_SESSION_IDS
+    assert len(mwahaha.excluded_session_ids) == 10
     assert mwahaha.task_ids == ("a-en", "a-es", "a-zh", "b1", "b2")
     assert mwahaha.allow_codabench is True
     assert mwahaha.codabench_competition_id == 9719

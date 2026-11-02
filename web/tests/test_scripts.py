@@ -94,6 +94,21 @@ async def test_prepare_data_for_scoring_main(
     records_excluded = json.loads(output_file.read_text(encoding="utf-8"))
     assert len(records_excluded) == 0
 
+    # Test exclusion via competition.excluded_session_ids union
+    comp_with_excluded = dataclasses.replace(
+        config.COMPETITIONS["mwahaha"],
+        excluded_session_ids=frozenset({"prolific-id-1-1", "prolific-id-2-1", "regular-sess"}),
+    )
+    with patch("mwahahavote.database.create_engine", fake_create_engine):
+        await prepare_data_for_scoring.async_main(
+            only_prolific_sessions=False,
+            include_ties=False,
+            competition=comp_with_excluded,
+            excluded_session_ids=[],
+        )
+    records_comp_excluded = json.loads(output_file.read_text(encoding="utf-8"))
+    assert len(records_comp_excluded) == 0
+
 
 async def test_postprocess_scores(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,

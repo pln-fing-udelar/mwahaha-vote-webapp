@@ -56,7 +56,9 @@ async def async_main(
     if competition is None:
         competition = ACTIVE_COMPETITION
 
-    base_excluded = set(excluded_session_ids) if excluded_session_ids is not None else EXCLUDED_SESSION_IDS
+    base_excluded = (
+        set(excluded_session_ids) if excluded_session_ids is not None else EXCLUDED_SESSION_IDS
+    ) | competition.excluded_session_ids
 
     async with mwahahavote.database.create_engine() as engine:
         for task in sorted(competition.task_choices):
