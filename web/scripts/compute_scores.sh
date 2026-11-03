@@ -5,8 +5,9 @@ set -x
 
 COMPETITION="${1:-${COMPETITION:-mwahaha}}"
 export COMPETITION
+[ "$#" -gt 0 ] && shift
 
-./scripts/prepare_data_for_scoring.py --competition "$COMPETITION"
+./scripts/prepare_data_for_scoring.py --competition "$COMPETITION" "$@"
 
 TASKS=$(uv run python -c "from mwahahavote.config import get_competition; print(' '.join(get_competition('$COMPETITION').task_ids))")
 

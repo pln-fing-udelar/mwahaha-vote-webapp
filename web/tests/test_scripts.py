@@ -112,6 +112,59 @@ async def test_prepare_data_for_scoring_main(
     assert len(records_comp_excluded) == 0
 
 
+async def test_prepare_data_from_csv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    csv_file = tmp_path / "subset.csv"
+    csv_file.write_text(
+        "source_file,source_row,prompt_id,system_id_a,system_id_b,vote,task\n"
+        "clean.csv,1,en_1,sys_a,sys_b,a,a-en\n"
+        "clean.csv,2,en_2,sys_b,sys_a,t,a-en\n"
+        "clean.csv,3,es_1,sys_c,sys_d,b,a-es\n"
+        "clean.csv,4,zh_1,sys_e,sys_f,a,a-zh\n"
+        "clean.csv,5,other_1,sys_g,sys_h,a,unknown_task\n",
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "out_scoring"
+
+    # With ties and min_votes=1
+    tasks = prepare_data_for_scoring.prepare_data_from_csv(
+        csv_file, output_dir=out_dir, include_ties=True, min_votes_per_system=1
+    )
+    assert set(tasks) == {"a-en", "a-es", "a-zh", "unknown_task"}
+    en_battles = json.loads((out_dir / "votes-a-en.json").read_text(encoding="utf-8"))
+    assert len(en_battles) == 2
+    assert en_battles[0]["winner"] == "model_a"
+    assert en_battles[0]["language"] == "English"
+    assert en_battles[1]["winner"] == "tie"
+
+    es_battles = json.loads((out_dir / "votes-a-es.json").read_text(encoding="utf-8"))
+    assert len(es_battles) == 1
+    assert es_battles[0]["language"] == "Spanish"
+
+    # Without ties
+    prepare_data_for_scoring.prepare_data_from_csv(
+        csv_file, output_dir=out_dir, include_ties=False, min_votes_per_system=1
+    )
+    en_battles_no_ties = json.loads((out_dir / "votes-a-en.json").read_text(encoding="utf-8"))
+    assert len(en_battles_no_ties) == 1
+    assert en_battles_no_ties[0]["winner"] == "model_a"
+
+    # min_votes filter
+    prepare_data_for_scoring.prepare_data_from_csv(
+        csv_file, output_dir=out_dir, include_ties=True, min_votes_per_system=5
+    )
+    en_battles_filtered = json.loads((out_dir / "votes-a-en.json").read_text(encoding="utf-8"))
+    assert len(en_battles_filtered) == 0
+
+    # Test async_main with input_csv
+    await prepare_data_for_scoring.async_main(
+        input_csv=csv_file,
+        output_dir=out_dir,
+        include_ties=True,
+        min_votes_per_system=1,
+    )
+    assert (out_dir / "votes-a-en.json").exists()
+
+
 async def test_postprocess_scores(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
     tmp_path: Path,
