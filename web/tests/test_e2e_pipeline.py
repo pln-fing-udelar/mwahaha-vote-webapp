@@ -18,7 +18,7 @@ import scores_json_to_pretty_text_table
 import sqlalchemy
 import sqlalchemy.ext.asyncio
 from fastchat.serve.monitor.elo_analysis import report_elo_analysis_results
-from httpx import ASGITransport, AsyncClient
+from httpx2 import ASGITransport, AsyncClient
 
 import mwahahavote.__main__ as main_mod
 from ingestion import codabench, submission
