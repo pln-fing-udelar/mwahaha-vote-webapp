@@ -31,7 +31,7 @@ scripts = [
     # We better pin the version to ensure the reproducibility of the scoring.
     # We don't use the latest stable version because it has some dependency issues, and this fork has a bugfix.
     # We don't use the one from upstream because it obliges us to install `torch`.
-    "fschat[analysis] @ git+https://github.com/pln-fing-udelar/FastChat@v0.2.36.post2",
+    "fschat[analysis] @ git+https://github.com/pln-fing-udelar/FastChat@v0.2.36.post3",
     "fsspec[http]<2027",
     "pandas<4",
     "tqdm<5",
