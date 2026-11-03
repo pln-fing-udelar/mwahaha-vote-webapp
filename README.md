@@ -36,6 +36,22 @@ DB_HOST=$(docker container inspect mwahaha-vote-webapp-database-1 | uv run jq -r
 To run some of the Python scripts and commands in this README file,
 you may benefit from prefixing `uv run --env-file ../.env` to them.
 
+## Loading a database dump
+
+Optionally, you can populate the database from a pre-existing dump, such as
+[the database dump containing the annotations from MWAHAHA 2026](https://github.com/pln-fing-udelar/mwahaha-vote-webapp/releases/download/v2026.02.22/dump-mwahaha-sanitized.sql.gz).
+This restores all `prompts`, `systems`, `outputs`, and `votes` at once, bypassing the need to ingest prompts and CodaBench submissions manually.
+
+You can stream, decompress, and pipe the dump directly into the database container without saving it to disk:
+
+```bash
+curl -sSL https://github.com/pln-fing-udelar/mwahaha-vote-webapp/releases/download/v2026.02.22/dump-mwahaha-sanitized.sql.gz | \
+  gunzip -c | \
+  docker compose exec -T database mysql -uroot -p mwahaha
+```
+
+If you do this, you can skip the steps involving adding the prompts and ingesting the submissions and baselines.
+
 ## Add the prompts to the database
 
 First, place the prompt files under the directory `web/prompts/`.
