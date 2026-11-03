@@ -252,14 +252,14 @@ async def async_main(
                 engine, competition.phase_id, task, excluded_session_ids=excluded_list
             )
             task_meta = {
-                "vote_count": vote_count,
+                "vote_count": int(vote_count),
                 "latest_date": (
                     latest_date.isoformat()
                     if isinstance(latest_date, datetime.datetime)
                     else (str(latest_date) if latest_date is not None else None)
                 ),
-                "vote_checksum": vote_checksum,
-                "output_count": output_count,
+                "vote_checksum": int(vote_checksum),
+                "output_count": int(output_count),
             }
             output_path = scores_path / f"{task}.json"
 

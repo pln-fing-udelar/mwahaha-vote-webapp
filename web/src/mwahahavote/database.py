@@ -771,7 +771,7 @@ async def get_task_vote_metadata(
                 {"task": task, "phase_id": phase_id},
             )
         ).one()[0]
-        return row[0], row[1], row[2], output_count
+        return int(row[0]), row[1], int(row[2]), int(output_count)
 
 
 async def get_votes_csv(engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int) -> str:
