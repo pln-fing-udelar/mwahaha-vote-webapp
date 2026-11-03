@@ -491,6 +491,57 @@ async def test_compute_scores_async_main(
     assert (intermediate_dir / "votes-a-en.json").exists()
     assert (intermediate_dir / "elo_results_a-en.pkl").exists()
 
+    # Test caching: 2nd run with unchanged votes should skip recomputation
+    cache_file = tmp_path / "cache.json"
+    with patch("mwahahavote.database.create_engine", fake_create_engine):
+        res1 = await compute_scores.async_main(
+            scores_dir=scores_dir,
+            intermediate_dir=intermediate_dir,
+            cache_file=cache_file,
+            min_votes_per_system=1,
+            num_bootstrap=10,
+            tasks=["a-en"],
+        )
+        assert res1["a-en"] is True
+        assert cache_file.exists()
+
+        # Unchanged: should skip
+        res2 = await compute_scores.async_main(
+            scores_dir=scores_dir,
+            intermediate_dir=intermediate_dir,
+            cache_file=cache_file,
+            min_votes_per_system=1,
+            num_bootstrap=10,
+            tasks=["a-en"],
+        )
+        assert res2["a-en"] is False
+
+        # Force: should recompute
+        res_force = await compute_scores.async_main(
+            scores_dir=scores_dir,
+            intermediate_dir=intermediate_dir,
+            cache_file=cache_file,
+            min_votes_per_system=1,
+            num_bootstrap=10,
+            tasks=["a-en"],
+            force=True,
+        )
+        assert res_force["a-en"] is True
+
+        # Directly touching the DB: updating a vote in-place automatically invalidates cache
+        async with seeded_db_engine.begin() as conn:
+            await conn.execute(sqlalchemy.sql.text("UPDATE votes SET vote = 'b' WHERE session_id = 'sess-1'"))
+
+        res_updated = await compute_scores.async_main(
+            scores_dir=scores_dir,
+            intermediate_dir=intermediate_dir,
+            cache_file=cache_file,
+            min_votes_per_system=1,
+            num_bootstrap=10,
+            tasks=["a-en"],
+        )
+        assert res_updated["a-en"] is True
+
     # Test an empty/unvoted task writes null ratings
     with patch("mwahahavote.database.create_engine", fake_create_engine):
         await compute_scores.async_main(
@@ -547,6 +598,9 @@ def test_compute_scores_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
             "1",
             "--num-bootstrap",
             "10",
+            "--cache-file",
+            str(tmp_path / "cache.json"),
+            "--force",
         ],
     )
     compute_scores.main()
