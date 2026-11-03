@@ -226,6 +226,7 @@ def report_elo_analysis_results(
     filter_func: Callable[[pd.Series], bool] | None = None,
     style_control: bool = False,  # Kept for signature compatibility
     num_cpu: int | None = None,
+    tol: float = 1e-6,
 ) -> dict[str, Any]:
     """Compute Bradley-Terry / Elo analysis results matching FastChat format."""
     if exclude_models is None:
@@ -241,8 +242,8 @@ def report_elo_analysis_results(
     elo_rating_online = compute_elo(battles)
 
     if rating_system == "bt":
-        bootstrap_df = compute_bootstrap_bt(battles, num_round=num_bootstrap, num_cpu=num_cpu)
-        elo_rating_final = compute_bt(battles)
+        bootstrap_df = compute_bootstrap_bt(battles, num_round=num_bootstrap, num_cpu=num_cpu, tol=tol)
+        elo_rating_final = compute_bt(battles, tol=tol)
     else:
         raise NotImplementedError(f"Unsupported rating system: {rating_system}")
 

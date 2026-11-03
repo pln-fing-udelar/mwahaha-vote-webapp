@@ -24,6 +24,7 @@ def main() -> None:
     parser.add_argument("--langs", type=str, nargs="+", default=[], help="Languages to filter.")
     parser.add_argument("--category", nargs="+", default=["full"], help="Categories to evaluate.")
     parser.add_argument("--num-cpu", type=int, default=1, help="Number of CPU cores.")
+    parser.add_argument("--tol", type=float, default=1e-6, help="L-BFGS-B gradient tolerance (gtol).")
 
     args = parser.parse_args()
 
@@ -42,6 +43,7 @@ def main() -> None:
             exclude_tie=args.exclude_tie,
             exclude_unknown_lang=args.exclude_unknown_lang,
             num_cpu=args.num_cpu,
+            tol=args.tol,
         )
 
     for cat in args.category:
