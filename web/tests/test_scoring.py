@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 from mwahahavote.scoring import (
+    _always_true,
     bt_loss_and_grad,
     compute_bootstrap_bt,
     compute_bt,
@@ -38,6 +39,10 @@ def _sample_battles() -> pd.DataFrame:
         },
     ]
     return pd.DataFrame(rows)
+
+
+def test_always_true() -> None:
+    assert _always_true(pd.Series()) is True
 
 
 def test_get_matchups_models() -> None:
@@ -139,6 +144,18 @@ def test_report_elo_analysis_results() -> None:
     assert "rating" in table_df.columns
     assert "variance" in table_df.columns
     assert "final_ranking" in table_df.columns
+
+
+def test_report_elo_analysis_results_with_custom_filter() -> None:
+    df = _sample_battles()
+    res = report_elo_analysis_results(
+        df,
+        rating_system="bt",
+        num_bootstrap=10,
+        filter_func=lambda row: bool(row["tstamp"] < 500),
+        num_cpu=1,
+    )
+    assert res["last_updated_tstamp"] == 400
 
 
 def test_report_elo_analysis_results_unsupported_system() -> None:
