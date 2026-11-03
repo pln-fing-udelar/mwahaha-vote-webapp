@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import gzip
 import json
 import pickle
 import zipfile
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import Any, cast
 from unittest.mock import AsyncMock, patch
 
+import anonymize_dump
 import ingest_baseline
 import ingest_prompts
 import ingest_submissions
@@ -303,3 +305,98 @@ def test_print_submission_stats_and_pretty_table(
     table_out = capsys.readouterr().out
     assert "sys_a" in table_out
     assert "1050" in table_out
+
+
+def test_anonymize_dump_logic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # 1. Test parse_prolific_tuples and sanitize_prolific_line
+    line = (
+        "INSERT INTO `prolific` VALUES "
+        "('prolific-id-user1-sess1','2026-02-15 16:16:17',NULL,NULL),"
+        "('prolific-id-user2-sess2','2026-02-06 22:46:50','2026-02-06 23:22:25','Fun, enjoyable study!'),"
+        "('prolific-id-user3','2026-02-05 16:13:38','2026-02-05 16:51:13','Has escaped \\'quotes\\' inside');\n"
+    )
+    sanitized = anonymize_dump.sanitize_prolific_line(line)
+    assert "Fun, enjoyable study!" not in sanitized
+    assert "Has escaped" not in sanitized
+    assert sanitized.startswith("INSERT INTO `prolific` VALUES ")
+    assert anonymize_dump.sanitize_prolific_line("SELECT 1;") == "SELECT 1;"
+
+    # 2. Test build_anonymization_maps and anonymize_prolific_id
+    raw_ids = [
+        "prolific-id-userB-sess2",
+        "prolific-id-userA-sess1",
+        "prolific-id-userA-sess3",
+        "prolific-id-userC",
+    ]
+    w_map, s_map = anonymize_dump.build_anonymization_maps(raw_ids)
+    assert w_map["userA"] == "worker_0001"
+    assert w_map["userB"] == "worker_0002"
+    assert w_map["userC"] == "worker_0003"
+    assert s_map["sess1"] == "session_0001"
+    assert s_map["sess2"] == "session_0002"
+    assert s_map["sess3"] == "session_0003"
+
+    assert (
+        anonymize_dump.anonymize_prolific_id("prolific-id-userA-sess1", w_map, s_map)
+        == "prolific-id-worker_0001-session_0001"
+    )
+    assert anonymize_dump.anonymize_prolific_id("prolific-id-userC", w_map, s_map) == "prolific-id-worker_0003"
+    assert anonymize_dump.anonymize_prolific_id("regular_session", w_map, s_map) == "regular_session"
+
+    # 3. Test anonymize_dump on dummy sql and gzipped sql
+    raw_sql = (
+        "-- MySQL dump\n"
+        "SET @@GLOBAL.GTID_PURGED='xyz';\n"
+        + line
+        + "INSERT INTO `votes` VALUES ('p1','sys_a','sys_b','prolific-id-userA-sess1','a','2026-02-15 16:20:00',0,0);\n"
+    )
+    dump_in = tmp_path / "dump.sql"
+    dump_in.write_text(raw_sql, encoding="utf-8")
+    dump_out = tmp_path / "dump.sql.gz"
+
+    lines, gtid_stripped = anonymize_dump.anonymize_dump(dump_in, dump_out, w_map, s_map)
+    assert lines == 4
+    assert gtid_stripped == 1
+
+    with gzip.open(dump_out, "rt", encoding="utf-8") as f:
+        dump_content = f.read()
+    assert "GTID_PURGED" not in dump_content
+    assert "prolific-id-userA-sess1" not in dump_content
+    assert "prolific-id-worker_0001-session_0001" in dump_content
+    assert "Fun, enjoyable study!" not in dump_content
+
+    # 4. Test anonymize_csv on dummy csv
+    csv_in = tmp_path / "annotations.csv"
+    csv_in.write_text(
+        "task,prompt_id,session_id,vote\nt3,p1,prolific-id-userA-sess1,a\nt3,p2,regular_user_123,b\n",
+        encoding="utf-8",
+    )
+    csv_out = tmp_path / "annotations-sanitized.csv.gz"
+    rows, anon_rows = anonymize_dump.anonymize_csv(csv_in, csv_out, w_map, s_map)
+    assert rows == 2
+    assert anon_rows == 1
+
+    with gzip.open(csv_out, "rt", encoding="utf-8") as f:
+        csv_content = f.read()
+    assert "prolific-id-worker_0001-session_0001" in csv_content
+    assert "regular_user_123" in csv_content
+    assert "prolific-id-userA-sess1" not in csv_content
+
+    # 5. Test main CLI execution
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "anonymize_dump.py",
+            "-i",
+            str(dump_in),
+            "-o",
+            str(tmp_path / "cli_out.sql"),
+            "--csv-inputs",
+            str(csv_in),
+            "--csv-outputs",
+            str(tmp_path / "cli_csv_out.csv"),
+        ],
+    )
+    anonymize_dump.main()
+    assert (tmp_path / "cli_out.sql").exists()
+    assert (tmp_path / "cli_csv_out.csv").exists()
