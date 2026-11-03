@@ -732,6 +732,48 @@ async def vote_count_without_skips(engine: sqlalchemy.ext.asyncio.AsyncEngine) -
         return (await connection.execute(STATEMENT_VOTE_COUNT, {"without_skips": True})).one()[0]
 
 
+async def get_task_vote_metadata(
+    engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    phase_id: int,
+    task: Task,
+    excluded_session_ids: Iterable[str] = (),
+) -> tuple[int, datetime.datetime | str | None, int, int]:
+    """Returns the total non-skip vote count, latest vote timestamp, vote checksum, and output count for a task."""
+    excluded_session_ids = tuple(excluded_session_ids)
+    if not excluded_session_ids:
+        excluded_session_ids = ("__PLACEHOLDER__",)
+    async with engine.connect() as connection:
+        row = (
+            await connection.execute(
+                sqlalchemy.sql.text("""
+                    SELECT
+                        COUNT(*),
+                        MAX(date),
+                        COALESCE(SUM(CASE vote WHEN 'a' THEN 1 WHEN 'b' THEN 2 WHEN 't' THEN 3 ELSE 4 END), 0)
+                    FROM votes v
+                    NATURAL JOIN prompts
+                    WHERE task = :task
+                      AND phase_id = :phase_id
+                      AND v.vote != 'n'
+                      AND session_id NOT IN :excluded_session_ids
+                """),
+                {"task": task, "phase_id": phase_id, "excluded_session_ids": excluded_session_ids},
+            )
+        ).one()
+        output_count = (
+            await connection.execute(
+                sqlalchemy.sql.text("""
+                    SELECT COUNT(*)
+                    FROM outputs
+                    NATURAL JOIN prompts
+                    WHERE task = :task AND phase_id = :phase_id
+                """),
+                {"task": task, "phase_id": phase_id},
+            )
+        ).one()[0]
+        return row[0], row[1], row[2], output_count
+
+
 async def get_votes_csv(engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int) -> str:
     """Returns the votes for a given phase ID with all associated information formatted as CSV."""
     async with engine.connect() as connection:

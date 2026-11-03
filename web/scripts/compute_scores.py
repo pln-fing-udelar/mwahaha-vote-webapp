@@ -4,6 +4,7 @@
 import os
 lazy import argparse
 lazy import asyncio
+lazy import datetime
 lazy import json
 lazy import pickle
 lazy from collections.abc import Sequence
@@ -183,13 +184,27 @@ async def async_main(
     tol: float = 1e-6,
     tasks: Sequence[Task] | None = None,
     intermediate_dir: Path | str | None = None,
-) -> None:
-    """Run the complete scoring pipeline in memory."""
+    cache_file: Path | str | None = "scoring/.scoring_cache.json",
+    no_cache: bool = False,
+    force: bool = False,
+) -> dict[str, bool]:
+    """Run the complete scoring pipeline in memory, caching results for unchanged tasks."""
     if competition is None:
         competition = ACTIVE_COMPETITION
 
     scores_path = Path(scores_dir)
     inter_path = Path(intermediate_dir) if intermediate_dir is not None else None
+    cache_path = Path(cache_file) if cache_file is not None else None
+
+    cache: dict[str, dict[str, Any]] = {}
+    if not no_cache and cache_path is not None and cache_path.exists():
+        try:
+            with open(cache_path, encoding="utf-8") as f:
+                cache = json.load(f)
+        except Exception:
+            cache = {}
+
+    tasks_recomputed: dict[str, bool] = {}
 
     if input_csv is not None:
         csv_tasks = prepare_data_from_csv(
@@ -212,7 +227,8 @@ async def async_main(
                 intermediate_dir=inter_path,
                 task=task,
             )
-        return
+            tasks_recomputed[task] = True
+        return tasks_recomputed
 
     base_excluded = (
         set(excluded_session_ids) if excluded_session_ids is not None else EXCLUDED_SESSION_IDS
@@ -221,6 +237,47 @@ async def async_main(
     async with mwahahavote.database.create_engine() as engine:
         tasks_to_process = tasks if tasks is not None else sorted(competition.task_choices)
         for task in tasks_to_process:
+            task_excluded = (
+                {
+                    session_id
+                    async for session_id in mwahahavote.database.get_session_ids(engine, competition.phase_id, task)
+                    if not session_id.startswith("prolific-id-")
+                }
+                if only_prolific_sessions
+                else set()
+            ) | base_excluded
+
+            excluded_list = list(task_excluded)
+            vote_count, latest_date, vote_checksum, output_count = await mwahahavote.database.get_task_vote_metadata(
+                engine, competition.phase_id, task, excluded_session_ids=excluded_list
+            )
+            task_meta = {
+                "vote_count": vote_count,
+                "latest_date": (
+                    latest_date.isoformat()
+                    if isinstance(latest_date, datetime.datetime)
+                    else (str(latest_date) if latest_date is not None else None)
+                ),
+                "vote_checksum": vote_checksum,
+                "output_count": output_count,
+            }
+            output_path = scores_path / f"{task}.json"
+
+            intermediate_missing = inter_path is not None and (
+                not (inter_path / f"votes-{task}.json").exists()
+                or (vote_count > 0 and not (inter_path / f"elo_results_{task}.pkl").exists())
+            )
+
+            if (
+                not force
+                and not no_cache
+                and output_path.exists()
+                and not intermediate_missing
+                and cache.get(task) == task_meta
+            ):
+                tasks_recomputed[task] = False
+                continue
+
             battles, all_system_id_to_vote_count = await fetch_task_battles(
                 engine=engine,
                 phase_id=competition.phase_id,
@@ -230,7 +287,6 @@ async def async_main(
                 include_ties=include_ties,
                 min_votes_per_system=min_votes_per_system,
             )
-            output_path = scores_path / f"{task}.json"
             process_task_leaderboard(
                 battles=battles,
                 all_system_id_to_vote_count=all_system_id_to_vote_count,
@@ -242,6 +298,15 @@ async def async_main(
                 intermediate_dir=inter_path,
                 task=task,
             )
+            cache[task] = task_meta
+            tasks_recomputed[task] = True
+
+        if not no_cache and cache_path is not None:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump(cache, f, indent=2)
+
+        return tasks_recomputed
 
 
 def main() -> None:
@@ -314,6 +379,25 @@ def main() -> None:
         default=None,
         help="Optional directory to save intermediate votes-*.json and elo_results_*.pkl files.",
     )
+    parser.add_argument(
+        "--cache-file",
+        type=Path,
+        default=Path("scoring/.scoring_cache.json"),
+        help="Path to incremental scoring cache file (default: scoring/.scoring_cache.json).",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        default=False,
+        help="Disable cache and recompute all tasks without reading or writing cache.",
+    )
+    parser.add_argument(
+        "--force",
+        "-f",
+        action="store_true",
+        default=False,
+        help="Force recomputation of all tasks, updating cache afterwards.",
+    )
 
     args = parser.parse_args()
     competition = get_competition(args.competition) if args.competition is not None else None
@@ -331,6 +415,9 @@ def main() -> None:
             tol=args.tol,
             tasks=tasks,
             intermediate_dir=args.dump_intermediate,
+            cache_file=args.cache_file,
+            no_cache=args.no_cache,
+            force=args.force,
         )
     )
 

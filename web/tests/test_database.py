@@ -385,6 +385,20 @@ async def test_votes_queries_and_stats(
     votes_per_session = await database.get_votes_per_session(seeded_db_engine, phase_id=phase)
     assert votes_per_session == {"s1": 2, "s3": 1}
 
+    count, latest_date, vote_checksum, output_count = await database.get_task_vote_metadata(
+        seeded_db_engine, phase_id=phase, task=task
+    )
+    assert count == 3
+    assert latest_date is not None
+    assert vote_checksum > 0
+    assert output_count > 0
+
+    count_excl, _, checksum_excl, _ = await database.get_task_vote_metadata(
+        seeded_db_engine, phase_id=phase, task=task, excluded_session_ids=["s1"]
+    )
+    assert count_excl == 1
+    assert checksum_excl < vote_checksum
+
     scoring_votes = [v async for v in database.get_votes_for_scoring(seeded_db_engine, phase_id=phase, task=task)]
     assert len(scoring_votes) == 2
     assert {v.vote for v in scoring_votes} == {"a", "b"}
