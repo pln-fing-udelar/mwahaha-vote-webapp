@@ -9,7 +9,7 @@ lazy import pickle
 lazy import numpy as np
 lazy import pandas as pd
 
-from mwahahavote.scoring import report_elo_analysis_results
+from mwahahavote.scoring import pretty_print_elo_rating, report_elo_analysis_results
 
 
 def main() -> None:
@@ -25,6 +25,7 @@ def main() -> None:
     parser.add_argument("--category", nargs="+", default=["full"], help="Categories to evaluate.")
     parser.add_argument("--num-cpu", type=int, default=1, help="Number of CPU cores.")
     parser.add_argument("--tol", type=float, default=1e-6, help="L-BFGS-B gradient tolerance (gtol).")
+    parser.add_argument("--quiet", "-q", action="store_true", default=False, help="Suppress output to stdout.")
 
     args = parser.parse_args()
 
@@ -49,6 +50,13 @@ def main() -> None:
     for cat in args.category:
         last_updated_tstamp = results[cat]["last_updated_tstamp"]
         cutoff_date = datetime.datetime.fromtimestamp(last_updated_tstamp, tz=ZoneInfo("US/Pacific")).strftime("%Y%m%d")
+        if not args.quiet:
+            print(f"\n\n# Results for {cat} conversations")
+            print("# Online Elo")
+            pretty_print_elo_rating(results[cat]["elo_rating_online"])
+            print("# Median")
+            pretty_print_elo_rating(results[cat]["elo_rating_median"])
+            print(f"last update : {cutoff_date}")
 
     out_path = args.output if args.output else f"elo_results_{cutoff_date}.pkl"
     with open(out_path, "wb") as fout:
