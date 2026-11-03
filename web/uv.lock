@@ -530,7 +530,7 @@ wheels = [
 [[package]]
 name = "fschat"
 version = "0.2.36"
-source = { git = "https://github.com/pln-fing-udelar/FastChat?rev=6d7f490#6d7f490dcfd9886bade6a00a545edd751c6d292d" }
+source = { git = "https://github.com/pln-fing-udelar/FastChat?rev=6666f76#6666f7613a87fe48985c47579f8ff413efadfb0f" }
 dependencies = [
     { name = "aiohttp" },
     { name = "fastapi" },
@@ -1193,7 +1193,7 @@ requires-dist = [
     { name = "cachetools", specifier = "<8" },
     { name = "cryptography" },
     { name = "fastapi", specifier = "<1" },
-    { name = "fschat", extras = ["webui"], marker = "extra == 'scripts'", git = "https://github.com/pln-fing-udelar/FastChat?rev=6d7f490" },
+    { name = "fschat", extras = ["webui"], marker = "extra == 'scripts'", git = "https://github.com/pln-fing-udelar/FastChat?rev=6666f76" },
     { name = "fsspec", extras = ["http"], marker = "extra == 'scripts'", specifier = "<2027" },
     { name = "httptools" },
     { name = "httpx2", specifier = ">=2,<3" },
