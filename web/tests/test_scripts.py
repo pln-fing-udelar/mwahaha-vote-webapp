@@ -10,6 +10,7 @@ from typing import Any, cast
 from unittest.mock import AsyncMock, patch
 
 import anonymize_dump
+import compute_scores
 import ingest_baseline
 import ingest_prompts
 import ingest_submissions
@@ -453,3 +454,100 @@ def test_anonymize_dump_logic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     anonymize_dump.main()
     assert (tmp_path / "cli_out.sql").exists()
     assert (tmp_path / "cli_csv_out.csv").exists()
+
+
+async def test_compute_scores_async_main(
+    seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    scores_dir = tmp_path / "scores"
+    intermediate_dir = tmp_path / "scoring"
+
+    await database.add_vote(seeded_db_engine, "sess-1", "en_1", "sys_a", "sys_b", "a", False, False)
+    await database.add_vote(seeded_db_engine, "sess-2", "en_1", "sys_b", "sys_c", "a", False, False)
+    await database.add_vote(seeded_db_engine, "sess-3", "en_1", "sys_c", "sys_a", "b", False, False)
+
+    @asynccontextmanager
+    async def fake_create_engine() -> Any:
+        yield seeded_db_engine
+
+    with patch("mwahahavote.database.create_engine", fake_create_engine):
+        await compute_scores.async_main(
+            scores_dir=scores_dir,
+            intermediate_dir=intermediate_dir,
+            min_votes_per_system=1,
+            num_bootstrap=10,
+            tasks=["a-en"],
+        )
+
+    out_file = scores_dir / "a-en.json"
+    assert out_file.exists()
+    records = json.loads(out_file.read_text(encoding="utf-8"))
+    assert len(records) == 3
+    by_sys = {r["system"]: r for r in records}
+    assert all(by_sys[s]["rating"] is not None for s in ["sys_a", "sys_b", "sys_c"])
+    assert (intermediate_dir / "votes-a-en.json").exists()
+    assert (intermediate_dir / "elo_results_a-en.pkl").exists()
+
+    # Test an empty/unvoted task writes null ratings
+    with patch("mwahahavote.database.create_engine", fake_create_engine):
+        await compute_scores.async_main(
+            scores_dir=scores_dir,
+            intermediate_dir=intermediate_dir,
+            min_votes_per_system=1,
+            tasks=["a-es"],
+        )
+    out_es = scores_dir / "a-es.json"
+    assert out_es.exists()
+    records_es = json.loads(out_es.read_text(encoding="utf-8"))
+    assert all(r["rating"] is None for r in records_es)
+
+
+async def test_compute_scores_input_csv(tmp_path: Path) -> None:
+    csv_file = tmp_path / "votes.csv"
+    csv_file.write_text(
+        "task,prompt_id,system_id_a,system_id_b,vote,session_id\n"
+        "a-en,en_1,sys_a,sys_b,a,sess1\n"
+        "a-en,en_2,sys_b,sys_a,b,sess2\n",
+        encoding="utf-8",
+    )
+    scores_dir = tmp_path / "scores"
+    await compute_scores.async_main(
+        input_csv=csv_file,
+        scores_dir=scores_dir,
+        min_votes_per_system=1,
+        num_bootstrap=10,
+    )
+    out_file = scores_dir / "a-en.json"
+    assert out_file.exists()
+    records = json.loads(out_file.read_text(encoding="utf-8"))
+    assert len(records) == 2
+
+
+def test_compute_scores_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    csv_file = tmp_path / "votes.csv"
+    csv_file.write_text(
+        "task,prompt_id,system_id_a,system_id_b,vote,session_id\n"
+        "a-en,en_1,sys_a,sys_b,a,sess1\n"
+        "a-en,en_2,sys_b,sys_a,b,sess2\n",
+        encoding="utf-8",
+    )
+    scores_dir = tmp_path / "scores"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "compute_scores.py",
+            "--input-csv",
+            str(csv_file),
+            "--scores-dir",
+            str(scores_dir),
+            "--min-votes-per-system",
+            "1",
+            "--num-bootstrap",
+            "10",
+        ],
+    )
+    compute_scores.main()
+    assert (scores_dir / "a-en.json").exists()

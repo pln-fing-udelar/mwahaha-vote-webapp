@@ -51,11 +51,10 @@ and the system uses FastChat's Bradley-Terry / Elo ranking to score submissions.
 - `ingest_submissions.py`: Fetch from CodaBench API (`codabench.py`, validated with Pydantic `BaseModel` / `TypeAdapter` over `httpx2`) or manual `.tsv`/`.zip` files in `web/submissions/`
 - `ingest_baseline.py`: Load baseline from `web/baselines/baseline.zip`
 
-**Scoring Pipeline** (`web/scripts/compute_scores.sh`):
+**Scoring Pipeline** (`web/scripts/compute_scores.sh` or `web/scripts/compute_scores.py`):
 
-1. `prepare_data_for_scoring.py`: Convert votes to FastChat format
-2. Run Bradley-Terry Elo analysis per task (`elo_analysis.py` using `mwahahavote.scoring`)
-3. `postprocess_scores.py`: Generate final leaderboard JSON in `web/src/mwahahavote/static/scores/`
+- `compute_scores.py`: Unified in-memory scoring pipeline that queries votes from DB once, computes Bradley-Terry Elo ratings with bootstrap confidence intervals in-memory via `mwahahavote.scoring`, and outputs final leaderboard JSONs to `web/src/mwahahavote/static/scores/`.
+- Individual scripts (`prepare_data_for_scoring.py`, `elo_analysis.py`, `postprocess_scores.py`) remain available for manual inspection and standalone use.
 
 ### Key Data Flow
 
