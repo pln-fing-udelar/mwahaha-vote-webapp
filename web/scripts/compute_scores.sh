@@ -3,8 +3,12 @@
 set -e
 set -x
 
-COMPETITION="${1:-${COMPETITION:-mwahaha}}"
+if [ "$#" -gt 0 ] && [[ "$1" != -* ]]; then
+  COMPETITION="$1"
+  shift
+else
+  COMPETITION="${COMPETITION:-mwahaha}"
+fi
 export COMPETITION
-[ "$#" -gt 0 ] && shift
 
 exec ./scripts/compute_scores.py --competition "$COMPETITION" --dump-intermediate scoring "$@"
