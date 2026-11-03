@@ -17,8 +17,7 @@ for task in $TASKS; do
     echo "Skipping the unvoted task $task."
     rm -f "scoring/elo_results_$task.pkl"
   else
-    uv run --extra scripts -m fastchat.serve.monitor.elo_analysis --clean-battle-file "$json_file" --num-cpu 1
-    mv elo_results_*.pkl "scoring/elo_results_$task.pkl"
+    ./scripts/elo_analysis.py --clean-battle-file "$json_file" --output "scoring/elo_results_$task.pkl" --num-cpu 1
   fi
 done
 

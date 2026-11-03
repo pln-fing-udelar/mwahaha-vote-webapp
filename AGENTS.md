@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides guidance to AI agents when working with code in this repository.
 
@@ -54,7 +54,7 @@ and the system uses FastChat's Bradley-Terry / Elo ranking to score submissions.
 **Scoring Pipeline** (`web/scripts/compute_scores.sh`):
 
 1. `prepare_data_for_scoring.py`: Convert votes to FastChat format
-2. Run FastChat Elo analysis per task
+2. Run Bradley-Terry Elo analysis per task (`elo_analysis.py` using `mwahahavote.scoring`)
 3. `postprocess_scores.py`: Generate final leaderboard JSON in `web/src/mwahahavote/static/scores/`
 
 ### Key Data Flow
