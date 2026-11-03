@@ -17,13 +17,13 @@ import pytest
 import scores_json_to_pretty_text_table
 import sqlalchemy
 import sqlalchemy.ext.asyncio
-from fastchat.serve.monitor.elo_analysis import report_elo_analysis_results
-from httpx import ASGITransport, AsyncClient
+from httpx2 import ASGITransport, AsyncClient
 
 import mwahahavote.__main__ as main_mod
 from ingestion import codabench, submission
 from mwahahavote import config, database
 from mwahahavote.__main__ import app
+from mwahahavote.scoring import report_elo_analysis_results
 
 
 @pytest.fixture(autouse=True)
@@ -161,7 +161,7 @@ async def test_full_mwhaha_competition_e2e_pipeline(
     2. Ingest baseline and participant submissions from TSV files (`ingest_submissions.py`)
     3. Serve battles via `/battles` and record human annotations via `/vote` (plus batch pairwise votes)
     4. Export votes for scoring (`prepare_data_for_scoring.py`) with session exclusions and same-text tie synthesis
-    5. Compute Bradley-Terry Elo ratings + bootstrap confidence intervals (`fastchat.serve.monitor.elo_analysis`)
+    5. Compute Bradley-Terry Elo ratings + bootstrap confidence intervals (`elo_analysis.py`)
     6. Postprocess leaderboard JSON (`postprocess_scores.py`) and pretty-print (`scores_json_to_pretty_text_table.py`)
     7. Serve the final leaderboard JSON and `/votes.csv` through the FastAPI app
     """

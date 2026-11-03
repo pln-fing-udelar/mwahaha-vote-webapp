@@ -5,16 +5,35 @@
 # MWAHAHA Vote Web App
 
 Website to crowd-annotate computer-generated jokes from
-[the MWAHAHA competition](https://pln-fing-udelar.github.io/semeval-2026-humor-gen/) (SemEval-2026 Task 1).
-It was also used to annotate for the [HAHA 2026 competition](https://www.fing.edu.uy/inco/grupos/pln/haha/).
+[the MWAHAHA competition](https://pln-fing-udelar.github.io/semeval-2026-humor-gen/) (SemEval 2026 Task 1).
+It was also used to annotate for the [HAHA 2026 task 3](https://www.fing.edu.uy/inco/grupos/pln/haha/).
 
-To use this repo, follow the instructions in the
+## Quick links
+
+* [MWAHAHA 2026 @ SemEval 2026 Task 1](https://pln-fing-udelar.github.io/semeval-2026-humor-gen/)
+* [HAHA 2026 @ IberLEF 2026](https://www.fing.edu.uy/inco/grupos/pln/haha/)
+* [MWAHAHA 2026 data (prompts + systems' outputs + annotations)](https://github.com/pln-fing-udelar/mwahaha-vote-webapp/releases/tag/v2026.02.22)
+  (the annotations were collected using the web app in this repo)
+
+## About using this annotation web application
+
+To use this repo (e.g., to collect data in a similar fashion or to reproduce the results),
+follow the instructions in the
 [pgHumor-clasificahumor repository](https://github.com/pln-fing-udelar/pghumor-clasificahumor) and replace the values
 appropriately.
 Some differences:
 
 * The database name is `mwahaha` instead of `pghumor`.
 * The Docker container names are prefixed with `mwahaha-vote-webapp-` instead of `clasificahumor-`.
+
+## Software Stack
+
+* **Backend & API**: [FastAPI](https://fastapi.tiangolo.com/) running on [Uvicorn](https://www.uvicorn.org/) with [uvloop](https://github.com/MagicStack/uvloop) and [httptools](https://github.com/MagicStack/httptools) for async request handling; [Pydantic](https://docs.pydantic.dev/) for data validation; [Jinja2](https://jinja.palletsprojects.com/) for server-side HTML rendering.
+* **Database Layer**: [MySQL](https://www.mysql.com/) 8.x with [SQLAlchemy](https://www.sqlalchemy.org/) 2.0 (using async drivers: `asyncmy` in production and `aiosqlite` for in-memory unit tests).
+* **Scoring Engine**: [FastChat](https://github.com/lm-sys/FastChat)'s Bradley-Terry / Elo ranking model with bootstrap confidence intervals; custom least-voted unseen battle matching algorithm (`random_least_voted_unseen_battles`).
+* **Security & Anti-Bot**: [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) CAPTCHA with async server verification ([`httpx2`](https://pypi.org/project/httpx2/)); Fernet symmetric encryption ([`cryptography`](https://cryptography.io/)) for tamper-proof battle token signing.
+* **Frontend**: Vanilla modern JavaScript (ES6+), HTML5, and CSS3 without heavy external framework dependencies.
+* **Tooling & Environment**: Python `>=3.15` managed via [`uv`](https://docs.astral.sh/uv/); containerized with [Docker Compose](https://docs.docker.com/compose/); tested and linted with [`ruff`](https://docs.astral.sh/ruff/), [`ty`](https://github.com/astral-sh/ty), and [`pytest`](https://docs.pytest.org/).
 
 ## Setup
 
@@ -25,6 +44,22 @@ DB_HOST=$(docker container inspect mwahaha-vote-webapp-database-1 | uv run jq -r
 
 To run some of the Python scripts and commands in this README file,
 you may benefit from prefixing `uv run --env-file ../.env` to them.
+
+## Loading a database dump
+
+Optionally, you can populate the database from a pre-existing dump, such as
+[the database dump containing the annotations from MWAHAHA 2026](https://github.com/pln-fing-udelar/mwahaha-vote-webapp/releases/download/v2026.02.22/dump-mwahaha-sanitized.sql.gz).
+This restores all `prompts`, `systems`, `outputs`, and `votes` at once, bypassing the need to ingest prompts and CodaBench submissions manually.
+
+You can stream, decompress, and pipe the dump directly into the database container without saving it to disk:
+
+```bash
+curl -sSL https://github.com/pln-fing-udelar/mwahaha-vote-webapp/releases/download/v2026.02.22/dump-mwahaha-sanitized.sql.gz | \
+  gunzip -c | \
+  docker compose exec -T database mysql -uroot -p mwahaha
+```
+
+If you do this, you can skip the steps involving adding the prompts and ingesting the submissions and baselines.
 
 ## Add the prompts to the database
 

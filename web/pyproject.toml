@@ -28,13 +28,10 @@ repository = "https://github.com/pln-fing-udelar/mwahaha-vote-webapp"
 [project.optional-dependencies]
 scripts = [
     "aioitertools<1",
-    # We better pin the version to ensure the reproducibility of the scoring.
-    # We don't use the latest stable version because it has some dependency issues, and this fork has a bugfix.
-    # We don't use the one from upstream because it obliges us to install `torch`.
-    "fschat[webui] @ git+https://github.com/pln-fing-udelar/FastChat@431f847",
     "fsspec[http]<2027",
-    "huggingface-hub>=0.34.0,<2", # For `fschat`.
+    "numpy<3",
     "pandas<4",
+    "scipy<2",
     "tqdm<5",
 ]
 
@@ -51,6 +48,7 @@ dev = [
     "pytest-asyncio>=0.24,<2",
     "pytest-cov>=6,<8",
     "ruff>=0.3,<1",
+    "scipy-stubs",
     "ty<1",
     "types-tqdm",
 ]

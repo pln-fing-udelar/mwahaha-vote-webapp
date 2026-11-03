@@ -11,11 +11,16 @@ def test_competition_configs() -> None:
     assert haha.default_task == "t3"
     assert haha.task_ids == ("t3",)
     assert haha.allow_codabench is False
+    assert haha.ignored_users == frozenset()
+    assert haha.excluded_session_ids == frozenset()
 
     mwahaha = config.COMPETITIONS["mwahaha"]
     assert mwahaha.id == "mwahaha"
     assert mwahaha.phase_id == 15785
     assert mwahaha.default_task == "a-en"
+    assert mwahaha.ignored_users == frozenset({"dangnt"})
+    assert mwahaha.excluded_session_ids == config.MWAHAHA_EXCLUDED_SESSION_IDS
+    assert len(mwahaha.excluded_session_ids) == 10
     assert mwahaha.task_ids == ("a-en", "a-es", "a-zh", "b1", "b2")
     assert mwahaha.allow_codabench is True
     assert mwahaha.codabench_competition_id == 9719
@@ -153,6 +158,12 @@ def test_filter_submissions_to_ingest() -> None:
     all_subs = ingest_submissions._filter_submissions_to_ingest([s1, s2, s3], only_latest_per_user=False)
     assert len(all_subs) == 3
     assert all_subs == [s1, s2, s3]
+
+    # ignored_users excludes specified users
+    filtered = ingest_submissions._filter_submissions_to_ingest(
+        [s1, s2, s3], only_latest_per_user=False, ignored_users=frozenset({"alice"})
+    )
+    assert filtered == [s3]
 
 
 def test_ingest_submissions_main_argparse(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -152,10 +152,17 @@
                             Rank <span class="sort-icon ml-1"></span>
                         </div>
                     </th>
+                    <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group text-center sort-header dark:hover:bg-gray-700"
+                        data-key="teamName"
+                        id="team-name-header" style="display: none;">
+                        <div class="flex items-center justify-center">
+                            Team Name <span class="sort-icon ml-1"></span>
+                        </div>
+                    </th>
                     <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group sort-header text-center dark:hover:bg-gray-700"
                         data-key="system">
                         <div class="flex items-center justify-center">
-                            System <span class="sort-icon ml-1"></span>
+                            <span id="system-header-label">System</span> <span class="sort-icon ml-1"></span>
                         </div>
                     </th>
                     <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 group text-center sort-header dark:hover:bg-gray-700"
@@ -389,6 +396,7 @@
   let defaultTask = "t3";
   let activeTab = "t3";
   const dataSets = {};
+  let teamMap = {};
   let sortConfig = {key: 'rating', direction: 'desc'};
   let TASKS = ["t3"];
   let taskLastModified = {}; // Stores date strings per task
@@ -590,6 +598,17 @@
   function renderTable() {
     // 1. Get Data
     let data = [...(dataSets[activeTab] || [])];
+      const hasTeams = data.some(row => teamMap[row.system]);
+
+      // Update Header
+      const teamNameHeader = document.getElementById("team-name-header");
+      const systemHeaderLabel = document.getElementById("system-header-label");
+      if (teamNameHeader) {
+          teamNameHeader.style.display = hasTeams ? "" : "none";
+      }
+      if (systemHeaderLabel) {
+          systemHeaderLabel.textContent = hasTeams ? "Username" : "System";
+      }
 
     // 2. Calculate Total Votes
     const totalVotes = data.reduce((sum, row) => sum + (row.num_battles || 0), 0) / 2;
@@ -606,8 +625,14 @@
     // 3. Sort Data
     if (sortConfig.key) {
       data.sort((a, b) => {
-        const valA = a[sortConfig.key];
-        const valB = b[sortConfig.key];
+          let valA, valB;
+          if (sortConfig.key === "teamName") {
+              valA = (teamMap[a.system] || "").toLowerCase();
+              valB = (teamMap[b.system] || "").toLowerCase();
+          } else {
+              valA = a[sortConfig.key];
+              valB = b[sortConfig.key];
+          }
         if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
         if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
         return 0;
@@ -618,7 +643,7 @@
     if (data.length === 0) {
       leaderboardBody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <td colspan="${hasTeams ? 6 : 5}" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                         ${icons.alertCircle}
                         <p>No data available for this task.</p>
                     </td>
@@ -681,6 +706,15 @@
 
         rank = row.final_ranking;
       }
+        const teamCell = hasTeams
+            ? `
+                    <td class="px-6 py-4 text-center">
+                        <span class="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors dark:text-gray-100 dark:group-hover:text-blue-400">
+                            ${escapeHtml(teamMap[row.system] || "")}
+                        </span>
+                    </td>`
+            : "";
+
       return `
                 <tr class="${rowClass} transition-colors duration-150 group border-b border-gray-100 dark:border-gray-800">
                     <td class="px-6 py-4 text-center font-medium">
@@ -688,6 +722,7 @@
                             <span class="text-gray-500 font-mono dark:text-gray-400">${rank}</span>
                         </div>
                     </td>
+                    ${teamCell}
                     <td class="px-6 py-4 text-center">
                         <span class="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors dark:text-gray-100 dark:group-hover:text-blue-400">
                             ${escapeHtml(row.system)}
@@ -732,6 +767,15 @@
   // --- DATA LOADING ---
 
   async function loadInitialData() {
+      try {
+          const teamMapResponse = await fetch("scores/team_map.json");
+          if (teamMapResponse.ok) {
+              teamMap = await teamMapResponse.json();
+          }
+      } catch (e) {
+          console.warn("Could not load scores/team_map.json:", e);
+      }
+
     const promises = TASKS.map(async (task) => {
       try {
         const response = await fetch(`scores/${task}.json`);

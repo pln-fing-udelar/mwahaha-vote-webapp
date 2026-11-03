@@ -496,6 +496,79 @@ async def test_leaderboard_page(browser: Browser, live_server_url: str) -> None:
     await context.close()
 
 
+async def test_leaderboard_team_mapping(browser: Browser, live_server_url: str) -> None:
+    context = await browser.new_context()
+    page = await context.new_page()
+    await _stub_external_trackers(page)
+
+    mock_team_map = {
+        "tanlocn": "DANGNT@SGU",
+        "berkbubus": "XplaiNLP",
+    }
+    mock_scores = [
+        {
+            "system": "tanlocn",
+            "rating": 961.9,
+            "variance": 10.0,
+            "rating_q975": 986.0,
+            "rating_q025": 925.0,
+            "num_battles": 378,
+            "final_ranking": 2,
+        },
+        {
+            "system": "berkbubus",
+            "rating": 1079.3,
+            "variance": 10.0,
+            "rating_q975": 1115.0,
+            "rating_q025": 1056.0,
+            "num_battles": 374,
+            "final_ranking": 1,
+        },
+    ]
+
+    await page.route(
+        "**/scores/team_map.json",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(mock_team_map),
+        ),
+    )
+    await page.route(
+        "**/scores/a-en.json",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(mock_scores),
+        ),
+    )
+
+    await page.goto(f"{live_server_url}/leaderboard?task=a-en")
+    await page.wait_for_selector("#leaderboard-body tr")
+
+    # Team Name header should be visible and Username header displayed
+    assert await page.is_visible("#team-name-header")
+    assert await page.locator("#system-header-label").text_content() == "Username"
+
+    # Team names should be present in table text
+    rows_text = await page.locator("#leaderboard-body").text_content()
+    assert rows_text is not None
+    assert "DANGNT@SGU" in rows_text
+    assert "XplaiNLP" in rows_text
+
+    # Sort by Team Name descending: XplaiNLP first, then DANGNT@SGU
+    await page.click("#team-name-header")
+    first_row_desc = await page.locator("#leaderboard-body tr").first.text_content()
+    assert first_row_desc is not None and "XplaiNLP" in first_row_desc
+
+    # Sort by Team Name ascending: DANGNT@SGU first, then XplaiNLP
+    await page.click("#team-name-header")
+    first_row_asc = await page.locator("#leaderboard-body tr").first.text_content()
+    assert first_row_asc is not None and "DANGNT@SGU" in first_row_asc
+
+    await context.close()
+
+
 async def test_leaderboard_empty_404_and_zero_ci_range(browser: Browser, live_server_url: str) -> None:
     context = await browser.new_context()
     page = await context.new_page()

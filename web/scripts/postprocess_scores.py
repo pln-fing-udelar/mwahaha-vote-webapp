@@ -33,9 +33,12 @@ async def async_main(competition: CompetitionConfig | None = None) -> None:
                     df.index.name = "system"
                     df = df.sort_values(by=["rating"], ascending=False)
 
+                    if competition.ignored_users:
+                        df = df.drop(index=list(competition.ignored_users), errors="ignore")
+
                     considered_system_ids = set(df.index)
                     for system_id, votes in system_id_to_vote_count.items():
-                        if system_id not in considered_system_ids:
+                        if system_id not in considered_system_ids and system_id not in competition.ignored_users:
                             df.loc[system_id] = [
                                 float("NaN"),  # rating
                                 float("NaN"),  # variance
@@ -62,6 +65,7 @@ async def async_main(competition: CompetitionConfig | None = None) -> None:
                                 "final_ranking": None,
                             }
                             for system_id, votes in system_id_to_vote_count.items()
+                            if system_id not in competition.ignored_users
                         ],
                         file,
                     )

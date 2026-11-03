@@ -12,7 +12,7 @@ def main() -> None:
         "--competition",
         "-c",
         choices=COMPETITION_CHOICES,
-        default=None,
+        default="mwahaha",
         help=f"Competition to target (default: {ACTIVE_COMPETITION.id}, or $COMPETITION env var).",
     )
     args, _ = parser.parse_known_args()
