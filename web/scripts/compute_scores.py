@@ -2,6 +2,7 @@
 """Unified in-memory scoring pipeline computing Bradley-Terry Elo leaderboards."""
 
 import os
+from zoneinfo import ZoneInfo
 lazy import argparse
 lazy import asyncio
 lazy import datetime
@@ -22,7 +23,7 @@ lazy from prepare_data_for_scoring import (
 )
 
 from mwahahavote.config import ACTIVE_COMPETITION, COMPETITION_CHOICES, CompetitionConfig, Task, get_competition
-from mwahahavote.scoring import report_elo_analysis_results
+from mwahahavote.scoring import pretty_print_elo_rating, report_elo_analysis_results
 lazy import mwahahavote.database
 
 MIN_VOTES_PER_SYSTEM = 20
@@ -105,6 +106,7 @@ def process_task_leaderboard(
     tol: float = 1e-6,
     intermediate_dir: Path | None = None,
     task: str = "",
+    quiet: bool = False,
 ) -> None:
     """Compute Bradley-Terry Elo ratings for task battles and write leaderboard JSON."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -132,6 +134,8 @@ def process_task_leaderboard(
         ]
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(unranked_records, f)
+        if not quiet and task:
+            print(f"Skipping the unvoted task {task}.")
         return
 
     np.random.seed(42)
@@ -170,6 +174,48 @@ def process_task_leaderboard(
     df.num_battles = df.num_battles.astype(int)  # ty:ignore[unresolved-attribute]
     df.reset_index().to_json(output_path, orient="records")
 
+    if not quiet:
+        last_updated_tstamp = results["last_updated_tstamp"]
+        cutoff_date = datetime.datetime.fromtimestamp(last_updated_tstamp, tz=ZoneInfo("US/Pacific")).strftime("%Y%m%d")
+        category_name = f"{task} conversations" if task else "full conversations"
+        print(f"\n\n# Results for {category_name}")
+        print("# Online Elo")
+        pretty_print_elo_rating(results["elo_rating_online"])
+        print("# Median")
+        pretty_print_elo_rating(results["elo_rating_median"])
+        print(f"last update : {cutoff_date}")
+
+
+def _print_cached_task_results(
+    task: str,
+    vote_count: int,
+    inter_path: Path | None,
+) -> None:
+    """Print results for a cached task if intermediate pickle results exist."""
+    if vote_count == 0:
+        print(f"Skipping the unvoted task {task}.")
+        return
+
+    if inter_path is not None and (inter_path / f"elo_results_{task}.pkl").exists():
+        try:
+            with open(inter_path / f"elo_results_{task}.pkl", "rb") as f:
+                cached_results = pickle.load(f)["full"]
+            last_updated_tstamp = cached_results["last_updated_tstamp"]
+            cutoff_date = datetime.datetime.fromtimestamp(last_updated_tstamp, tz=ZoneInfo("US/Pacific")).strftime(
+                "%Y%m%d"
+            )
+            print(f"\n\n# Results for {task} conversations (cached)")
+            print("# Online Elo")
+            pretty_print_elo_rating(cached_results["elo_rating_online"])
+            print("# Median")
+            pretty_print_elo_rating(cached_results["elo_rating_median"])
+            print(f"last update : {cutoff_date}")
+            return
+        except Exception:
+            pass
+
+    print(f"Skipping task {task} (cached - no changes).")
+
 
 async def async_main(
     competition: CompetitionConfig | None = None,
@@ -187,6 +233,7 @@ async def async_main(
     cache_file: Path | str | None = "scoring/.scoring_cache.json",
     no_cache: bool = False,
     force: bool = False,
+    quiet: bool = False,
 ) -> dict[str, bool]:
     """Run the complete scoring pipeline in memory, caching results for unchanged tasks."""
     if competition is None:
@@ -226,6 +273,7 @@ async def async_main(
                 tol=tol,
                 intermediate_dir=inter_path,
                 task=task,
+                quiet=quiet,
             )
             tasks_recomputed[task] = True
         return tasks_recomputed
@@ -276,6 +324,8 @@ async def async_main(
                 and cache.get(task) == task_meta
             ):
                 tasks_recomputed[task] = False
+                if not quiet:
+                    _print_cached_task_results(task, vote_count, inter_path)
                 continue
 
             battles, all_system_id_to_vote_count = await fetch_task_battles(
@@ -297,6 +347,7 @@ async def async_main(
                 tol=tol,
                 intermediate_dir=inter_path,
                 task=task,
+                quiet=quiet,
             )
             cache[task] = task_meta
             tasks_recomputed[task] = True
@@ -398,6 +449,13 @@ def main() -> None:
         default=False,
         help="Force recomputation of all tasks, updating cache afterwards.",
     )
+    parser.add_argument(
+        "--quiet",
+        "-q",
+        action="store_true",
+        default=False,
+        help="Suppress output to stdout.",
+    )
 
     args = parser.parse_args()
     competition = get_competition(args.competition) if args.competition is not None else None
@@ -418,6 +476,7 @@ def main() -> None:
             cache_file=args.cache_file,
             no_cache=args.no_cache,
             force=args.force,
+            quiet=args.quiet,
         )
     )
 

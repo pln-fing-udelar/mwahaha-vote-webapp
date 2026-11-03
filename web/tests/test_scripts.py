@@ -460,6 +460,7 @@ async def test_compute_scores_async_main(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.chdir(tmp_path)
     scores_dir = tmp_path / "scores"
@@ -482,6 +483,11 @@ async def test_compute_scores_async_main(
             tasks=["a-en"],
         )
 
+    out = capsys.readouterr().out
+    assert "# Results for a-en conversations" in out
+    assert "# Online Elo" in out
+    assert "# Median" in out
+
     out_file = scores_dir / "a-en.json"
     assert out_file.exists()
     records = json.loads(out_file.read_text(encoding="utf-8"))
@@ -491,7 +497,7 @@ async def test_compute_scores_async_main(
     assert (intermediate_dir / "votes-a-en.json").exists()
     assert (intermediate_dir / "elo_results_a-en.pkl").exists()
 
-    # Test caching: 2nd run with unchanged votes should skip recomputation
+    # Test caching: 2nd run with unchanged votes should skip recomputation and print cached results
     cache_file = tmp_path / "cache.json"
     with patch("mwahahavote.database.create_engine", fake_create_engine):
         res1 = await compute_scores.async_main(
@@ -504,8 +510,9 @@ async def test_compute_scores_async_main(
         )
         assert res1["a-en"] is True
         assert cache_file.exists()
+        capsys.readouterr()  # discard
 
-        # Unchanged: should skip
+        # Unchanged: should skip recomputation and print cached standings
         res2 = await compute_scores.async_main(
             scores_dir=scores_dir,
             intermediate_dir=intermediate_dir,
@@ -515,6 +522,8 @@ async def test_compute_scores_async_main(
             tasks=["a-en"],
         )
         assert res2["a-en"] is False
+        cached_out = capsys.readouterr().out
+        assert "# Results for a-en conversations (cached)" in cached_out
 
         # Force: should recompute
         res_force = await compute_scores.async_main(
@@ -542,7 +551,8 @@ async def test_compute_scores_async_main(
         )
         assert res_updated["a-en"] is True
 
-    # Test an empty/unvoted task writes null ratings
+    # Test an empty/unvoted task writes null ratings and prints skip message
+    capsys.readouterr()  # discard
     with patch("mwahahavote.database.create_engine", fake_create_engine):
         await compute_scores.async_main(
             scores_dir=scores_dir,
@@ -550,6 +560,8 @@ async def test_compute_scores_async_main(
             min_votes_per_system=1,
             tasks=["a-es"],
         )
+    skip_out = capsys.readouterr().out
+    assert "Skipping the unvoted task a-es." in skip_out
     out_es = scores_dir / "a-es.json"
     assert out_es.exists()
     records_es = json.loads(out_es.read_text(encoding="utf-8"))
@@ -577,7 +589,9 @@ async def test_compute_scores_input_csv(tmp_path: Path) -> None:
     assert len(records) == 2
 
 
-def test_compute_scores_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_compute_scores_cli(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     csv_file = tmp_path / "votes.csv"
     csv_file.write_text(
         "task,prompt_id,system_id_a,system_id_b,vote,session_id\n"
@@ -604,4 +618,27 @@ def test_compute_scores_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
         ],
     )
     compute_scores.main()
+    out = capsys.readouterr().out
+    assert "# Results for a-en conversations" in out
+    assert "# Online Elo" in out
+    assert "# Median" in out
     assert (scores_dir / "a-en.json").exists()
+
+    # Test --quiet suppresses output
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "compute_scores.py",
+            "--input-csv",
+            str(csv_file),
+            "--scores-dir",
+            str(scores_dir),
+            "--min-votes-per-system",
+            "1",
+            "--num-bootstrap",
+            "10",
+            "--quiet",
+        ],
+    )
+    compute_scores.main()
+    assert capsys.readouterr().out == ""

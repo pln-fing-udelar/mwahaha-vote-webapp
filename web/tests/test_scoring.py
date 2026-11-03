@@ -17,6 +17,7 @@ from mwahahavote.scoring import (
     get_matchups_models,
     preprocess_for_bt,
     preprocess_for_elo,
+    pretty_print_elo_rating,
     report_elo_analysis_results,
     scale_and_offset,
 )
@@ -140,6 +141,8 @@ def test_report_elo_analysis_results() -> None:
     )
     assert res["rating_system"] == "bt"
     assert "sys_c" not in res["elo_rating_final"]
+    assert "elo_rating_median" in res
+    assert "sys_a" in res["elo_rating_median"]
     table_df = res["leaderboard_table_df"]
     assert "rating" in table_df.columns
     assert "variance" in table_df.columns
@@ -177,7 +180,18 @@ def test_report_elo_analysis_results_unsupported_system() -> None:
         report_elo_analysis_results(df, rating_system="invalid")
 
 
-def test_elo_analysis_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pretty_print_elo_rating(capsys: pytest.CaptureFixture[str]) -> None:
+    ratings = {"model_b": 950.2, "model_a": 1280.8, "model_c": 1100.0}
+    pretty_print_elo_rating(ratings)
+    out = capsys.readouterr().out
+    lines = [line.strip() for line in out.strip().splitlines()]
+    assert len(lines) == 3
+    assert lines[0].startswith("1, model_a") and lines[0].endswith("1281")
+    assert lines[1].startswith("2, model_c") and lines[1].endswith("1100")
+    assert lines[2].startswith("3, model_b") and lines[2].endswith("950")
+
+
+def test_elo_analysis_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     df = _sample_battles()
     input_json = tmp_path / "battles.json"
     output_pkl = tmp_path / "results.pkl"
@@ -201,8 +215,35 @@ def test_elo_analysis_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
     )
     elo_analysis.main()
 
+    out = capsys.readouterr().out
+    assert "# Results for full conversations" in out
+    assert "# Online Elo" in out
+    assert "# Median" in out
+    assert "last update :" in out
+
     assert output_pkl.is_file()
     with open(output_pkl, "rb") as f:
         data = pickle.load(f)
     assert "full" in data
     assert "leaderboard_table_df" in data["full"]
+
+    # Test --quiet suppresses output
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "elo_analysis.py",
+            "--clean-battle-file",
+            str(input_json),
+            "--output",
+            str(output_pkl),
+            "--num-bootstrap",
+            "10",
+            "--num-cpu",
+            "1",
+            "--tol",
+            "1e-4",
+            "--quiet",
+        ],
+    )
+    elo_analysis.main()
+    assert capsys.readouterr().out == ""

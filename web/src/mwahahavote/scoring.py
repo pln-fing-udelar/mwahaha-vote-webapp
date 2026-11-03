@@ -73,6 +73,13 @@ def compute_elo(
     return {model: float(ratings[idx]) for idx, model in enumerate(models)}
 
 
+def pretty_print_elo_rating(rating: dict[str, float]) -> None:
+    """Print Elo ratings formatted in descending order."""
+    model_order = sorted(rating.keys(), key=lambda k: -rating[k])
+    for i, model in enumerate(model_order):
+        print(f"{i + 1:2d}, {model:25s}, {rating[model]:.0f}")
+
+
 def bt_loss_and_grad(
     ratings: np.ndarray,
     matchups: np.ndarray,
@@ -272,6 +279,7 @@ def report_elo_analysis_results(
         "rating_system": rating_system,
         "elo_rating_online": elo_rating_online,
         "elo_rating_final": elo_rating_final,
+        "elo_rating_median": bootstrap_df.median().to_dict(),
         "last_updated_datetime": last_updated_datetime,
         "last_updated_tstamp": last_updated_tstamp,
         "bootstrap_df": bootstrap_df,
