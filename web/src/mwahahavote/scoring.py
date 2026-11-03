@@ -13,7 +13,7 @@ lazy import multiprocessing as mp
 lazy import numpy as np
 lazy import pandas as pd
 lazy from scipy.optimize import minimize
-lazy from scipy.special import expit
+lazy from scipy.special import expit, log_expit
 
 
 def _always_true(_: pd.Series) -> bool:
@@ -81,16 +81,14 @@ def bt_loss_and_grad(
     alpha: float = 1.0,
 ) -> tuple[float, np.ndarray]:
     """Compute negative log-likelihood loss and gradients for the Bradley-Terry model."""
-    matchup_ratings = ratings[matchups]
-    logits = alpha * (matchup_ratings[:, 0] - matchup_ratings[:, 1])
+    diff = ratings[matchups[:, 0]] - ratings[matchups[:, 1]]
+    logits = alpha * diff
     probs = expit(logits)
-    loss = -float(((np.log(probs) * outcomes + np.log(1.0 - probs) * (1.0 - outcomes)) * weights).sum())
-    matchups_grads = -alpha * (outcomes - probs) * weights
-    model_grad = np.zeros_like(ratings)
-    np.add.at(
-        model_grad,
-        matchups[:, [0, 1]],
-        matchups_grads[:, None] * np.array([1.0, -1.0], dtype=np.float64),
+    loss = -float(((log_expit(logits) * outcomes + log_expit(-logits) * (1.0 - outcomes)) * weights).sum())
+    m_grads = alpha * (probs - outcomes) * weights
+    n_models = len(ratings)
+    model_grad = np.bincount(matchups[:, 0], weights=m_grads, minlength=n_models) - np.bincount(
+        matchups[:, 1], weights=m_grads, minlength=n_models
     )
     return loss, model_grad
 
@@ -183,8 +181,9 @@ def _filter_battles(
     exclude_models: list[str],
     exclude_tie: bool,
 ) -> pd.DataFrame:
-    filtered_indices = battles.apply(filter_func, axis=1)
-    battles = battles[filtered_indices]
+    if filter_func is not _always_true:
+        filtered_indices = battles.apply(filter_func, axis=1)
+        battles = battles[filtered_indices]
     battles = battles.sort_values(ascending=True, by=["tstamp"])
 
     if len(langs) > 0:
@@ -205,15 +204,12 @@ def _compute_ranking(
     model_rating_q025: pd.Series,
     model_rating_q975: pd.Series,
 ) -> dict[str, int]:
-    ranking: dict[str, int] = {}
-    for i, model_a in enumerate(model_order):
-        ranking[model_a] = 1
-        for j, model_b in enumerate(model_order):
-            if i == j:
-                continue
-            if model_rating_q025[model_b] > model_rating_q975[model_a]:
-                ranking[model_a] += 1
-    return ranking
+    q025_arr = model_rating_q025[model_order].to_numpy()
+    q975_arr = model_rating_q975[model_order].to_numpy()
+    strictly_better = q025_arr[None, :] > q975_arr[:, None]
+    np.fill_diagonal(strictly_better, False)
+    ranks = 1 + strictly_better.sum(axis=1)
+    return dict(zip(model_order, ranks.tolist(), strict=True))
 
 
 def report_elo_analysis_results(
