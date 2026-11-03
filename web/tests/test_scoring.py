@@ -158,6 +158,19 @@ def test_report_elo_analysis_results_with_custom_filter() -> None:
     assert res["last_updated_tstamp"] == 400
 
 
+def test_report_elo_analysis_results_with_custom_tol() -> None:
+    df = _sample_battles()
+    res = report_elo_analysis_results(
+        df,
+        rating_system="bt",
+        num_bootstrap=10,
+        tol=1e-4,
+        num_cpu=1,
+    )
+    assert "leaderboard_table_df" in res
+    assert res["rating_system"] == "bt"
+
+
 def test_report_elo_analysis_results_unsupported_system() -> None:
     df = _sample_battles()
     with pytest.raises(NotImplementedError):
@@ -182,6 +195,8 @@ def test_elo_analysis_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
             "10",
             "--num-cpu",
             "1",
+            "--tol",
+            "1e-4",
         ],
     )
     elo_analysis.main()
