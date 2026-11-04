@@ -187,6 +187,7 @@ async def test_create_engine(monkeypatch: pytest.MonkeyPatch) -> None:
                 "mysql+asyncmy://testuser:testpass@db.local/testdb",
                 pool_size=10,
                 pool_recycle=3600,
+                pool_pre_ping=True,
             )
         mock_engine.dispose.assert_awaited_once()
 

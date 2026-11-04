@@ -25,6 +25,9 @@ RUN \
 
 EXPOSE 80
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD ["python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:80/healthz')"]
+
 # We tried with `--workers "$(($(nproc)*2 + 1))"` but it uses too much memory for DigialOcean CPU-RAM ratios
 # of the machines we use (about <.5GB per worker).
 # And fewer seems fine.
