@@ -224,6 +224,11 @@ async def test_routes_end_to_end(
 
     transport = httpx2.ASGITransport(app=inject_db)
     async with httpx2.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        # Test /healthz
+        resp_healthz = await client.get("/healthz")
+        assert resp_healthz.status_code == 200
+        assert resp_healthz.json() == {"status": "ok"}
+
         # GET /battles with invalid task (falls back to 't3') and out-of-range batch_size (clamped to [1, 4])
         resp_battles_clamped = await client.get("/battles", params={"task": "invalid_task", "batch_size": "99"})
         assert resp_battles_clamped.status_code == 200
@@ -248,6 +253,7 @@ async def test_routes_end_to_end(
         assert resp_battles.headers["cache-control"] == "max-age=0, no-cache"
         assert resp_battles.headers["x-content-type-options"] == "nosniff"
         assert resp_battles.headers["x-frame-options"] == "SAMEORIGIN"
+        assert "httponly" in resp_battles.headers["set-cookie"].lower()
         assert resp_battles.headers["referrer-policy"] == "strict-origin-when-cross-origin"
         assert "id=" in resp_battles.headers["set-cookie"]
         battles_data = resp_battles.json()

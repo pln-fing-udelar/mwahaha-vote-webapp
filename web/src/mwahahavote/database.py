@@ -245,6 +245,7 @@ async def create_engine() -> AsyncGenerator[sqlalchemy.ext.asyncio.AsyncEngine]:
         f"mysql+asyncmy://{os.environ['DB_USER']}:{os.environ['DB_PASS']}@{os.environ['DB_HOST']}/{os.environ['DB_NAME']}",
         pool_size=10,
         pool_recycle=3600,
+        pool_pre_ping=True,
     )
     try:
         yield engine
