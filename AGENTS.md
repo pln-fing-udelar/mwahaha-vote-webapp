@@ -53,7 +53,7 @@ and the system uses FastChat's Bradley-Terry / Elo ranking to score submissions.
 
 **Scoring Pipeline** (`web/scripts/compute_scores.sh` or `web/scripts/compute_scores.py`):
 
-- `compute_scores.py`: Unified in-memory scoring pipeline that queries votes from DB once, computes Bradley-Terry Elo ratings with bootstrap confidence intervals in-memory via `mwahahavote.scoring`, and outputs final leaderboard JSONs to `web/src/mwahahavote/static/scores/`.
+- `compute_scores.py`: Unified in-memory scoring pipeline that queries votes from DB once, computes Bradley-Terry Elo ratings with bootstrap confidence intervals in-memory via `mwahahavote.scoring`, and outputs final leaderboard JSONs to `web/src/mwahahavote/static/scores/`. The scores only depend on how many votes there are for each (system A, system B, outcome), so unless `--dump-intermediate` is given (it needs the votes one by one; `compute_scores.sh` passes it only with `DUMP_INTERMEDIATE=1`), the database groups the votes (`get_vote_counts_for_scoring`, `get_same_text_battle_counts`) and the cost doesn't grow with the number of votes.
 - Individual scripts (`prepare_data_for_scoring.py`, `elo_analysis.py`, `postprocess_scores.py`) remain available for manual inspection and standalone use.
 
 ### Key Data Flow
@@ -93,6 +93,9 @@ DB_HOST=$(docker container inspect mwahaha-vote-webapp-database-1 | uv run jq -r
 
 # Optionally exclude specific session IDs from scoring
 EXCLUDED_SESSION_IDS=session1,session2,session3 ./scripts/compute_scores.sh
+
+# Optionally also save the intermediate files (`scoring/votes-*.json` and `scoring/elo_results_*.pkl`), which is slower
+DUMP_INTERMEDIATE=1 ./scripts/compute_scores.sh
 ```
 
 **Session Exclusion**: Set `EXCLUDED_SESSION_IDS` (comma-separated) to exclude votes from specific sessions in score

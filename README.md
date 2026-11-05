@@ -102,6 +102,13 @@ Run:
 ./scripts/compute_scores.sh
 ```
 
+The scores are computed from how many votes there are for each pair of systems and outcome, which the database
+counts, so the time hardly depends on how many votes there are.
+
+To also save the votes one by one and the full results in `scoring/` (`votes-*.json` and `elo_results_*.pkl`, for
+analysis outside the app), run `DUMP_INTERMEDIATE=1 ./scripts/compute_scores.sh`. It's slower, as it needs to read
+every vote.
+
 ## Development & Testing
 
 Run the linter, formatter, type-checker, and test suite from `web/`:

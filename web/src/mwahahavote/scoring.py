@@ -28,21 +28,40 @@ def get_matchups_models(df: pd.DataFrame) -> tuple[np.ndarray, list[str]]:
     return matchups, models.to_list()
 
 
+def cells_from_battles(df: pd.DataFrame) -> pd.DataFrame:
+    """Group battles into (model_a, model_b, winner) cells with the number of battles in each one."""
+    winner = np.where(df["winner"] == "model_a", "model_a", np.where(df["winner"] == "model_b", "model_b", "tie"))
+    return (
+        pd.DataFrame({"model_a": df["model_a"].to_numpy(), "model_b": df["model_b"].to_numpy(), "winner": winner})
+        .groupby(["model_a", "model_b", "winner"], sort=True)
+        .size()
+        .rename("count")
+        .reset_index()
+    )
+
+
+def preprocess_cells_for_bt(cells: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, list[str], np.ndarray]:
+    """Preprocess (model_a, model_b, winner, count) cells into matchups, outcomes, models, and observation weights.
+
+    The models are sorted by ID, so the results don't depend on the order the battles were in.
+    """
+    cells = cells.groupby(["model_a", "model_b", "winner"], sort=True, as_index=False).agg(count=("count", "sum"))
+    models = sorted(set(cells["model_a"]) | set(cells["model_b"]))
+    model_to_index = {model: i for i, model in enumerate(models)}
+    model_a_indices = cells["model_a"].map(model_to_index).to_numpy(dtype=np.int32)
+    model_b_indices = cells["model_b"].map(model_to_index).to_numpy(dtype=np.int32)
+    # model_a win -> 2, tie -> 1, model_b win -> 0
+    outcome_ids = cells["winner"].map({"model_b": 0, "tie": 1, "model_a": 2}).to_numpy(dtype=np.int32)
+    order = np.lexsort((outcome_ids, model_b_indices, model_a_indices))
+    matchups = np.column_stack([model_a_indices[order], model_b_indices[order]])
+    outcomes = outcome_ids[order].astype(np.float64) / 2.0
+    weights = cells["count"].to_numpy(dtype=np.float64)[order]
+    return matchups, outcomes, models, weights
+
+
 def preprocess_for_bt(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, list[str], np.ndarray]:
     """Preprocess battles into unique (matchup, outcome) pairs with corresponding observation weights."""
-    n_rows = len(df)
-    # The 3 columns of schedule represent: model_a id, model_b id, outcome_id
-    schedule = np.full((n_rows, 3), fill_value=1, dtype=np.int32)
-    schedule[:, [0, 1]], models = get_matchups_models(df)
-    # model_a win -> 2, tie -> 1, model_b win -> 0
-    schedule[df["winner"] == "model_a", 2] = 2
-    schedule[df["winner"] == "model_b", 2] = 0
-
-    matchups_outcomes, weights = np.unique(schedule, return_counts=True, axis=0)
-    matchups = matchups_outcomes[:, [0, 1]]
-    outcomes = matchups_outcomes[:, 2].astype(np.float64) / 2.0
-    weights_float = weights.astype(np.float64)
-    return matchups, outcomes, models, weights_float
+    return preprocess_cells_for_bt(cells_from_battles(df))
 
 
 def preprocess_for_elo(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, list[str]]:
@@ -137,6 +156,20 @@ def scale_and_offset(
     return scaled_ratings
 
 
+def compute_bt_from_data(
+    bt_data: tuple[np.ndarray, np.ndarray, list[str], np.ndarray],
+    base: float = 10.0,
+    scale: float = 400.0,
+    init_rating: float = 1000.0,
+    tol: float = 1e-6,
+) -> pd.Series:
+    """Compute Bradley-Terry maximum likelihood ratings from preprocessed battles."""
+    matchups, outcomes, models, weights = bt_data
+    ratings = fit_bt(matchups, outcomes, weights, len(models), math.log(base), tol)
+    scaled_ratings = scale_and_offset(ratings, models, scale, init_rating=init_rating)
+    return pd.Series(scaled_ratings, index=models).sort_values(ascending=False)
+
+
 def compute_bt(
     df: pd.DataFrame,
     base: float = 10.0,
@@ -145,14 +178,11 @@ def compute_bt(
     tol: float = 1e-6,
 ) -> pd.Series:
     """Compute Bradley-Terry maximum likelihood ratings for models in the dataset."""
-    matchups, outcomes, models, weights = preprocess_for_bt(df)
-    ratings = fit_bt(matchups, outcomes, weights, len(models), math.log(base), tol)
-    scaled_ratings = scale_and_offset(ratings, models, scale, init_rating=init_rating)
-    return pd.Series(scaled_ratings, index=models).sort_values(ascending=False)
+    return compute_bt_from_data(preprocess_for_bt(df), base, scale, init_rating, tol)
 
 
-def compute_bootstrap_bt(
-    battles: pd.DataFrame,
+def compute_bootstrap_bt_from_data(
+    bt_data: tuple[np.ndarray, np.ndarray, list[str], np.ndarray],
     num_round: int = 100,
     base: float = 10.0,
     scale: float = 400.0,
@@ -160,11 +190,12 @@ def compute_bootstrap_bt(
     tol: float = 1e-6,
     num_cpu: int | None = None,
 ) -> pd.DataFrame:
-    """Compute bootstrap sample distributions of Bradley-Terry ratings."""
-    matchups, outcomes, models, weights = preprocess_for_bt(battles)
+    """Compute bootstrap sample distributions of Bradley-Terry ratings from preprocessed battles."""
+    matchups, outcomes, models, weights = bt_data
+    n_battles = int(weights.sum())
     rng = np.random.default_rng(seed=0)
-    idxs = rng.multinomial(n=len(battles), pvals=weights / weights.sum(), size=num_round)
-    boot_weights = idxs.astype(np.float64) / len(battles)
+    idxs = rng.multinomial(n=n_battles, pvals=weights / weights.sum(), size=num_round)
+    boot_weights = idxs.astype(np.float64) / n_battles
 
     bt_fn = partial(fit_bt, matchups, outcomes, n_models=len(models), alpha=math.log(base), tol=tol)
 
@@ -178,6 +209,19 @@ def compute_bootstrap_bt(
     scaled_ratings = scale_and_offset(ratings, models, scale, init_rating)
     df = pd.DataFrame(scaled_ratings, columns=models)
     return df[df.median().sort_values(ascending=False).index]
+
+
+def compute_bootstrap_bt(
+    battles: pd.DataFrame,
+    num_round: int = 100,
+    base: float = 10.0,
+    scale: float = 400.0,
+    init_rating: float = 1000.0,
+    tol: float = 1e-6,
+    num_cpu: int | None = None,
+) -> pd.DataFrame:
+    """Compute bootstrap sample distributions of Bradley-Terry ratings."""
+    return compute_bootstrap_bt_from_data(preprocess_for_bt(battles), num_round, base, scale, init_rating, tol, num_cpu)
 
 
 def _filter_battles(
@@ -219,6 +263,54 @@ def _compute_ranking(
     return dict(zip(model_order, ranks.tolist(), strict=True))
 
 
+def _build_elo_analysis_results(
+    bt_data: tuple[np.ndarray, np.ndarray, list[str], np.ndarray],
+    num_battles: pd.Series,
+    last_updated_tstamp: int,
+    elo_rating_online: dict[str, float] | None,
+    rating_system: str,
+    num_bootstrap: int,
+    num_cpu: int | None,
+    tol: float,
+) -> dict[str, Any]:
+    if rating_system != "bt":
+        raise NotImplementedError(f"Unsupported rating system: {rating_system}")
+
+    bootstrap_df = compute_bootstrap_bt_from_data(bt_data, num_round=num_bootstrap, num_cpu=num_cpu, tol=tol)
+    elo_rating_final = compute_bt_from_data(bt_data, tol=tol)
+
+    model_order = list(elo_rating_final.keys())
+    model_rating_q025 = bootstrap_df.quantile(0.025)
+    model_rating_q975 = bootstrap_df.quantile(0.975)
+    ranking = _compute_ranking(model_order, model_rating_q025, model_rating_q975)
+
+    leaderboard_table_df = pd.DataFrame(
+        {
+            "rating": elo_rating_final,
+            "variance": bootstrap_df.var(),
+            "rating_q975": bootstrap_df.quantile(0.975),
+            "rating_q025": bootstrap_df.quantile(0.025),
+            "num_battles": num_battles,
+            "final_ranking": pd.Series(ranking),
+        }
+    )
+
+    last_updated_datetime = datetime.datetime.fromtimestamp(last_updated_tstamp, tz=ZoneInfo("US/Pacific")).strftime(
+        "%Y-%m-%d %H:%M:%S %Z"
+    )
+
+    return {
+        "rating_system": rating_system,
+        "elo_rating_online": elo_rating_online,
+        "elo_rating_final": elo_rating_final,
+        "elo_rating_median": bootstrap_df.median().to_dict(),
+        "last_updated_datetime": last_updated_datetime,
+        "last_updated_tstamp": last_updated_tstamp,
+        "bootstrap_df": bootstrap_df,
+        "leaderboard_table_df": leaderboard_table_df,
+    }
+
+
 def report_elo_analysis_results(
     battles_json: pd.DataFrame | list[dict[str, Any]] | dict[str, Any],
     rating_system: str = "bt",
@@ -248,40 +340,40 @@ def report_elo_analysis_results(
 
     elo_rating_online = compute_elo(battles)
 
-    if rating_system == "bt":
-        bootstrap_df = compute_bootstrap_bt(battles, num_round=num_bootstrap, num_cpu=num_cpu, tol=tol)
-        elo_rating_final = compute_bt(battles, tol=tol)
-    else:
-        raise NotImplementedError(f"Unsupported rating system: {rating_system}")
-
-    model_order = list(elo_rating_final.keys())
-    model_rating_q025 = bootstrap_df.quantile(0.025)
-    model_rating_q975 = bootstrap_df.quantile(0.975)
-    ranking = _compute_ranking(model_order, model_rating_q025, model_rating_q975)
-
-    leaderboard_table_df = pd.DataFrame(
-        {
-            "rating": elo_rating_final,
-            "variance": bootstrap_df.var(),
-            "rating_q975": bootstrap_df.quantile(0.975),
-            "rating_q025": bootstrap_df.quantile(0.025),
-            "num_battles": battles["model_a"].value_counts().add(battles["model_b"].value_counts(), fill_value=0),
-            "final_ranking": pd.Series(ranking),
-        }
+    return _build_elo_analysis_results(
+        bt_data=preprocess_for_bt(battles),
+        num_battles=battles["model_a"].value_counts().add(battles["model_b"].value_counts(), fill_value=0),
+        last_updated_tstamp=battles["tstamp"].max(),
+        elo_rating_online=elo_rating_online,
+        rating_system=rating_system,
+        num_bootstrap=num_bootstrap,
+        num_cpu=num_cpu,
+        tol=tol,
     )
 
-    last_updated_tstamp = battles["tstamp"].max()
-    last_updated_datetime = datetime.datetime.fromtimestamp(last_updated_tstamp, tz=ZoneInfo("US/Pacific")).strftime(
-        "%Y-%m-%d %H:%M:%S %Z"
-    )
 
-    return {
-        "rating_system": rating_system,
-        "elo_rating_online": elo_rating_online,
-        "elo_rating_final": elo_rating_final,
-        "elo_rating_median": bootstrap_df.median().to_dict(),
-        "last_updated_datetime": last_updated_datetime,
-        "last_updated_tstamp": last_updated_tstamp,
-        "bootstrap_df": bootstrap_df,
-        "leaderboard_table_df": leaderboard_table_df,
-    }
+def report_elo_analysis_results_from_cells(
+    cells: pd.DataFrame,
+    last_updated_tstamp: int,
+    rating_system: str = "bt",
+    num_bootstrap: int = 100,
+    num_cpu: int | None = None,
+    tol: float = 1e-6,
+) -> dict[str, Any]:
+    """Like `report_elo_analysis_results`, but for battles already grouped in (model_a, model_b, winner, count) cells.
+
+    It gives the same results without needing the battles one by one, except for the online Elo (it's `None`), as it
+    depends on their order.
+    """
+    cells = cells.groupby(["model_a", "model_b", "winner"], sort=True, as_index=False).agg(count=("count", "sum"))
+    num_battles = cells.groupby("model_a")["count"].sum().add(cells.groupby("model_b")["count"].sum(), fill_value=0)
+    return _build_elo_analysis_results(
+        bt_data=preprocess_cells_for_bt(cells),
+        num_battles=num_battles,
+        last_updated_tstamp=last_updated_tstamp,
+        elo_rating_online=None,
+        rating_system=rating_system,
+        num_bootstrap=num_bootstrap,
+        num_cpu=num_cpu,
+        tol=tol,
+    )

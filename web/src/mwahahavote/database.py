@@ -4,7 +4,7 @@ import functools
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterable, MutableMapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, Literal, get_args
+from typing import Any, Literal, NamedTuple, get_args
 lazy import asyncio
 lazy import csv
 lazy import datetime
@@ -618,6 +618,78 @@ async def get_votes_for_scoring(
                 is_offensive_a=is_offensive_a,
                 is_offensive_b=is_offensive_b,
             )
+
+
+class VoteCount(NamedTuple):
+    """How many votes there are for a vote option in a battle between two systems, and when the last one was cast."""
+
+    system_id_a: str
+    system_id_b: str
+    vote: VoteString
+    count: int
+    last_date: datetime.datetime | str | None
+
+
+async def get_vote_counts_for_scoring(
+    engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int, task: Task, excluded_session_ids: Iterable[str] = ()
+) -> list[VoteCount]:
+    """Returns the non-skip votes for a given phase ID and task, grouped by systems and vote.
+
+    It's what is needed to score the systems without reading the votes one by one.
+    """
+    excluded_session_ids = tuple(excluded_session_ids)
+
+    if not excluded_session_ids:  # When empty, the SQL syntax breaks, so we have to put something.
+        excluded_session_ids = ("__PLACEHOLDER__",)
+
+    async with engine.connect() as connection:
+        return [
+            VoteCount(*row)
+            for row in await connection.execute(
+                sqlalchemy.sql.text("""
+                    SELECT system_id_a, system_id_b, vote, COUNT(*) AS count, MAX(date) AS last_date
+                    FROM votes v NATURAL JOIN prompts
+                    WHERE
+                      task = :task
+                      AND phase_id = :phase_id
+                      AND v.vote != 'n'
+                      AND session_id NOT IN :excluded_session_ids
+                    GROUP BY system_id_a, system_id_b, vote
+                """),
+                {"task": task, "phase_id": phase_id, "excluded_session_ids": excluded_session_ids},
+            )
+        ]
+
+
+async def get_same_text_battle_counts(
+    engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int, task: Task
+) -> list[tuple[str, str, int]]:
+    """Returns how many battles with the same text there are between each pair of systems (the first one is the lowest
+    by ID), for a given phase ID and task.
+    """
+    async with engine.connect() as connection:
+        return [
+            (system_id_a, system_id_b, int(count))
+            for system_id_a, system_id_b, count in await connection.execute(
+                sqlalchemy.sql.text("""
+                    SELECT outputs_a.system_id AS system_id_a, outputs_b.system_id AS system_id_b, COUNT(*) AS count
+                    FROM
+                      prompts
+                      NATURAL JOIN outputs AS outputs_a
+                      JOIN outputs AS outputs_b
+                        ON (
+                          outputs_b.prompt_id = outputs_a.prompt_id
+                          AND outputs_b.system_id > outputs_a.system_id  -- We avoid repeated battles.
+                        )
+                    WHERE
+                      task = :task
+                      AND phase_id = :phase_id
+                      AND outputs_a.text = outputs_b.text
+                    GROUP BY outputs_a.system_id, outputs_b.system_id
+                """),
+                {"task": task, "phase_id": phase_id},
+            )
+        ]
 
 
 async def get_session_ids(engine: sqlalchemy.ext.asyncio.AsyncEngine, phase_id: int, task: Task) -> AsyncIterator[str]:
