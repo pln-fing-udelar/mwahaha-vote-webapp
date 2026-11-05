@@ -357,6 +357,15 @@ def _print_cached_task_results(
     print(f"Skipping task {task} (cached - no changes).")
 
 
+def _is_task_cached(cached: dict[str, Any] | None, task_meta: dict[str, Any], needs_intermediate_files: bool) -> bool:
+    """Whether the cache has the scores for the current votes of a task, and also the intermediate files, if needed."""
+    if cached is None:
+        return False
+    cached = dict(cached)
+    has_current_intermediate_files = cached.pop("intermediate", False)
+    return cached == task_meta and (has_current_intermediate_files or not needs_intermediate_files)
+
+
 async def _score_task(
     engine: sqlalchemy.ext.asyncio.AsyncEngine,
     competition: CompetitionConfig,
@@ -524,7 +533,7 @@ async def async_main(
                 and not no_cache
                 and output_path.exists()
                 and not intermediate_missing
-                and cache.get(task) == task_meta
+                and _is_task_cached(cache.get(task), task_meta, needs_intermediate_files=inter_path is not None)
             ):
                 tasks_recomputed[task] = False
                 if not quiet:
@@ -547,7 +556,8 @@ async def async_main(
                 inter_path=inter_path,
                 quiet=quiet,
             )
-            cache[task] = task_meta
+            # Scoring without the intermediate files leaves the ones from before out of date.
+            cache[task] = {**task_meta, "intermediate": inter_path is not None}
             tasks_recomputed[task] = True
 
         if not no_cache and cache_path is not None:

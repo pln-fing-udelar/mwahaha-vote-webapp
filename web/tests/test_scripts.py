@@ -614,6 +614,58 @@ async def test_compute_scores_without_dumping_the_intermediate_files_gives_the_s
         assert {r["system"] for r in records["grouped"]} == {"sys_a", "sys_b", "sys_c"}
 
 
+async def test_compute_scores_cache_knows_if_the_intermediate_files_are_current(
+    seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    tmp_path: Path,
+) -> None:
+    scores_dir = tmp_path / "scores"
+    intermediate_dir = tmp_path / "scoring"
+    cache_file = tmp_path / "cache.json"
+    await database.add_vote(seeded_db_engine, "sess-1", "en_1", "sys_a", "sys_b", "a", False, False)
+    await database.add_vote(seeded_db_engine, "sess-2", "en_1", "sys_b", "sys_c", "a", False, False)
+    await database.add_vote(seeded_db_engine, "sess-3", "en_1", "sys_c", "sys_a", "b", False, False)
+
+    @asynccontextmanager
+    async def fake_create_engine() -> Any:
+        yield seeded_db_engine
+
+    async def run(*, dump_intermediate: bool) -> bool:
+        with patch("mwahahavote.database.create_engine", fake_create_engine):
+            recomputed = await compute_scores.async_main(
+                scores_dir=scores_dir,
+                intermediate_dir=intermediate_dir if dump_intermediate else None,
+                cache_file=cache_file,
+                min_votes_per_system=1,
+                num_bootstrap=10,
+                tasks=["a-en"],
+                quiet=True,
+            )
+        return recomputed["a-en"]
+
+    assert await run(dump_intermediate=False) is True
+    assert not intermediate_dir.exists()
+    assert await run(dump_intermediate=False) is False
+
+    # The files are requested later, so they have to be created even though the votes are the same.
+    assert await run(dump_intermediate=True) is True
+    assert (intermediate_dir / "votes-a-en.json").exists()
+    assert await run(dump_intermediate=True) is False
+    assert await run(dump_intermediate=False) is False
+
+    # Scoring new votes without the files leaves the ones from before out of date, so they have to be created again.
+    await database.add_vote(seeded_db_engine, "sess-4", "en_1", "sys_a", "sys_c", "a", False, False)
+    assert await run(dump_intermediate=False) is True
+    assert await run(dump_intermediate=True) is True
+    assert await run(dump_intermediate=True) is False
+
+    # A cache from before this was tracked doesn't have the intermediate files, but it has the scores.
+    cache = json.loads(cache_file.read_text(encoding="utf-8"))
+    cache["a-en"].pop("intermediate")
+    cache_file.write_text(json.dumps(cache), encoding="utf-8")
+    assert await run(dump_intermediate=False) is False
+    assert await run(dump_intermediate=True) is True
+
+
 async def test_compute_scores_unvoted_task_without_dumping_the_intermediate_files(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
     tmp_path: Path,
