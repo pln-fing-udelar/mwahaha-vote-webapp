@@ -1,7 +1,9 @@
 import asyncio
+import base64
 import json
 import socket
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -15,6 +17,12 @@ from mwahahavote import database
 from mwahahavote.__main__ import app
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "src" / "mwahahavote" / "static"
+
+_ONE_PIXEL_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+)
 
 
 def _get_free_port() -> int:
@@ -69,6 +77,12 @@ async def _stub_external_trackers(page: Page) -> None:
     await page.route("https://js.sentry-cdn.com/**", _empty_js)
     await page.route("https://www.googletagmanager.com/**", _empty_js)
     await page.route("https://www.gstatic.com/**", _empty_js)
+
+    async def _not_found(route: Route) -> None:
+        await route.fulfill(status=404)
+
+    # The images of the emoji.
+    await page.route("https://raw.githubusercontent.com/**", _not_found)
 
 
 async def test_voting_page_flow(browser: Browser, live_server_url: str) -> None:
@@ -144,7 +158,7 @@ async def test_voting_page_image_newlines_and_emoji_rendering(browser: Browser, 
     )
     await page.route(
         "https://raw.githubusercontent.com/**",
-        lambda route: route.fulfill(status=200, content_type="image/png", body=b""),
+        lambda route: route.fulfill(status=200, content_type="image/png", body=_ONE_PIXEL_PNG),
     )
 
     custom_battles = [
@@ -177,6 +191,104 @@ async def test_voting_page_image_newlines_and_emoji_rendering(browser: Browser, 
     assert "emoji" in output_b_html
 
     await context.close()
+
+
+async def test_emoji_are_shown_as_images(browser: Browser, live_server_url: str) -> None:
+    context = await browser.new_context()
+    page = await context.new_page()
+    await _stub_external_trackers(page)
+    await page.goto(live_server_url)
+
+    html = await page.evaluate("() => emojiToHtml('a 😂 ❤ 1️⃣ 👍🏽 🇺🇾 🏃 🙅 b')")
+
+    assert html.startswith("a ")
+    assert html.endswith(" b")
+    for name in (
+        "1f602",
+        "2764-fe0f",
+        "0031-fe0f-20e3",
+        "1f44d-1f3fd",
+        "1f1fa-1f1fe",
+        "1f3c3-200d-2642-fe0f",
+        "1f645-200d-2640-fe0f",
+    ):
+        assert f'data-codepoints="{name}"' in html
+        assert f"img-twitter-64/{name}.png" in html
+
+    await context.close()
+
+
+async def test_emoji_without_image_are_shown_as_text(browser: Browser, live_server_url: str) -> None:
+    context = await browser.new_context()
+    page = await context.new_page()
+    await _stub_external_trackers(page)
+    await page.goto(live_server_url)
+
+    await page.evaluate(
+        """() => {
+            const element = document.createElement("p");
+            element.id = "emoji-test";
+            element.innerHTML = emojiToHtml("x 😂 y");
+            document.body.appendChild(element);
+            showNativeEmojiIfImageIsMissing(element);
+        }"""
+    )
+
+    await page.wait_for_function("() => document.querySelector('#emoji-test').textContent === 'x 😂 y'")
+    assert await page.locator("#emoji-test .emoji").count() == 0
+
+    await context.close()
+
+
+async def test_only_one_toast_is_shown_at_a_time(browser: Browser, live_server_url: str) -> None:
+    context = await browser.new_context()
+    page = await context.new_page()
+    await _stub_external_trackers(page)
+    await page.goto(live_server_url)
+    await page.wait_for_function("() => battles.length > 0")
+
+    await page.evaluate("onTurnstileSuccess('token-1')")
+    async with page.expect_response(lambda resp: resp.url.endswith("/vote")):
+        await page.click("#vote-left")
+    await page.evaluate("onTurnstileSuccess('token-2')")
+    async with page.expect_response(lambda resp: resp.url.endswith("/vote")):
+        await page.click("#tie")
+    await page.wait_for_timeout(400)  # The first toast takes a bit to go away.
+
+    assert await page.locator(".md-toast").count() == 1
+    assert "tie" in (await page.locator(".md-toast").text_content() or "")
+
+    await context.close()
+
+
+async def test_loading_placeholders_are_replaced_by_the_battle(browser: Browser, live_server_url: str) -> None:
+    context = await browser.new_context()
+    page = await context.new_page()
+    await _stub_external_trackers(page)
+
+    async def _delayed_battles(route: Route) -> None:
+        await page.wait_for_timeout(300)
+        await route.continue_()
+
+    await page.route("**/battles*", _delayed_battles)
+    await page.goto(live_server_url)
+
+    assert await page.locator("#prompt-text .placeload-background").count() == 1
+    assert await page.locator("#output-a-text .placeload-background").count() == 1
+    assert await page.locator("#output-b-text .placeload-background").count() == 1
+    await page.wait_for_function("() => document.querySelector('.placeload-background') === null")
+    assert (await page.locator("#output-a-text").text_content() or "").strip()
+
+    await context.close()
+
+
+async def test_index_html_uses_current_libraries_with_the_bootstrap_3_look() -> None:
+    content = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+
+    assert 'href="css/bootstrap3-compat.css"' in content
+    assert "bootstrap@5" in content
+    for removed in ("bootstrap/3", "js/mdtoast.js", "js/placeload.min.js", "js/emoji.min.js", "css/emoji.css"):
+        assert removed not in content
 
 
 async def test_voting_page_circular_buffer_wraparound(browser: Browser, live_server_url: str) -> None:
