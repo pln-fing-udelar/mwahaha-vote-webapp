@@ -11,6 +11,7 @@ import pytest
 from mwahahavote.scoring import (
     _always_true,
     bt_loss_and_grad,
+    cells_from_battles,
     compute_bootstrap_bt,
     compute_bt,
     compute_elo,
@@ -19,6 +20,7 @@ from mwahahavote.scoring import (
     preprocess_for_elo,
     pretty_print_elo_rating,
     report_elo_analysis_results,
+    report_elo_analysis_results_from_cells,
     scale_and_offset,
 )
 
@@ -61,6 +63,42 @@ def test_preprocess_for_bt() -> None:
     assert len(matchups) == len(outcomes) == len(weights)
     assert all(o in {0.0, 0.5, 1.0} for o in outcomes)
     assert weights.sum() == len(df)
+
+
+def test_cells_from_battles() -> None:
+    df = pd.DataFrame(
+        {
+            "model_a": ["sys_a", "sys_a", "sys_b", "sys_a", "sys_a"],
+            "model_b": ["sys_b", "sys_b", "sys_a", "sys_b", "sys_b"],
+            "winner": ["model_a", "model_a", "model_b", "tie", "tie (bothbad)"],
+        }
+    )
+    assert cells_from_battles(df).to_dict("records") == [
+        {"model_a": "sys_a", "model_b": "sys_b", "winner": "model_a", "count": 2},
+        {"model_a": "sys_a", "model_b": "sys_b", "winner": "tie", "count": 2},
+        {"model_a": "sys_b", "model_b": "sys_a", "winner": "model_b", "count": 1},
+    ]
+
+
+def test_preprocess_for_bt_does_not_depend_on_the_order_of_the_battles() -> None:
+    df = _sample_battles()
+    shuffled = df.sample(frac=1, random_state=1).reset_index(drop=True)
+    for original, from_shuffled in zip(preprocess_for_bt(df), preprocess_for_bt(shuffled), strict=True):
+        assert np.array_equal(original, from_shuffled)
+
+
+def test_report_elo_analysis_results_from_cells_matches_the_one_from_battles() -> None:
+    battles = _sample_battles()
+    battles = battles[battles["anony"]]
+    res = report_elo_analysis_results(battles, num_bootstrap=20)
+    res_cells = report_elo_analysis_results_from_cells(
+        cells_from_battles(battles), last_updated_tstamp=int(battles["tstamp"].max()), num_bootstrap=20
+    )
+
+    pd.testing.assert_frame_equal(res["leaderboard_table_df"], res_cells["leaderboard_table_df"], check_dtype=False)
+    pd.testing.assert_frame_equal(res["bootstrap_df"], res_cells["bootstrap_df"])
+    assert res["last_updated_tstamp"] == res_cells["last_updated_tstamp"]
+    assert res_cells["elo_rating_online"] is None
 
 
 def test_preprocess_for_elo() -> None:

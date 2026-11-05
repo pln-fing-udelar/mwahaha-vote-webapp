@@ -340,6 +340,49 @@ async def test_same_text_battles(
     assert tie_votes[0].session_id == "<placeholder>"
 
 
+async def test_get_same_text_battle_counts(
+    seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+) -> None:
+    phase = ACTIVE_COMPETITION.phase_id
+    task = ACTIVE_COMPETITION.default_task
+
+    # In seeded_db_engine, en_1 has identical text for sys_a and sys_c
+    assert await database.get_same_text_battle_counts(seeded_db_engine, phase_id=phase, task=task) == [
+        ("sys_a", "sys_c", 1)
+    ]
+
+
+async def test_get_vote_counts_for_scoring(
+    seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+) -> None:
+    phase = ACTIVE_COMPETITION.phase_id
+    task = ACTIVE_COMPETITION.default_task
+    await database.add_vote(seeded_db_engine, "sess-1", "en_1", "sys_a", "sys_b", "a", False, False)
+    await database.add_vote(seeded_db_engine, "sess-2", "en_1", "sys_a", "sys_b", "a", False, False)
+    await database.add_vote(seeded_db_engine, "sess-3", "en_1", "sys_a", "sys_b", "t", False, False)
+    await database.add_vote(seeded_db_engine, "sess-4", "en_1", "sys_b", "sys_a", "b", False, False)
+    await database.add_vote(seeded_db_engine, "sess-5", "en_1", "sys_a", "sys_b", "n", False, False)  # A skip.
+
+    vote_counts = await database.get_vote_counts_for_scoring(seeded_db_engine, phase_id=phase, task=task)
+    assert {(c.system_id_a, c.system_id_b, c.vote): c.count for c in vote_counts} == {
+        ("sys_a", "sys_b", "a"): 2,
+        ("sys_a", "sys_b", "t"): 1,
+        ("sys_b", "sys_a", "b"): 1,
+    }
+    assert all(c.last_date is not None for c in vote_counts)
+
+    vote_counts = await database.get_vote_counts_for_scoring(
+        seeded_db_engine, phase_id=phase, task=task, excluded_session_ids=["sess-1", "sess-3"]
+    )
+    assert {(c.system_id_a, c.system_id_b, c.vote): c.count for c in vote_counts} == {
+        ("sys_a", "sys_b", "a"): 1,
+        ("sys_b", "sys_a", "b"): 1,
+    }
+
+    other_task = next(t for t in TASK_CHOICES if t != task)
+    assert await database.get_vote_counts_for_scoring(seeded_db_engine, phase_id=phase, task=other_task) == []
+
+
 async def test_votes_queries_and_stats(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
 ) -> None:

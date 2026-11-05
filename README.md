@@ -102,6 +102,11 @@ Run:
 ./scripts/compute_scores.sh
 ```
 
+By default, it also saves the votes and the full results in `scoring/`, which requires reading every vote.
+If you don't need them, run `DUMP_INTERMEDIATE=0 ./scripts/compute_scores.sh` instead: it gives the same scores several
+times faster, as the database groups the votes by pair of systems and outcome, and the cost doesn't grow with the
+number of votes.
+
 ## Development & Testing
 
 Run the linter, formatter, type-checker, and test suite from `web/`:

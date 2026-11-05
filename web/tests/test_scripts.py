@@ -568,6 +568,79 @@ async def test_compute_scores_async_main(
     assert all(r["rating"] is None for r in records_es)
 
 
+async def test_compute_scores_without_dumping_the_intermediate_files_gives_the_same_scores(
+    seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    for session_id, system_id_a, system_id_b, vote in (
+        ("sess-1", "sys_a", "sys_b", "a"),
+        ("sess-2", "sys_b", "sys_c", "a"),
+        ("sess-3", "sys_c", "sys_a", "b"),
+        ("sess-4", "sys_a", "sys_b", "t"),
+        ("sess-5", "sys_b", "sys_a", "b"),
+        ("sess-6", "sys_a", "sys_c", "n"),  # A skip.
+        ("sess-7", "sys_c", "sys_b", "a"),  # From an excluded session.
+    ):
+        await database.add_vote(seeded_db_engine, session_id, "en_1", system_id_a, system_id_b, vote, False, False)
+
+    @asynccontextmanager
+    async def fake_create_engine() -> Any:
+        yield seeded_db_engine
+
+    for min_votes_per_system, include_ties in ((1, True), (3, False)):
+        records = {}
+        for name, intermediate_dir in (("one_by_one", tmp_path / "scoring"), ("grouped", None)):
+            with patch("mwahahavote.database.create_engine", fake_create_engine):
+                await compute_scores.async_main(
+                    scores_dir=tmp_path / f"scores-{name}",
+                    min_votes_per_system=min_votes_per_system,
+                    include_ties=include_ties,
+                    excluded_session_ids={"sess-7"},
+                    num_bootstrap=10,
+                    tasks=["a-en"],
+                    no_cache=True,
+                    intermediate_dir=intermediate_dir,
+                )
+            out = capsys.readouterr().out
+            assert "# Median" in out
+            assert ("# Online Elo" in out) == (name == "one_by_one")
+            records[name] = json.loads((tmp_path / f"scores-{name}" / "a-en.json").read_text(encoding="utf-8"))
+
+        assert records["grouped"] == records["one_by_one"]
+        assert {r["system"] for r in records["grouped"]} == {"sys_a", "sys_b", "sys_c"}
+
+
+async def test_compute_scores_unvoted_task_without_dumping_the_intermediate_files(
+    seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    task = config.ACTIVE_COMPETITION.default_task
+
+    @asynccontextmanager
+    async def fake_create_engine() -> Any:
+        yield seeded_db_engine
+
+    # No votes, and the only battle (the one with the same text) doesn't reach the minimum of votes per system.
+    with patch("mwahahavote.database.create_engine", fake_create_engine):
+        await compute_scores.async_main(scores_dir=tmp_path, tasks=[task], no_cache=True)
+
+    assert f"Skipping the unvoted task {task}." in capsys.readouterr().out
+    records = json.loads((tmp_path / f"{task}.json").read_text(encoding="utf-8"))
+    assert {r["system"] for r in records} == {"sys_a", "sys_b", "sys_c"}
+    assert all(r["rating"] is None and r["num_battles"] == 0 for r in records)
+
+
+def test_to_tstamp_accepts_dates_and_text() -> None:
+    date = datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=datetime.UTC)
+    assert compute_scores._to_tstamp(date) == round(date.timestamp())
+    assert compute_scores._to_tstamp("2026-01-02 03:04:05+00:00") == round(date.timestamp())
+
+
 async def test_compute_scores_input_csv(tmp_path: Path) -> None:
     csv_file = tmp_path / "votes.csv"
     csv_file.write_text(
