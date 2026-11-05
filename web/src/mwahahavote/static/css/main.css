@@ -348,3 +348,124 @@ button.no-hover:hover {
     padding: 8px 16px;
   }
 }
+
+/* Emoji, shown as images. */
+span.emoji {
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  background-size: contain;
+  display: inline-block;
+  height: 1em;
+  text-indent: -9999px;
+  vertical-align: baseline;
+  width: 1em;
+}
+
+span.emoji-sizer {
+  font-size: 1em;
+  line-height: 0.81em;
+  margin: -2px 0;
+}
+
+/* Placeholders shown while the battles are loading: a gray shimmer, masked into three text lines (or just one). */
+@keyframes placeHolderShimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.placeload-background {
+  animation-duration: 1s;
+  animation-fill-mode: forwards;
+  animation-iteration-count: infinite;
+  animation-name: placeHolderShimmer;
+  animation-timing-function: linear;
+  background: linear-gradient(to right, #eee 8%, #ddd 18%, #eee 33%);
+  background-size: 1000px 104px;
+  display: block;
+  height: 59px;
+  overflow: hidden;
+  position: relative;
+}
+
+.placeload-single-line {
+  height: 15px;
+}
+
+.placeload-masker {
+  background: #fff;
+  display: block;
+  height: 15px;
+  left: 0;
+  position: absolute;
+  width: 100%;
+}
+
+.placeload-gap-1 {
+  height: 7px;
+  top: 15px;
+}
+
+.placeload-gap-2 {
+  height: 7px;
+  top: 37px;
+}
+
+.placeload-line-3-end {
+  left: 40%;
+  top: 44px;
+}
+
+/* Material-style toast notifications. */
+.md-toast {
+  align-items: center;
+  background-color: #323232;
+  border-radius: 2px;
+  bottom: 24px;
+  box-shadow: 0 6px 10px 0 rgba(0, 0, 0, 0.14), 0 1px 18px 0 rgba(0, 0, 0, 0.12), 0 3px 5px -1px rgba(0, 0, 0, 0.3);
+  color: #fff;
+  display: flex;
+  flex-direction: row;
+  font-size: 14px;
+  left: 24px;
+  max-width: 500px;
+  pointer-events: auto;
+  position: fixed;
+  text-align: left;
+  transform: translateY(0);
+  transition: transform 0.3s cubic-bezier(0, 0, 0.2, 1);
+  user-select: none;
+  z-index: 100002;
+}
+
+.md-toast.load {
+  transform: translateY(200%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.md-toast .mdt-message {
+  display: block;
+  flex: 1 auto;
+  padding: 16px 24px;
+}
+
+@media (max-width: 640px) {
+  .md-toast {
+    border-radius: 0;
+    bottom: 0;
+    box-shadow: none;
+    font-weight: 500;
+    left: 0;
+    max-width: 100%;
+    right: 0;
+    transform: translateY(0);
+  }
+
+  .md-toast.load {
+    opacity: 1;
+    transform: translateY(100%);
+  }
+}
