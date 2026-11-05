@@ -13,7 +13,7 @@ It was also used to annotate for the [HAHA 2026 task 3](https://www.fing.edu.uy/
 * [MWAHAHA 2026 @ SemEval 2026 Task 1](https://pln-fing-udelar.github.io/semeval-2026-humor-gen/)
 * [HAHA 2026 @ IberLEF 2026](https://www.fing.edu.uy/inco/grupos/pln/haha/)
 * [MWAHAHA 2026 data (prompts + systems' outputs + annotations)](https://github.com/pln-fing-udelar/mwahaha-vote-webapp/releases/tag/v2026.02.22)
-  (the annotations were collected using the web app in this repo)
+  (The annotations were collected using the web app in this repo.)
 
 ## About using this annotation web application
 
@@ -29,7 +29,7 @@ Some differences:
 ## Software Stack
 
 * **Backend & API**: [FastAPI](https://fastapi.tiangolo.com/) running on [Uvicorn](https://www.uvicorn.org/) with [uvloop](https://github.com/MagicStack/uvloop) and [httptools](https://github.com/MagicStack/httptools) for async request handling; [Pydantic](https://docs.pydantic.dev/) for data validation; [Jinja2](https://jinja.palletsprojects.com/) for server-side HTML rendering.
-* **Database Layer**: [MySQL](https://www.mysql.com/) 26.x with [SQLAlchemy](https://www.sqlalchemy.org/) 2.0 (using async drivers: `asyncmy` in production and `aiosqlite` for in-memory unit tests).
+* **Database Layer**: [MySQL](https://www.mysql.com/) 26.10 with [SQLAlchemy](https://www.sqlalchemy.org/) 2.0 (using async drivers: `asyncmy` in production and `aiosqlite` for in-memory unit tests).
 * **Scoring Engine**: [FastChat](https://github.com/lm-sys/FastChat)'s Bradley-Terry / Elo ranking model with bootstrap confidence intervals; custom least-voted unseen battle matching algorithm (`random_least_voted_unseen_battles`).
 * **Security & Anti-Bot**: [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) CAPTCHA with async server verification ([`httpx2`](https://pypi.org/project/httpx2/)); Fernet symmetric encryption ([`cryptography`](https://cryptography.io/)) for tamper-proof battle token signing.
 * **Frontend**: Vanilla modern JavaScript (ES6+), HTML5, and CSS3 without heavy external framework dependencies.
@@ -113,7 +113,7 @@ uv run ty check
 uv run pytest
 ```
 
-The linter, the formatter, and the type-checker can be run automatically when using `pre-commit`.
+You can run the linter, formatter, and type checker automatically with `pre-commit`.
 
 ## Load test
 
@@ -126,13 +126,13 @@ To conduct a test simulating high annotation load (especially for production), r
 ## Running it in production
 
 When we run the server in production to collect annotations, we run some commands under an SSH session using `screen`
-so it survives session disconnections. You can do similarly with other programs such as `tmux`.
+so it survives session disconnections. You can do the same with other programs, such as `tmux`.
 
-Note that the database docker container in production is called `clasificahumor-database-1` because it's shared with
+Note that the database Docker container in production is called `clasificahumor-database-1` because it's shared with
 clasificahumor.
 And its Docker Compose network is called `clasificahumor_net`.
 
-When making changes on the submissions or scores, it's recommended to first test it locally,
+When making changes to the submissions or scores, it's recommended to first test it locally,
 then apply the same change on production.
 
 To ingest new submissions and recompute the scores based on the latest annotations every hour,
