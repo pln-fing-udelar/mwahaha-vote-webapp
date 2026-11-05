@@ -9,6 +9,9 @@ services:
       - '5000:80'
     volumes:
       - ./web/src/:/app/src
+    depends_on:
+      database:
+        condition: service_healthy
     networks:
       - net
   database:
@@ -21,6 +24,12 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=123123
       - MYSQL_DATABASE=mwahaha
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 networks:
   net:
 volumes:

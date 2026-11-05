@@ -29,7 +29,7 @@ Some differences:
 ## Software Stack
 
 * **Backend & API**: [FastAPI](https://fastapi.tiangolo.com/) running on [Uvicorn](https://www.uvicorn.org/) with [uvloop](https://github.com/MagicStack/uvloop) and [httptools](https://github.com/MagicStack/httptools) for async request handling; [Pydantic](https://docs.pydantic.dev/) for data validation; [Jinja2](https://jinja.palletsprojects.com/) for server-side HTML rendering.
-* **Database Layer**: [MySQL](https://www.mysql.com/) 8.x with [SQLAlchemy](https://www.sqlalchemy.org/) 2.0 (using async drivers: `asyncmy` in production and `aiosqlite` for in-memory unit tests).
+* **Database Layer**: [MySQL](https://www.mysql.com/) 26.x with [SQLAlchemy](https://www.sqlalchemy.org/) 2.0 (using async drivers: `asyncmy` in production and `aiosqlite` for in-memory unit tests).
 * **Scoring Engine**: [FastChat](https://github.com/lm-sys/FastChat)'s Bradley-Terry / Elo ranking model with bootstrap confidence intervals; custom least-voted unseen battle matching algorithm (`random_least_voted_unseen_battles`).
 * **Security & Anti-Bot**: [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) CAPTCHA with async server verification ([`httpx2`](https://pypi.org/project/httpx2/)); Fernet symmetric encryption ([`cryptography`](https://cryptography.io/)) for tamper-proof battle token signing.
 * **Frontend**: Vanilla modern JavaScript (ES6+), HTML5, and CSS3 without heavy external framework dependencies.
