@@ -45,6 +45,15 @@ DB_HOST=$(docker container inspect mwahaha-vote-webapp-database-1 | uv run jq -r
 To run some of the Python scripts and commands in this README file,
 you may benefit from prefixing `uv run --env-file ../.env` to them.
 
+## Requiring a system in every battle
+
+To make every battle include at least one system from a given set (e.g., to collect more votes for new submissions),
+set the env var `REQUIRED_SYSTEM_IDS` to a comma-separated list of system IDs
+(e.g., `REQUIRED_SYSTEM_IDS=system1,system2`) and restart the `web` service.
+The other system in each battle can be any other system for the same prompt.
+Prompts without an output from these systems are not shown, and if no system matches, no battles are shown.
+Leave it unset or empty for the default behavior.
+
 ## Loading a database dump
 
 Optionally, you can populate the database from a pre-existing dump, such as

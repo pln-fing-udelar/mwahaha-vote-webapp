@@ -9,3 +9,4 @@ services:
       - DB_PASS
       - DB_NAME=mwahaha
       - TURNSTILE_SECRET_KEY
+      - REQUIRED_SYSTEM_IDS

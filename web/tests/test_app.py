@@ -211,6 +211,23 @@ async def test_get_battle_objects(
         assert len(results) == 2
 
 
+async def test_get_battle_objects_uses_required_system_ids(
+    seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(main_mod, "REQUIRED_SYSTEM_IDS", frozenset({"sys_c"}))
+    battles = [
+        b
+        async for b in _get_battle_objects(
+            seeded_db_engine, main_mod.PHASE_ID, "sess_1", main_mod.DEFAULT_TASK, batch_size=2
+        )
+    ]
+    assert len(battles) == 2
+    for battle in battles:
+        _, system_id_a, system_id_b = main_mod._decrypt_battle_token(battle["token"])
+        assert "sys_c" in {system_id_a, system_id_b}
+
+
 async def test_routes_end_to_end(
     seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
     monkeypatch: pytest.MonkeyPatch,

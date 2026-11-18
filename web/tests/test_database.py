@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
@@ -233,6 +234,47 @@ async def test_random_least_voted_unseen_battles(
     for battle in battles:
         assert battle.output_a.system.id != battle.output_b.system.id
         assert battle.output_a.text != battle.output_b.text
+
+
+async def test_random_least_voted_unseen_battles_required_system_ids(
+    seeded_db_engine: sqlalchemy.ext.asyncio.AsyncEngine,
+) -> None:
+    kwargs: dict[str, Any] = {
+        "phase_id": ACTIVE_COMPETITION.phase_id,
+        "session_id": "session_1",
+        "task": ACTIVE_COMPETITION.default_task,
+        "batch_size": 4,
+    }
+
+    battles = [
+        b
+        async for b in database.random_least_voted_unseen_battles(
+            seeded_db_engine, **kwargs, required_system_ids=frozenset({"sys_c"})
+        )
+    ]
+    # Only en_1 has an output from sys_c, and its text is the same as sys_a's, so the partner is always sys_b.
+    assert len(battles) == 4
+    for battle in battles:
+        assert battle.prompt.id == "en_1"
+        assert {battle.output_a.system.id, battle.output_b.system.id} == {"sys_c", "sys_b"}
+
+    for _ in range(10):
+        battles = [
+            b
+            async for b in database.random_least_voted_unseen_battles(
+                seeded_db_engine, **kwargs, required_system_ids=["sys_a", "sys_x"]
+            )
+        ]
+        assert len(battles) == 4
+        for battle in battles:
+            assert "sys_a" in {battle.output_a.system.id, battle.output_b.system.id}
+
+    assert not [
+        b
+        async for b in database.random_least_voted_unseen_battles(
+            seeded_db_engine, **kwargs, required_system_ids={"sys_x"}
+        )
+    ]
 
 
 async def test_random_least_voted_unseen_battles_skips_unpartnerable_outputs(

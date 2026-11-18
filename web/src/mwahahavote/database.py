@@ -1,7 +1,7 @@
 """Provides mechanisms to handle the database."""
 
 import functools
-from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterable, MutableMapping
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Collection, Iterable, MutableMapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any, Literal, NamedTuple, get_args
@@ -335,6 +335,7 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
     task: Task,
     batch_size: int,
     ignored_output_ids: Iterable[tuple[str, str]] = (),
+    required_system_ids: Collection[str] = (),
 ) -> AsyncIterator[Battle]:
     """Returns an iterator with a random subsample of the top `batch_size` least-voted outputs,
     and unvoted by the session, each paired in a battle with a random other unvoted output for the same prompt.
@@ -361,6 +362,11 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
 
     The outputs from `ignored_output_ids` are considered voted for the sake of this algorithm.
     Otherwise, we may yield battles that repeat their prompts (but not their outputs).
+
+    If `required_system_ids` is non-empty, every battle has at least one system from it: output A is only picked
+    among the outputs of those systems (the rules above apply within them), while B can be from any other system.
+    The battle's sides are still randomly swapped. Note that this restricts the prompts to the ones that
+    have an output from these systems, and if none does, no battles are yielded.
 
     Note: we don't care if a session already voted the battle A-B. If this battle was chosen, then it means that
     a session has voted all outputs already, which is an unlikely scenario. And it's also unlikely to arrive to this
@@ -422,6 +428,7 @@ async def random_least_voted_unseen_battles(  # "unseen" means unvoted by the se
             )
             for prompt_id, outputs in prompt_id_to_outputs.items()
             for system_id, text in outputs
+            if not required_system_ids or system_id in required_system_ids
         ]
 
         random.shuffle(candidate_outputs)

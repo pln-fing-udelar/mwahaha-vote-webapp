@@ -39,6 +39,11 @@ IS_LOCAL_DEVELOPMENT = "VIRTUAL_HOST" not in os.environ
 
 REQUEST_BATTLE_BATCH_SIZE = 4
 
+# If set (comma-separated system IDs), every battle has at least one of these systems.
+REQUIRED_SYSTEM_IDS = frozenset(
+    system_id.strip() for system_id in os.environ.get("REQUIRED_SYSTEM_IDS", "").split(",") if system_id.strip()
+)
+
 SESSION_ID_MAX_AGE = int(timedelta(weeks=1000).total_seconds())
 
 sentry_sdk.init(
@@ -270,7 +275,7 @@ async def _get_battle_objects(
     ignored_output_ids: Iterable[tuple[str, str]] = (),
 ) -> AsyncIterator[SimplifiedBattleDict]:
     async for battle in database.random_least_voted_unseen_battles(
-        engine, phase_id, session_id, task, batch_size, ignored_output_ids
+        engine, phase_id, session_id, task, batch_size, ignored_output_ids, REQUIRED_SYSTEM_IDS
     ):
         yield _simplify_battle_object(battle)
 
